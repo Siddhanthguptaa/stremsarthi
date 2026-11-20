@@ -1,0 +1,31 @@
+{
+  "model": "opusplan",
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(pip *)",
+      "Bash(uv *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(git *)",
+      "Bash(ffmpeg *)",
+      "Bash(ffprobe *)",
+      "Bash(nvidia-smi *)",
+      "Bash(flock *)",
+      "Bash(docker *)",
+      "Bash(npm *)",
+      "Bash(node *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(touch *)",
+      "Bash(bash scripts/*)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Read(./.env)",
+      "Edit(./reference/**)"
+    ]
+  }
+}

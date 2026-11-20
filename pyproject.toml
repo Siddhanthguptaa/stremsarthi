@@ -1,0 +1,22 @@
+# Minimal project config written in Step 0 (contracts + tests). Task T0.1 (lead) extends this
+# with dependencies, extras and entry points; see docs/PLAN.md section 7 and docs/specs/ops.md.
+[project]
+name = "stream-sarthi"
+version = "0.0.0"
+description = "Real-time privacy and safety layer for Indian live streamers"
+requires-python = ">=3.11,<3.12"
+readme = "CLAUDE.md"
+
+[tool.pytest.ini_options]
+addopts = "-q --import-mode=importlib"
+pythonpath = ["."]
+testpaths = ["contracts/tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["reference", "models/weights", "eval/data/generated"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+ignore = ["E501"]

@@ -1,0 +1,17 @@
+# Demo profile (RTX 5050 laptop, 8 GB). Extras are switched on here, never in code.
+profile: demo
+delay_seconds: 4.0
+detect:
+  stride: 2            # detect every 2nd frame
+  fast_hz: 15
+  accurate_hz: 5
+gpu:
+  enabled: true
+  mem_limit_mb: 7000
+  ort_provider: cuda
+audio:
+  local_stt_model: small
+  local_stt_device: cuda
+captions:
+  enabled: false       # the streamer toggles captions at runtime
+  provider: indictrans2

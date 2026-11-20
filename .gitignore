@@ -1,0 +1,32 @@
+
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# node
+node_modules/
+.next/
+
+# models and generated data
+models/weights/
+eval/data/generated/
+eval/clips/raw/
+*.pt
+*.onnx
+*.engine
+
+# biometric-derived and private data: never commit
+models/allowlist/
+eval/data/private/
+eval/clips/private/
+*.embedding.json
+
+# tools and runtime
+.tmp/
+.claude/settings.local.json

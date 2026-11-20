@@ -1,0 +1,19 @@
+# Development profile (RTX 3050 laptop, 4-6 GB). Everything must work here.
+# Only non-default values are listed; defaults live in contracts/config.py.
+# Secrets never go in this file: they come from .env.
+profile: dev
+delay_seconds: 4.0
+detect:
+  stride: 3            # detect every 3rd frame, tracking fills the rest
+  fast_hz: 10
+  accurate_hz: 4
+gpu:
+  enabled: false       # video runs on the CPU first; GPU is optional acceleration
+  mem_limit_mb: 3500   # hard cap (a 4 GB card must fit)
+  ort_provider: cpu
+audio:
+  local_stt_model: base
+  local_stt_device: cpu
+captions:
+  enabled: false
+  provider: sarvam     # local IndicTrans2 is a demo-profile extra
