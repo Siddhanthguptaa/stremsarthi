@@ -1,0 +1,1 @@
+"""Stamp sender and reader."""

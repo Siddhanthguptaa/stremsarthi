@@ -1,0 +1,42 @@
+# Stream Sarthi runtime dependencies (Python 3.11). One ORT distribution only: see gpu.txt / ort-cpu.txt.
+# Do NOT install: opencv-python, opencv-python-headless (conflict with contrib-headless), plain
+# onnxruntime next to onnxruntime-gpu, paddle*, modelscope, openai-whisper, webrtcvad, flask*, eventlet.
+numpy==2.2.6
+scipy>=1.14,<1.17
+opencv-contrib-python-headless==4.12.0.88
+pillow>=11.2,<12
+pydantic>=2.11,<3
+pydantic-settings>=2.8,<3
+PyYAML>=6.0.2
+psutil>=7.0
+
+# media
+av==16.0.1
+soundfile>=0.13
+zxing-cpp>=2.3
+pyacoustid>=1.3.0
+
+# models (ONNX Runtime comes from gpu.txt or ort-cpu.txt)
+onnx>=1.18
+rapidocr==3.10.0
+pyclipper>=1.3
+shapely>=2.1
+
+# bus, api, chat, apis
+pyzmq>=26
+fastapi>=0.115
+uvicorn>=0.34
+websockets>=14
+aiohttp>=3.12
+httpx>=0.28
+python-dotenv>=1.1
+groq>=0.30
+sarvamai>=0.1.20
+twitchAPI==4.5.0
+keyring>=25.6
+google-api-python-client>=2.170
+google-auth-oauthlib>=1.2
+cryptography>=44
+huggingface-hub>=0.30
+python-multipart>=0.0.20
+qrcode>=8.0

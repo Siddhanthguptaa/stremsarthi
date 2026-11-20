@@ -10,7 +10,17 @@ readme = "CLAUDE.md"
 [tool.pytest.ini_options]
 addopts = "-q --import-mode=importlib"
 pythonpath = ["."]
-testpaths = ["contracts/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = [
+  "contracts/tests", "engine", "relay", "vision", "audio", "guard", "chat",
+  "app/api", "eval", "scripts", "models",
+]
+markers = [
+  "gpu: needs the GPU (run under the GPU lock, never in unit CI)",
+  "live: needs real API keys or a real stream (skipped when keys are absent)",
+  "slow: takes more than a few seconds",
+]
 
 [tool.ruff]
 line-length = 110

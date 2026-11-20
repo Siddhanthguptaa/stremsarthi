@@ -1,0 +1,117 @@
+"""Relay address and credential rules (ported from IRL Shield tests/m2/test_security.py)."""
+
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from relay.security import Credentials, RelayAddress, is_allowed_bind, mediamtx_users, redact
+
+
+@pytest.mark.parametrize(
+    "host", ["0.0.0.0", "::", "::1", "100.63.255.255", "100.128.0.0", "localhost", "8.8.8.8", "172.32.0.1"]
+)
+def test_bind_hosts_outside_loopback_lan_tailscale_are_refused(host):
+    assert not is_allowed_bind(host)
+    with pytest.raises(ValueError):
+        RelayAddress(host)
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "127.0.0.1",
+        "127.255.255.254",
+        "10.1.2.3",
+        "172.16.0.9",
+        "192.168.1.20",
+        "100.64.0.0",
+        "100.80.90.100",
+        "100.127.255.255",
+    ],
+)
+def test_loopback_lan_and_tailscale_binds_are_allowed(host):
+    assert RelayAddress(host).host == host
+
+
+def test_ports_must_be_unprivileged_and_distinct():
+    with pytest.raises(ValueError):
+        RelayAddress("127.0.0.1", rtmp_port=80)
+    with pytest.raises(ValueError):
+        RelayAddress("127.0.0.1", rtmp_port=9000, srt_port=9000)
+
+
+def test_default_ports_match_the_config_defaults():
+    address = RelayAddress()
+    assert (address.host, address.rtmp_port, address.srt_port) == ("127.0.0.1", 1935, 8890)
+
+
+def test_credentials_are_hidden_and_unique():
+    phone, internal = Credentials.generate(), Credentials.generate()
+    assert phone.password != internal.password
+    for text in (repr(phone), str(phone)):
+        assert phone.password not in text
+        assert phone.user not in text
+
+
+def test_credentials_reject_characters_that_could_break_urls():
+    for bad in ("a:b", "a b", "a&b", "", "x" * 200):
+        with pytest.raises(ValueError):
+            Credentials("user", bad)
+
+
+def test_user_list_permissions_and_ips():
+    address = RelayAddress("192.168.1.20")
+    phone, internal = Credentials.generate(), Credentials.generate()
+    users = mediamtx_users(address, phone, internal)
+    by_user = {(u["user"], tuple(u["ips"])): u["permissions"] for u in users}
+    assert by_user[(phone.user, ())] == [{"action": "publish", "path": "camera"}]
+    internal_perms = next(u for u in users if u["user"] == internal.user)
+    assert internal_perms["permissions"] == [
+        {"action": "read", "path": "camera"},
+        {"action": "publish", "path": "shielded"},
+    ]
+    assert set(internal_perms["ips"]) == {"127.0.0.1", "192.168.1.20"}
+    anonymous = [u for u in users if u["user"] == "any"]
+    assert all(u["ips"] == ["127.0.0.1"] for u in anonymous), "anonymous access is loopback only"
+    assert {p["action"] for u in anonymous for p in u["permissions"]} == {"read", "api"}
+    assert not any(p["path"] == "camera" for u in anonymous for p in u["permissions"] if "path" in p)
+    json.dumps(users)  # serialisable
+
+
+def test_url_builders():
+    address = RelayAddress("127.0.0.1", rtmp_port=19350, srt_port=18890, rtsp_port=18554)
+    creds = Credentials("alice", "s3cret-_x")
+    assert address.rtmp("camera", creds) == "rtmp://127.0.0.1:19350/camera?user=alice&pass=s3cret-_x"
+    srt = address.srt("publish", "camera", creds, latency_ms=300)
+    assert "streamid=publish:camera:alice:s3cret-_x" in srt and "latency=300000" in srt
+    assert address.rtsp("camera", creds) == "rtsp://alice:s3cret-_x@127.0.0.1:18554/camera"
+    assert address.rtsp("shielded") == "rtsp://127.0.0.1:18554/shielded"
+    with pytest.raises(ValueError):
+        address.rtmp("other")
+    with pytest.raises(ValueError):
+        address.srt("write", "camera")
+
+
+def test_no_twitch_or_tailscale_coupling_left():
+    import relay.security as security
+
+    assert not hasattr(security, "TwitchDestination")
+    source = open(security.__file__, encoding="utf-8").read()
+    assert "bandwidthtest" not in source and "naie" not in source
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "publishing rtmps://a.rtmps.youtube.com:443/live2/abcd-efgh-ijkl-mnop failed",
+        "connect rtsp://user:hunter2@127.0.0.1:8554/camera ok",
+        "bad request ?user=bob&pass=hunter2",
+        "path /live2/abcd-efgh-ijkl-mnop",
+    ],
+)
+def test_redact_removes_urls_and_keys(line):
+    cleaned = redact(line)
+    for secret in ("hunter2", "abcd-efgh-ijkl-mnop", "youtube.com", "bob"):
+        assert secret not in cleaned

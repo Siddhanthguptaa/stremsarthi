@@ -1,0 +1,4 @@
+# Optional adapters only. NOT on the default path. Replace before any commercial release.
+# ultralytics is AGPL-3.0; insightface code is MIT but its pretrained weights are non-commercial.
+ultralytics==8.3.189
+insightface==0.7.3

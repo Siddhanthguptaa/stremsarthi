@@ -1,0 +1,1 @@
+{"t":"Detection","v":1,"d":{"detector":"cards","category":"aadhaar","quad":{"pts":[[10,20],[110,20],[110,80],[10,80]]},"confidence":0.93,"frame_seq":7,"pts":0.233,"completed_at":12.5,"track_id":3,"allow":false,"aux_quads":{"mouth":{"pts":[[10,20],[110,20],[110,80],[10,80]]}},"extra":{"verhoeff":true,"score":0.5,"script":"latin"}}}

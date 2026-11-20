@@ -71,7 +71,7 @@ def test_unknown_nested_keys_rejected():
 
 
 def test_private_terms_not_in_repr():
-    c = make(chat={"streamer_private_terms": ["my street name"]})
+    c = make(chat={"streamer_private": {"terms": ["my street name"]}})
     assert "my street name" not in repr(c)
 
 
@@ -143,3 +143,44 @@ def test_groq_rate_caps_stay_under_provider_limits():
 
 def test_blocklist_not_in_repr():
     assert "badword" not in repr(make(guard={"risky_text_blocklist": ["badword"]}))
+
+
+def test_chat_config_matches_the_chat_spec():
+    c = make().chat
+    assert (
+        c.youtube.planned_stream_hours,
+        c.youtube.daily_quota_units,
+        c.youtube.action_budget_fraction,
+    ) == (3.0, 10_000, 0.2)
+    assert c.youtube.allow_timeout is False and c.twitch.anonymous_read is False
+    assert (c.classify.llm_rpm, c.classify.llm_timeout_ms, c.classify.llm_pending_max_s) == (30, 250, 10.0)
+    assert c.actions.severe_abuse == "timeout" and c.actions.scam == "delete"
+    assert c.commands.hold_roles == ["broadcaster", "moderator"] and c.commands.unhold_roles == [
+        "broadcaster"
+    ]
+    assert (c.modqueue.max_items, c.modqueue.ttl_s) == (500, 1800)
+    assert "555" not in repr(make(chat={"streamer_private": {"phones": ["555-0100"]}}))
+
+
+def test_risky_text_is_off_by_default_and_ocr_model_selectable():
+    c = make()
+    assert c.categories[Category.RISKY_TEXT].enabled is False
+    assert all(cfg.enabled for cat, cfg in c.categories.items() if cat is not Category.RISKY_TEXT)
+    assert c.ocr.det_model == "v6_tiny" and make(ocr={"det_model": "v5_mobile"}).ocr.det_model == "v5_mobile"
+
+
+def test_engine_cv_threads_default_and_limits():
+    assert make().engine.cv_threads == 2
+    assert make(engine={"cv_threads": None}).engine.cv_threads is None
+    with pytest.raises(ValidationError):
+        make(engine={"cv_threads": 0})
+
+
+def test_relay_ingest_settings_and_secrets(monkeypatch):
+    c = make()
+    assert c.relay.ingest_bind_host == "127.0.0.1" and c.relay.rtsp_port == 8554
+    monkeypatch.setenv("INGEST_PUBLISH_USER", "publisher-name")
+    monkeypatch.setenv("INGEST_PUBLISH_PASSWORD", "publisher-secret")
+    c = make()
+    assert c.ingest_publish_password.get_secret_value() == "publisher-secret"
+    assert "publisher-secret" not in repr(c) + c.model_dump_json()

@@ -1,0 +1,1 @@
+{"t":"ChatMessage","v":1,"d":{"platform":"twitch","message_id":"m1","channel_id":"c1","author_id":"u1","author_display":"viewer one","text":"hello there","received_at":1700000000.0,"is_broadcaster":false,"is_moderator":false}}

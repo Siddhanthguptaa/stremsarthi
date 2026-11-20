@@ -44,6 +44,7 @@ class Category(StrEnum):
     # --- system ---
     HOLD = "hold"
     FAILSAFE = "failsafe"
+    SYSTEM_STATUS = "system_status"  # operational notices (quota low, platform disconnected)
 
 
 class Modality(StrEnum):

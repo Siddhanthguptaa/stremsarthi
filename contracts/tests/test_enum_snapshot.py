@@ -33,6 +33,7 @@ SNAPSHOT = {
         "profanity",
         "hold",
         "failsafe",
+        "system_status",
     },
     "Modality": {"video", "audio", "chat", "guard", "system"},
     "MaskStyle": {"blur", "pixelate", "solid"},

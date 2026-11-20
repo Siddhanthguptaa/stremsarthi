@@ -30,3 +30,13 @@ eval/clips/private/
 # tools and runtime
 .tmp/
 .claude/settings.local.json
+
+# eval run output
+eval/runs/
+
+# test certificates and keys: never commit
+auto.crt
+auto.key
+*.key
+*.crt
+*.pem

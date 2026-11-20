@@ -1,0 +1,7 @@
+# Installed with --no-deps because their own dependency lists would pull a second ONNX Runtime
+# (faster-whisper -> onnxruntime) or a second OpenCV. Their real dependencies are listed in base.txt
+# or below.
+faster-whisper==1.2.1
+ctranslate2>=4.6,<5
+tokenizers>=0.21
+tqdm>=4.66

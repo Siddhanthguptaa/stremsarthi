@@ -1,0 +1,51 @@
+{
+  "host": {
+    "cpu": "x86_64",
+    "os": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.11.18"
+  },
+  "vad": {
+    "ms_per_32ms_window": 0.159,
+    "cpu_fraction_of_realtime": 0.005,
+    "segments": 3
+  },
+  "sarvam": {
+    "status": "UNVERIFIED (no SARVAM_API_KEY in the environment)"
+  },
+  "groq": {
+    "status": "UNVERIFIED (no GROQ_API_KEY in the environment)"
+  },
+  "local": {
+    "tiny": {
+      "repo": "Systran/faster-whisper-tiny",
+      "download": "present, hash-verified at fetch, commit d90ca5fe2602",
+      "load_and_warm_s": 0.52,
+      "n": 20,
+      "p50_s": 0.274,
+      "p95_s": 0.306,
+      "max_s": 0.326,
+      "status": "measured",
+      "segment_s": 1.5,
+      "rtf": 0.183,
+      "word_times": "word-level",
+      "wer_english_clip": 0.0,
+      "sample_output": "Hello, this is a test."
+    },
+    "base": {
+      "repo": "Systran/faster-whisper-base",
+      "download": "present, hash-verified at fetch, commit ebe41f70d5b6",
+      "load_and_warm_s": 0.85,
+      "n": 20,
+      "p50_s": 0.473,
+      "p95_s": 0.56,
+      "max_s": 0.568,
+      "status": "measured",
+      "segment_s": 1.5,
+      "rtf": 0.315,
+      "word_times": "word-level",
+      "wer_english_clip": 0.0,
+      "sample_output": "Hello, this is a test."
+    },
+    "hindi_hinglish_quality": "NOT MEASURED: no Hindi/Hinglish TTS clip available (pass --clip/--ref)"
+  }
+}

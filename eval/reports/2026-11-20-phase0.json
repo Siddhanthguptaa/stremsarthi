@@ -1,0 +1,198 @@
+{
+  "baseline": null,
+  "checks": [
+    {
+      "name": "doctor",
+      "note": "exit 1 accepted (warnings only)",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "contracts tests",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "ruff check",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "ruff format --check",
+      "note": "",
+      "op": "==",
+      "passed": false,
+      "target": 0.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "eval selftest",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "eval unit tests",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "ffprobe receive (SRT ingest)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "ffprobe receive (RTMP ingest)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "loopback 60s (0 drops)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "STT spike report",
+      "note": "",
+      "op": "==",
+      "passed": false,
+      "target": 0.0,
+      "unit": "",
+      "value": 1.0
+    }
+  ],
+  "date": "2026-11-20",
+  "failing_ids": [],
+  "header": {
+    "commands": [
+      "python scripts/doctor.py",
+      "python -m pytest -q contracts/tests",
+      "ruff check .",
+      "ruff format --check .",
+      "python -m eval.run selftest",
+      "python -m pytest -q eval/tests",
+      "python -m eval.run ffprobe-check --transport srt --run-dir .tmp/gate/phase0/ffprobe-srt",
+      "python -m eval.run ffprobe-check --transport rtmp --run-dir .tmp/gate/phase0/ffprobe-rtmp",
+      "python -m eval.run loopback --seconds 60 --transport srt --tap rtmp --run-dir .tmp/gate/phase0/loopback",
+      "spike_check"
+    ],
+    "git_rev": "3b878fd1ddb4",
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
+    },
+    "profile": "dev",
+    "seed": 1234
+  },
+  "notes": [
+    "loopback.json: {\"checks\": {\"capture_gaps_over_100ms_eq_0\": true, \"no_reader_error\": true, \"reader_attached_within_5s\": true, \"received_fraction_ge_0.98\": true, \"stamp_unreadable_le_1pct\": true}, \"frames_sent_total\": 1910, \"passed\": true, \"reader\": {\"av_offset_ms\": {\"max_abs_ms\": 0.5, \"mean_ms\": 0.114, \"n\": 62}, \"beeps_audio\": 62, \"beeps_video\": 62, \"capture_gaps_over_100ms\": 0, \"counter_first\": 60, \"counter_last\": 1899, \"delay\": {\"max_s\": 1.6215, \"n\": 1840, \"p50_s\": 0.3024, \"p95_s\": 0.3165}, \"elapsed_s\": 60.038, \"error\": null, \"fps\": 30.647, \"frames_read\": 1840, \"max_capture_gap_ms\": 38.0, \"max_interarrival_ms\": 104.82, \"missing_frames\": 0, \"received_fraction\": 1.0, \"stamp_decode_ms_p95\": 2.275, \"stamp_unreadable\": 0, \"stamp_unreadable_frac\": 0.0, \"video_decoded\": 1840}, \"reader_window_s\": 60.0, \"sender_cpu\": {\"mean_cores\": 0.4, \"n\": 64, \"peak_cores\": 2.164}, \"sender_exit\": 0, \"tap\": \"rtmp\", \"transport\": \"srt\"}",
+    "ffprobe.json: {\"audio\": {\"channels\": 1, \"codec_name\": \"aac\", \"sample_rate\": \"48000\"}, \"checks\": {\"audio_48k\": true, \"audio_aac\": true, \"video_1280x720\": true, \"video_h264\": true}, \"last_error\": null, \"passed\": true, \"transport\": \"srt\", \"video\": {\"codec_name\": \"h264\", \"height\": 720, \"r_frame_rate\": \"30/1\", \"width\": 1280}}",
+    "ffprobe.json: {\"audio\": {\"channels\": 1, \"codec_name\": \"aac\", \"sample_rate\": \"48000\"}, \"checks\": {\"audio_48k\": true, \"audio_aac\": true, \"video_1280x720\": true, \"video_h264\": true}, \"last_error\": null, \"passed\": true, \"transport\": \"rtmp\", \"video\": {\"codec_name\": \"h264\", \"height\": 720, \"r_frame_rate\": \"30/1\", \"width\": 1280}}"
+  ],
+  "passed": false,
+  "phase": "phase0",
+  "tables": [
+    {
+      "columns": [
+        "step",
+        "raw exit",
+        "gate exit",
+        "seconds"
+      ],
+      "rows": [
+        [
+          "doctor",
+          1,
+          0,
+          2.2
+        ],
+        [
+          "contracts tests",
+          0,
+          0,
+          3.3
+        ],
+        [
+          "ruff check",
+          0,
+          0,
+          0.0
+        ],
+        [
+          "ruff format --check",
+          1,
+          1,
+          0.0
+        ],
+        [
+          "eval selftest",
+          0,
+          0,
+          14.6
+        ],
+        [
+          "eval unit tests",
+          0,
+          0,
+          96.0
+        ],
+        [
+          "ffprobe receive (SRT ingest)",
+          0,
+          0,
+          4.8
+        ],
+        [
+          "ffprobe receive (RTMP ingest)",
+          0,
+          0,
+          8.8
+        ],
+        [
+          "loopback 60s (0 drops)",
+          0,
+          0,
+          71.4
+        ],
+        [
+          "STT spike report",
+          1,
+          1,
+          0.0
+        ]
+      ],
+      "title": "Steps"
+    }
+  ]
+}

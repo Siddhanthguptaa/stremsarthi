@@ -1,0 +1,50 @@
+{
+  "baseline": null,
+  "checks": [
+    {
+      "name": "preflight",
+      "note": "",
+      "op": "==",
+      "passed": false,
+      "target": 0.0,
+      "unit": "",
+      "value": 2.0
+    }
+  ],
+  "date": "2026-11-20",
+  "failing_ids": [],
+  "header": {
+    "commands": [
+      "python -m eval.run phase1 --leg preflight --engine ref --out /tmp/pytest-of-root/pytest-2/test_a_failed_preflight_stops_0/out"
+    ],
+    "git_rev": "3b878fd1ddb4",
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
+    },
+    "profile": "dev",
+    "seed": 1234
+  },
+  "notes": [],
+  "passed": false,
+  "phase": "phase1-ref",
+  "tables": [
+    {
+      "columns": [
+        "step",
+        "raw exit",
+        "gate exit",
+        "seconds"
+      ],
+      "rows": [
+        [
+          "preflight",
+          2,
+          2,
+          0.0
+        ]
+      ],
+      "title": "Steps"
+    }
+  ]
+}

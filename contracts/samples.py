@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import CONTRACT_VERSION
 from .chat import ChatMessage, ChatVerdict, ModAction, ModQueueItem
 from .detection import Detection, MaskRequest, MuteSpan
 from .enums import Category, ChatAction, HoldSource, MaskKind, MaskStyle, Modality
@@ -137,7 +138,7 @@ def samples() -> list[Any]:
             allowlist_version=2,
             lanes_stale=(),
             protect_seconds=0.0,
-            contract_version="1.0.0",
+            contract_version=CONTRACT_VERSION,
         ),
         StageTiming(stage="lane_fast", seq=9, pts=0.3, t_start=1.0, t_end=1.02),
     ]

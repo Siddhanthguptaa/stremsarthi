@@ -1,0 +1,54 @@
+# MediaMTX configuration template for Stream Sarthi. Rendered by relay/mediamtx.py and written to
+# the child's stdin (never to disk). Placeholders are validated ints, an IPv4 address or JSON.
+# Everything MediaMTX enables by default and we do not need (HLS, WebRTC, MoQ, metrics, pprof,
+# playback, recording) is switched off.
+logLevel: info
+logDestinations: [stdout]
+logStructured: false
+dumpPackets: false
+
+# A short cellular or host pause must not kill the connection; the engine's own deadlines
+# decide PROTECT or HOLD. A large IDR arrives as hundreds of packets in one burst, so the write
+# queue is sized for that burst (power of two; it adds no steady-state playout delay).
+readTimeout: 10s
+writeTimeout: 10s
+writeQueueSize: 1024
+
+authMethod: internal
+authInternalUsers: ${users_json}
+
+api: yes
+apiAddress: 127.0.0.1:${api_port}
+metrics: no
+pprof: no
+playback: no
+hls: no
+webrtc: no
+moq: no
+
+# Loopback RTSP over TCP: serves the `shielded` tap to the eval gates.
+rtsp: yes
+rtspAddress: 127.0.0.1:${rtsp_port}
+rtspTransports: [tcp]
+rtspEncryption: "no"
+
+# Publishers (OBS or phone). Bound to ${bind_host}, loopback by default.
+rtmp: yes
+rtmpAddress: ${bind_host}:${rtmp_port}
+rtmpEncryption: "no"
+srt: yes
+srtAddress: ${bind_host}:${srt_port}
+srtMinLatency: ${srt_latency_ms}ms
+
+pathDefaults:
+  source: publisher
+  record: no
+
+paths:
+  # A new authenticated publisher replaces a stale one, so a phone that changes network
+  # (4G to Wi-Fi) reconnects immediately instead of waiting for the old SRT socket to time out.
+  camera:
+    overridePublisher: yes
+  # Written only by the relay; read by the eval gates on loopback.
+  shielded:
+    overridePublisher: no

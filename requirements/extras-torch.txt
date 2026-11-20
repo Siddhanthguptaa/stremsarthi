@@ -1,0 +1,9 @@
+# Optional: demo captions (IndicTrans2) and Kannada/Bengali OCR on crops. Heavy (about 3 GB).
+# cu128 wheels stop at torch 2.11; they carry sm_86 and sm_120. Install with:
+#   uv pip install -r requirements/extras-torch.txt --extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0
+torchvision==0.26.0
+torchaudio==2.11.0
+transformers>=4.57,<5
+sentencepiece>=0.2
+easyocr==1.7.2

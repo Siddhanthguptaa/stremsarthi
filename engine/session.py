@@ -1,0 +1,628 @@
+"""``Session``: A/V rings, the tick loop and the emit path. Never blocks on the sink.
+
+Adapted from IRL Shield ``relay/live.py`` (``RelaySession``; MIT, Copyright (c) 2026 Elan Nash;
+``engine/THIRD_PARTY_LICENSES/irl-shield/LICENSE``). Kept: the 48 kHz PCM ring tagged by absolute
+sample index (a slot is read only when its tag matches, so missing audio is silence), the audio
+slice of one frame taken at emit time, and the hold re-check just before the sink. Changed: video
+and audio arrive from a ``contracts.FrameSource`` on their own threads; masks come from a
+``contracts.LaneHost`` through ``DeadlineEngine``; painting is ``engine/compositor.py``; ``MuteSpan``
+and retroactive-hold ranges are applied to the audio slice; events, status and timing go out on the
+bus; the egress hold follows ``FrameSink.healthy``.
+
+Threads (``start``): ingest-video (``FrameSource.frames`` -> ``on_frame``), ingest-audio
+(``audio_blocks`` -> ``on_audio``) and tick (``step`` every ``tick_s``). Everything they call is
+also public and clock-injectable (``now=``), so the unit tests drive a session in virtual time
+without threads.
+
+Per emitted frame (docs/specs/engine.md 5.2 to 5.4): ``DeadlineEngine.poll`` decides LIVE, PROTECT
+or HOLD; the hold is re-checked; the compositor paints; the audio slice (1600 samples at 30 fps,
+exactly the frame's span on the 48 kHz timeline, silent in HOLD, mutes applied) is cut; the sink
+gets ``write(pts, image, audio)``. No frame is emitted before its deadline.
+"""
+
+from __future__ import annotations
+
+import logging
+import math
+import threading
+import time
+import uuid
+from collections import deque
+from collections.abc import Callable, Mapping
+from typing import Any
+
+import numpy as np
+from scipy.signal import firwin, lfilter
+
+from contracts import (
+    AllowlistUpdate,
+    AudioChunk,
+    AudioHost,
+    Category,
+    Config,
+    ConfigChange,
+    Frame,
+    FrameSink,
+    FrameSource,
+    HoldCommand,
+    HoldSource,
+    LaneHost,
+    MaskKind,
+    MaskRequest,
+    MaskStyle,
+    MuteSpan,
+    SessionCommand,
+    StageTiming,
+    Topic,
+)
+
+from .audio_mute import RATE, MuteBook
+from .compositor import Composed, Compositor
+from .control import HOLD
+from .deadline import DeadlineEngine, FrameDecision
+from .publishers import SafetyPublisher, StatusPublisher
+from .timing import TimingLog
+
+log = logging.getLogger("streamsarthi.engine.session")
+
+ANALYSIS_RATE = 16_000
+RESYNC_SAMPLES = RATE // 50  # 20 ms: audio and video clocks further apart than this are re-aligned
+
+
+class AudioRing:
+    """48 kHz int16 ring indexed by absolute sample number. A slot is valid only when its tag matches."""
+
+    def __init__(self, seconds: float, rate: int = RATE) -> None:
+        self.capacity = int(math.ceil(seconds * rate))
+        self._samples = np.zeros(self.capacity, np.int16)
+        self._tags = np.full(self.capacity, -1, np.int64)
+        self._lock = threading.Lock()
+        self.latest = -1  # highest sample index written
+        self.rejected = 0
+
+    def write(self, index: int, pcm: np.ndarray) -> None:
+        n = len(pcm)
+        if n == 0:
+            return
+        idx = np.arange(index, index + n, dtype=np.int64)
+        with self._lock:
+            floor = self.latest - self.capacity + 1  # older samples would overwrite newer ones
+            if index < floor:
+                keep = idx >= floor
+                self.rejected += int((~keep).sum())
+                idx, pcm = idx[keep], pcm[keep]
+                if len(idx) == 0:
+                    return
+            slots = idx % self.capacity
+            self._samples[slots] = pcm
+            self._tags[slots] = idx
+            self.latest = max(self.latest, int(idx[-1]))
+
+    def read(self, first: int, n: int) -> np.ndarray:
+        """``n`` samples from ``first``; anything not written (or overwritten) reads as silence."""
+        idx = np.arange(first, first + n, dtype=np.int64)
+        slots = idx % self.capacity
+        with self._lock:
+            valid = self._tags[slots] == idx
+            return np.where(valid, self._samples[slots], 0).astype(np.int16)
+
+    def zero(self, start: int, end: int) -> None:
+        """Silence ``[start, end)`` in place (retroactive hold)."""
+        if end <= start:
+            return
+        start = max(start, end - self.capacity)
+        idx = np.arange(start, end, dtype=np.int64)
+        slots = idx % self.capacity
+        with self._lock:
+            hit = self._tags[slots] == idx
+            self._samples[slots[hit]] = 0
+
+    def clear(self) -> None:
+        with self._lock:
+            self._tags.fill(-1)
+            self.latest = -1
+
+    @property
+    def nbytes(self) -> int:
+        return int(self._samples.nbytes + self._tags.nbytes)
+
+
+class Downsampler:
+    """Streaming 48 kHz -> 16 kHz (low-pass FIR with carried state, then every third sample)."""
+
+    def __init__(self) -> None:
+        self._taps = firwin(63, 7000.0, fs=RATE).astype(np.float64)
+        self._zi = np.zeros(len(self._taps) - 1)
+        self._phase = 0
+
+    def reset(self) -> None:
+        self._zi[:] = 0.0
+        self._phase = 0
+
+    def process(self, pcm48: np.ndarray) -> np.ndarray:
+        filtered, self._zi = lfilter(self._taps, 1.0, pcm48.astype(np.float64), zi=self._zi)
+        out = filtered[self._phase :: 3]
+        self._phase = (self._phase - len(pcm48)) % 3
+        return np.clip(np.rint(out), -32768, 32767).astype(np.int16)
+
+
+class Session:
+    def __init__(
+        self,
+        config: Config,
+        source: FrameSource,
+        sink: FrameSink,
+        *,
+        lane_host: LaneHost | None = None,
+        audio_host: AudioHost | None = None,
+        bus: Any = None,
+        engine: DeadlineEngine | None = None,
+        compositor: Compositor | None = None,
+        clock: Callable[[], float] = time.monotonic,
+        session_id: str | None = None,
+        tick_s: float = 0.004,
+    ) -> None:
+        self.config = config
+        self.source, self.sink = source, sink
+        self.lane_host, self.audio_host = lane_host, audio_host
+        self.bus = bus
+        self.clock = clock
+        self.tick_s = tick_s
+        self.session_id = session_id or uuid.uuid4().hex
+        self.fps = float(config.fps)
+        lanes = lane_host.active_lanes if lane_host is not None else ()
+        self.engine = engine or DeadlineEngine.from_config(config, lanes)
+        self.compositor = compositor or Compositor(config)
+        self.mutes = MuteBook()
+        self.mute_ms: deque[float] = deque(maxlen=4096)  # ring read + mute application, per emitted frame
+        self._mute_window: tuple[float, float] | None = None
+        delay = self.engine.delay_seconds
+        self.ring = AudioRing(delay + 3.0)
+        self._down = Downsampler()
+        self._audio_seq = 0
+        self._acursor: float | None = None  # next output sample (float: fps need not divide 48 kHz)
+        self._cursor_reset = False  # set by ingest threads, applied by the tick thread
+        self.safety = SafetyPublisher(bus, self.session_id, fps=self.fps) if bus is not None else None
+        self.status = StatusPublisher(bus, self.engine) if bus is not None else None
+        self.timing_log = TimingLog(config.engine.timing_log_path)
+        if bus is not None and self.timing_log.enabled:
+            self.timing_log.attach(bus)
+        self._highwater = -1  # highest capture sequence submitted: the fence's high-water mark
+        self._arrivals: dict[int, float] = {}
+        self._arrival_order: deque[int] = deque()
+        self._generation: Any = None
+        self._resets_seen = 0
+        self._state = "ready"
+        self._last_emit_at: float | None = None
+        self._egress_held = False
+        self._last_pts: float | None = None
+        self._lanes_checked = 0.0
+        self.counts: dict[str, int] = {
+            "emitted": 0, "LIVE": 0, "PROTECT": 0, "HOLD": 0, "fenced": 0, "bad_frames": 0,
+            "sink_errors": 0, "lane_errors": 0, "audio_errors": 0, "audio_resyncs": 0,
+            "rejected_requests": 0, "compose_errors": 0, "config_ignored": 0,
+            "late_spans": 0, "tardy_spans": 0,
+        }  # fmt: skip
+        self.emit_lag: deque[float] = deque(maxlen=4096)
+        self.compose_ms: deque[float] = deque(maxlen=4096)
+        self.finished = threading.Event()
+        self._stop = threading.Event()
+        self._threads: list[threading.Thread] = []
+        self._unsubscribe: list[Callable[[], None]] = []
+        if bus is not None:
+            self._wire_bus(bus)
+
+    # ------------------------------------------------------------------ bus wiring
+
+    def _wire_bus(self, bus: Any) -> None:
+        on = getattr(bus, "on", None)
+        if on is None:
+            return
+        self._unsubscribe = [
+            on(Topic.HOLD, self.apply_hold),
+            on(Topic.CONFIG, self.apply_config),
+            on(Topic.MUTE_SPAN, self.on_mute),
+            on(Topic.MASK_REQUEST, self.on_mask_request),
+            on(Topic.ALLOWLIST, self._on_allowlist),
+            on(Topic.SESSION, self._on_session_command),
+        ]
+
+    def _on_allowlist(self, update: AllowlistUpdate) -> None:
+        if self.status is not None:
+            self.status.allowlist_version = update.version
+
+    def _on_session_command(self, command: SessionCommand) -> None:
+        # Go-live orchestration belongs to the API (T6.1); the engine is always on and ignores it.
+        log.info("session command %s ignored by the engine", command.action)
+
+    def _publish_timing(self, stage: str, seq: int, pts: float | None, t0: float, t1: float) -> None:
+        if self.bus is None:
+            return
+        try:
+            self.bus.publish(Topic.TIMING, StageTiming(stage, seq, pts, t0, max(t0, t1)))
+        except Exception as exc:
+            log.debug("timing publish failed: %s", type(exc).__name__)
+
+    # ------------------------------------------------------------------ ingest
+
+    def on_frame(self, frame: Frame, now: float | None = None) -> bool:
+        """Feed one decoded frame to the engine and the vision host. False if it was discarded."""
+        now = self.clock() if now is None else now
+        try:
+            frame.validate_canvas()
+        except ValueError:
+            self.counts["bad_frames"] += 1
+            return False
+        self._highwater = max(self._highwater, frame.seq)
+        try:
+            accepted = self.engine.submit(frame, now)
+        except (ValueError, RuntimeError):
+            self.counts["bad_frames"] += 1
+            return False
+        if self.engine.resets != self._resets_seen:
+            self._resets_seen = self.engine.resets
+            self._on_reset(frame.seq)
+        if not accepted:
+            return False
+        self._arrivals[frame.seq] = frame.arrival
+        self._arrival_order.append(frame.seq)
+        while len(self._arrival_order) > 512:
+            self._arrivals.pop(self._arrival_order.popleft(), None)
+        if self.lane_host is not None:
+            try:
+                self.lane_host.submit(frame)
+            except Exception as exc:
+                self.counts["lane_errors"] += 1
+                log.warning("lane host submit failed: %s", type(exc).__name__)
+        return True
+
+    def _on_reset(self, seq: int) -> None:
+        """The PTS clock restarted: sequence-keyed and sample-keyed state from the old clock is void."""
+        self._highwater = seq
+        self._arrivals.clear()
+        self._arrival_order.clear()
+        self.compositor.presenter.reset()
+        if self._generation is None:  # the source does not label audio generations: clear here
+            self.ring.clear()
+            self._down.reset()
+        self.mutes.clear()
+        self._cursor_reset = True
+
+    def on_audio(self, index: int, pcm: Any, generation: Any = None) -> None:
+        """Feed one 48 kHz block tagged with its absolute sample index; tap 16 kHz to the audio host."""
+        samples = np.asarray(pcm, np.int16)
+        if generation is not None and generation != self._generation:
+            if self._generation is not None:
+                self.ring.clear()
+                self._down.reset()
+                self.mutes.clear()
+                self._cursor_reset = True
+            self._generation = generation
+        self.ring.write(int(index), samples)
+        if self.audio_host is None:
+            return
+        try:
+            chunk = AudioChunk(
+                seq=self._audio_seq,
+                pts_start=index / RATE,
+                sample_rate=ANALYSIS_RATE,
+                pcm=self._down.process(samples),
+                arrival=self.clock(),
+            )
+            self._audio_seq += 1
+            self.audio_host.feed(chunk)
+        except Exception as exc:  # the audio path must never stall ingest
+            self.counts["audio_errors"] += 1
+            log.warning("audio host feed failed: %s", type(exc).__name__)
+
+    # ------------------------------------------------------------------ commands from the bus
+
+    def hold(self, source: HoldSource | str, active: bool, now: float | None = None) -> str:
+        now = self.clock() if now is None else now
+        src = HoldSource(source)
+        state = self.engine.hold(src, active, now=now)
+        if self.safety is not None:
+            self.safety.hold(src, active, now, self._last_pts)
+        self._apply_retro_audio()
+        return state
+
+    def apply_hold(self, command: HoldCommand) -> None:
+        self.hold(command.source, command.active)
+
+    def apply_config(self, change: ConfigChange) -> None:
+        """Runtime toggles the engine owns; keys for other modules are not an error."""
+        for key, value in change.diff.items():
+            try:
+                self._apply_config_key(key, value)
+            except (TypeError, ValueError):
+                self.counts["config_ignored"] += 1
+
+    def _apply_config_key(self, key: str, value: Any) -> None:
+        if key == "hold.retro_seconds":
+            retro = max(0.0, min(float(value), self.engine.delay_seconds - 0.5))
+            self.engine.control.retro_seconds = retro
+        elif key == "engine.max_mask_area_ratio":
+            ratio = float(value)
+            if not 0.0 < ratio <= 1.0:
+                raise ValueError("ratio out of range")
+            self.compositor.max_area_ratio = ratio
+        elif key.startswith("categories.") and key.endswith(".style"):
+            category = Category(key.split(".")[1])
+            self.compositor.style_overrides[category] = MaskStyle(value)
+        elif key == "audio.mute_mode":
+            if value not in ("silence", "bleep"):
+                raise ValueError("unknown mute mode")
+            self.mutes.mode_override = str(value)  # takes effect for audio not yet emitted
+        # captions.enabled arrives with T5.4; other keys belong to other modules
+
+    def on_mute(self, span: MuteSpan, now: float | None = None) -> None:
+        """Accept a ``MuteSpan`` (docs/specs/engine.md 5.6) and report it (codes only, never audio or text)."""
+        now = self.clock() if now is None else now
+        outcome = self.mutes.add(span)
+        origin = self.engine.origin
+        if outcome.accepted and origin is not None and now > origin + span.pts_start + self.engine.delay_seconds - 0.1:
+            self.counts["tardy_spans"] += 1  # after span_start_arrival + D - 0.1, but its audio had not left
+        late = outcome.late or outcome.leaked_samples > 0
+        if late:
+            self.counts["late_spans"] += 1
+            log.warning("late-span: mute span arrived after (part of) its audio was emitted")
+            self._publish_timing(
+                "late_span", round(span.pts_start * self.fps), span.pts_start, min(span.completed_at, now), now
+            )
+        if self.safety is None or not (outcome.accepted or outcome.late):
+            return
+        if late:
+            self.safety.mute(span, late=True, partial_ms=round(outcome.leaked_samples * 1000 / RATE))
+        if outcome.accepted:
+            self.safety.mute(span)  # a revised span republishes the same event_id with its new duration
+
+    def on_mask_request(self, request: MaskRequest) -> None:
+        """Audio-originated requests (FULL_FRAME, MOUTH_OF_SPEAKER). REGION masks come from lanes only."""
+        if request.kind is MaskKind.REGION:
+            self.counts["rejected_requests"] += 1
+            return
+        self.engine.submit_request(request)
+
+    def _apply_retro_audio(self) -> None:
+        """Retroactive hold (D-23): zero the held PTS range in the ring now, and keep it as a hard-silence
+        range in the mute book so audio that reaches the ring late for that time is silenced too."""
+        for window in self.engine.pop_retro_ranges():
+            start, end = round(window.pts_start * RATE), round(window.pts_end * RATE)
+            self.ring.zero(start, end)
+            self.mutes.add_silence(start, end)
+
+    # ------------------------------------------------------------------ the tick
+
+    def step(self, now: float | None = None) -> int:
+        """One tick: drain lane results, decide due frames, emit them. Returns how many were emitted."""
+        now = self.clock() if now is None else now
+        self._check_sink(now)
+        self._drain_lanes(now)
+        self._sync_lanes(now)
+        self._apply_retro_audio()
+        emitted = 0
+        for decision in self.engine.poll(now):
+            self._emit(decision, now)
+            emitted += 1
+        if self.status is not None:
+            self.status.tick(now, self._status_state(now))
+        if self.engine.drained:
+            self.finished.set()
+        return emitted
+
+    def _check_sink(self, now: float) -> None:
+        healthy = bool(getattr(self.sink, "healthy", True))
+        if not healthy and not self._egress_held:
+            self._egress_held = True
+            self.hold(HoldSource.AUTO_EGRESS, True, now)
+        elif healthy and self._egress_held:
+            self._egress_held = False
+            self.hold(HoldSource.AUTO_EGRESS, False, now)
+
+    def _drain_lanes(self, now: float) -> None:
+        if self.lane_host is None:
+            return
+        try:
+            results = self.lane_host.poll()
+        except Exception as exc:
+            self.counts["lane_errors"] += 1
+            log.warning("lane host poll failed: %s", type(exc).__name__)
+            return
+        for result in results:
+            self.engine.submit_result(result)
+            started = self._arrivals.get(result.frame_seq, result.completed_at)
+            self._publish_timing(
+                f"lane_{result.lane.value}", result.frame_seq, result.pts, started, result.completed_at
+            )
+
+    def _sync_lanes(self, now: float) -> None:
+        """Follow the host's active lanes (a category toggle can add or remove a lane)."""
+        if self.lane_host is None or now - self._lanes_checked < 1.0:
+            return
+        self._lanes_checked = now
+        lanes = tuple(sorted(self.lane_host.active_lanes, key=lambda lane: lane.value))
+        if set(lanes) != set(self.engine.lanes):
+            self.engine.set_lanes(lanes)
+
+    def _status_state(self, now: float) -> str:
+        if self._stop.is_set():
+            return "stopping"
+        if self._state == "error":
+            return "error"
+        if self._last_emit_at is not None and now - self._last_emit_at < 1.5:
+            return "live"
+        return "waiting_ingest" if self._threads or self._last_emit_at is not None else self._state
+
+    # ------------------------------------------------------------------ emit
+
+    def _emit(self, decision: FrameDecision, now: float) -> None:
+        began = time.monotonic()
+        self._apply_retro_audio()
+        decision = self.engine.recheck(decision)
+        composed = self._compose(decision)
+        if self.engine.control.state == HOLD and composed.state != HOLD:
+            # a hold arrived while painting: slate this frame instead (hold re-check, docs 5.3)
+            decision = self.engine.recheck(decision)
+            composed = self._compose(decision)
+        composed_at = time.monotonic()
+        audio = self._audio_slice(decision, composed)
+        written_from = time.monotonic()
+        try:
+            self.sink.write(decision.pts, composed.image, audio)
+        except Exception as exc:  # a failing sink must not stop the clock
+            self.counts["sink_errors"] += 1
+            log.warning("sink write failed: %s", type(exc).__name__)
+        written = time.monotonic()
+        self._after_emit(decision, composed, now, began, composed_at, written_from, written)
+
+    def _compose(self, decision: FrameDecision) -> Composed:
+        try:
+            return self.compositor.compose(decision, self._highwater)
+        except Exception as exc:  # never emit unpainted pixels: a failure slate is the safe output
+            self.counts["compose_errors"] += 1
+            log.error("compose failed: %s", type(exc).__name__)
+            return Composed(
+                self.compositor.presenter.store.get("FAILURE").copy(), "slate", HOLD, "FAILURE", 0, 0.0, False
+            )
+
+    def _audio_slice(self, decision: FrameDecision, composed: Composed) -> np.ndarray:
+        per_frame = RATE / self.fps
+        target = decision.pts * RATE
+        if self._cursor_reset:
+            self._cursor_reset = False
+            self._acursor = None
+            self.mutes.reset_cursor()
+        if self._acursor is None or abs(self._acursor - target) > RESYNC_SAMPLES:
+            if self._acursor is not None:
+                self.counts["audio_resyncs"] += 1
+            self._acursor = target
+        first = round(self._acursor)
+        self._acursor += per_frame
+        n = round(self._acursor) - first
+        if composed.audio_silent:  # HOLD: fully silent, whatever the book holds
+            self.mutes.advance(first + n)
+            return np.zeros(n, np.int16)
+        began = time.monotonic()
+        pcm = self.ring.read(first, n)
+        self.mutes.apply(pcm, first)  # also marks [first, first + n) as emitted (late-span test)
+        self._mute_window = (began, time.monotonic())
+        self.mute_ms.append((self._mute_window[1] - began) * 1000.0)
+        return pcm
+
+    def _after_emit(
+        self,
+        decision: FrameDecision,
+        composed: Composed,
+        now: float,
+        began: float,
+        composed_at: float,
+        written_from: float,
+        written: float,
+    ) -> None:
+        state = composed.state
+        self.counts["emitted"] += 1
+        self.counts[state] += 1
+        if composed.kind == "slate" and state == "HOLD" and decision.state != HOLD:
+            self.counts["fenced"] += 1
+        self.emit_lag.append(decision.emit_lag)
+        self.compose_ms.append((composed_at - began) * 1000.0)
+        self._last_emit_at = now
+        self._last_pts = decision.pts
+        if self.safety is not None:
+            self.safety.frame(decision.pts, decision.masks if state == "LIVE" else ())
+            self.safety.state(state, decision.reason, decision.pts)
+        if self.status is not None:
+            self.status.observe(now, decision.arrival, decision.protect_age)
+        if self.bus is not None:
+            seq, pts = decision.seq, decision.pts
+            self._publish_timing("compose", seq, pts, began, composed_at)
+            self._publish_timing("sink_write", seq, pts, written_from, written)
+            if self._mute_window is not None:
+                self._publish_timing("audio_mute", seq, pts, *self._mute_window)
+                self._mute_window = None
+            if decision.arrival is not None:
+                self._publish_timing("engine_delay", seq, pts, decision.arrival, self.clock())
+            self._publish_timing(
+                "emit_lag", seq, pts, decision.deadline, max(decision.deadline, decision.emitted_at)
+            )
+
+    # ------------------------------------------------------------------ threads
+
+    def start(self) -> None:
+        if self._threads:
+            return
+        self._state = "waiting_ingest"  # the caller (engine.main) starts the lane and audio hosts first
+        for name, target in (
+            ("engine-ingest-video", self._video_loop),
+            ("engine-ingest-audio", self._audio_loop),
+            ("engine-tick", self._tick_loop),
+        ):
+            thread = threading.Thread(target=target, name=name, daemon=True)
+            thread.start()
+            self._threads.append(thread)
+
+    def _video_loop(self) -> None:
+        try:
+            for frame in self.source.frames():
+                if self._stop.is_set():
+                    return
+                self.on_frame(frame)
+        except Exception as exc:
+            self._state = "error"
+            log.error("video ingest failed: %s", type(exc).__name__)
+            return
+        if not self._stop.is_set():
+            self.engine.end()  # the source ended: drain what is buffered, then finish
+
+    def _audio_loop(self) -> None:
+        try:
+            for block in self.source.audio_blocks():
+                if self._stop.is_set():
+                    return
+                index, pcm = block
+                self.on_audio(index, pcm, getattr(block, "generation", None))
+        except Exception as exc:
+            self._state = "error"
+            log.error("audio ingest failed: %s", type(exc).__name__)
+
+    def _tick_loop(self) -> None:
+        while not self._stop.is_set():
+            try:
+                emitted = self.step()
+            except Exception as exc:  # a bug in one tick must not end the stream clock
+                self.counts["compose_errors"] += 1
+                log.error("tick failed: %s", type(exc).__name__)
+                emitted = 0
+            if self.finished.is_set():
+                return
+            if emitted < 4:
+                self._stop.wait(self.tick_s)
+
+    def stop(self, join_timeout: float = 3.0) -> None:
+        """Stop the threads, close the source (to unblock ingest) and flush open events."""
+        self._stop.set()
+        try:
+            self.source.close()
+        except Exception as exc:
+            log.warning("source close failed: %s", type(exc).__name__)
+        for thread in self._threads:
+            thread.join(join_timeout)
+        self._threads.clear()
+        if self.safety is not None:
+            self.safety.close(self.clock())
+        if self.status is not None:
+            self.status.tick(self.clock() + 10.0, "stopping")
+        for unsubscribe in self._unsubscribe:
+            unsubscribe()
+        self._unsubscribe = []
+        self.timing_log.close()
+        self.engine.close()
+
+    @property
+    def stats(self) -> Mapping[str, Any]:
+        out: dict[str, Any] = dict(self.counts)
+        out["audio_ring_bytes"] = self.ring.nbytes
+        out["audio_rejected_samples"] = self.ring.rejected
+        out["mute_ranges"] = len(self.mutes)
+        out["mute_replaced"] = self.mutes.replaced
+        return out

@@ -1,0 +1,1 @@
+{"t":"MaskRequest","v":1,"d":{"request_id":"r-1","source":"cards","category":"aadhaar","kind":"region","quads":[{"pts":[[10,20],[110,20],[110,80],[10,80]]},{"pts":[[10,20],[110,20],[110,80],[10,80]]}],"frame_pts":0.2,"pts_start":0.2,"pts_end":0.5,"style":"solid","confidence":0.9,"reason":"verhoeff_ok","completed_at":1.0,"track_id":null}}

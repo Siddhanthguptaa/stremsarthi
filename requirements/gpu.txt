@@ -1,0 +1,11 @@
+# GPU path. Installed INSTEAD of ort-cpu.txt. CUDA 12.8 libraries come from the NVIDIA pip wheels,
+# so no system CUDA toolkit is needed (the Windows driver is used through WSL2). 1.26.0 is a
+# CUDA 12.8 build; avoid 1.23.0/1.23.1 (broke Blackwell). Blackwell (sm_120) works via PTX JIT:
+# keep the compile cache (CUDA_CACHE_MAXSIZE) and verify on the RTX 5050 (docs/DECISIONS.md).
+onnxruntime-gpu==1.26.0
+nvidia-cuda-runtime-cu12>=12.8,<12.9
+nvidia-cublas-cu12>=12.8,<12.9
+nvidia-cufft-cu12>=11.3,<12
+nvidia-curand-cu12>=10.3,<11
+nvidia-cuda-nvrtc-cu12>=12.8,<12.9
+nvidia-cudnn-cu12>=9.5,<10

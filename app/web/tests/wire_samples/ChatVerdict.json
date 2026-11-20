@@ -1,0 +1,1 @@
+{"t":"ChatVerdict","v":1,"d":{"platform":"twitch","message_id":"m1","action":"timeout","categories":["chat_abuse"],"confidence":0.91,"reason":"abuse_list_hit","stage":"rules","latency_ms":3.2,"timeout_seconds":300,"platform_result":"pending"}}

@@ -1,0 +1,1 @@
+{"t":"EngineStatus","v":1,"d":{"state":"live","hold_active":false,"hold_sources":[],"delay_s_p50":4.6,"fps":29.9,"cpu_cores":4.2,"vram_mb":null,"allowlist_version":2,"lanes_stale":[],"protect_seconds":0.0,"contract_version":"1.1.0"}}

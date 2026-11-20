@@ -1,0 +1,2 @@
+# CPU-only ONNX Runtime. Never install together with gpu.txt.
+onnxruntime==1.26.0

@@ -62,7 +62,7 @@ Stable strings. `LOCAL_ONLY_TOPICS` never leave the engine process. `NEVER_DROP_
 
 ## 5. Wire format (`wire.py`)
 - Envelope `{"t": "<ClassName>", "v": 1, "d": {...}}`. Strict decode: unknown type, version, field, enum value or `Literal` value raises `ContractError` (a `ValueError`). Invalid field values surface as `ContractError` too.
-- `StrEnum` encodes as its string, `Quad` as `[[x,y] x4]`, tuples as lists (decoded back to tuples), `Mapping` fields as JSON objects.
+- `StrEnum` encodes as its string, `Quad` as `{"pts": [[x,y] x4]}`, tuples as lists (decoded back to tuples), `Mapping` fields as JSON objects.
 - Only classes in `WIRE_TYPES` serialise. `Frame`, `AudioChunk`, `LaneResult`, `Transcript`, `Word`, `TranscriptWindow`, `PiiSpan` and `OcrResult` raise `TypeError`.
 - Max message size 256 KB (`MAX_WIRE_BYTES`). A 512-float `AllowlistUpdate` is about 5 KB.
 - The ZeroMQ bridge (engine) sends `[topic bytes, dumps(event)]` for `WIRE_TOPICS` only and may add a `seq` envelope outside the contract.

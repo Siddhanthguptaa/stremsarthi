@@ -96,16 +96,70 @@ class HoldConfig(_Model):
     slate_text_en: str = "Privacy hold"
 
 
+class YoutubeChatConfig(_Model):
+    planned_stream_hours: float = Field(3.0, gt=0)
+    daily_quota_units: int = Field(10_000, ge=1000)
+    action_budget_fraction: float = Field(0.2, ge=0.0, le=0.5)
+    min_poll_s: float = Field(2.0, ge=0.5)
+    allow_timeout: bool = False  # a ban costs 200 quota units; deletes cost 20
+    auto_delete: bool = True
+
+
+class TwitchChatConfig(_Model):
+    channel_login: str | None = None
+    anonymous_read: bool = False  # dev without OAuth: justinfan IRC, read only, no actions
+    auto_delete: bool = True
+    auto_timeout: bool = True
+
+
+class ClassifyConfig(_Model):
+    rules_hide_threshold: float = Field(0.9, ge=0.0, le=1.0)
+    allow_below: float = Field(0.3, ge=0.0, le=1.0)
+    llm_enabled: bool = True
+    llm_model: str = "openai/gpt-oss-20b"
+    llm_batch_max: int = Field(20, ge=1, le=50)
+    llm_flush_ms: int = Field(40, ge=1)
+    llm_timeout_ms: int = Field(250, ge=50)
+    llm_rpm: int = Field(30, ge=1, le=30)
+    llm_tpm: int = Field(8000, ge=500)
+    llm_pending_max_s: float = Field(10.0, gt=0)  # unserved longer than this goes to HOLD_FOR_MOD
+
+
+class ChatActionsConfig(_Model):
+    abuse: Literal["hide", "hold_for_mod", "delete", "timeout"] = "hide"
+    severe_abuse: Literal["hide", "hold_for_mod", "delete", "timeout"] = "timeout"
+    doxxing: Literal["hide", "hold_for_mod", "delete", "timeout"] = "delete"
+    scam: Literal["hide", "hold_for_mod", "delete", "timeout"] = "delete"
+
+
+class StreamerPrivateConfig(_Model):
+    # Used for doxxing detection. In memory only, never logged, excluded from repr.
+    terms: list[str] = Field(default_factory=list, repr=False)
+    phones: list[str] = Field(default_factory=list, repr=False)
+
+
+class ChatCommandsConfig(_Model):
+    enabled: bool = True
+    hold_roles: list[Literal["broadcaster", "moderator"]] = ["broadcaster", "moderator"]
+    unhold_roles: list[Literal["broadcaster", "moderator"]] = ["broadcaster"]
+    rate_limit_s: float = Field(2.0, ge=0.0)
+
+
+class ModQueueConfig(_Model):
+    max_items: int = Field(500, ge=10)
+    ttl_s: int = Field(1800, ge=60)
+
+
 class ChatConfig(_Model):
-    youtube_enabled: bool = False
-    twitch_enabled: bool = False
-    youtube_daily_quota_units: int = 10_000
-    youtube_quota_reserve_pct: int = Field(10, ge=0, le=50)
-    llm_batch_size: int = Field(20, ge=1, le=50)
-    classify_timeout_ms: int = Field(300, ge=50)
-    commands_enabled: bool = True
-    # Streamer-private terms used for doxxing detection. Held in memory only, never logged.
-    streamer_private_terms: list[str] = Field(default_factory=list, repr=False)
+    enabled: bool = False
+    platforms: list[Literal["youtube", "twitch"]] = ["youtube", "twitch"]
+    youtube: YoutubeChatConfig = YoutubeChatConfig()
+    twitch: TwitchChatConfig = TwitchChatConfig()
+    classify: ClassifyConfig = ClassifyConfig()
+    actions: ChatActionsConfig = ChatActionsConfig()
+    streamer_private: StreamerPrivateConfig = StreamerPrivateConfig()
+    commands: ChatCommandsConfig = ChatCommandsConfig()
+    modqueue: ModQueueConfig = ModQueueConfig()
 
 
 def _default_guard_weights() -> dict[str, float]:
@@ -159,6 +213,7 @@ class EngineConfig(_Model):
     protect_fill_s: float = Field(1.0, ge=0.0)  # mean-colour fill before the PROTECT slate
     max_mask_area_ratio: float = Field(0.6, gt=0.0, le=1.0)  # above this, collapse to one solid fill
     timing_log_path: str | None = None  # StageTiming JSONL (category/time only)
+    cv_threads: int | None = Field(2, ge=1, le=16)  # cv2.setNumThreads cap; None leaves OpenCV's default
 
 
 def _default_modules() -> dict[str, str]:
@@ -182,6 +237,8 @@ class RelayConfig(_Model):
     encoder: Literal["auto", "x264", "nvenc"] = "auto"
     ingest_hold_after_s: float = Field(1.0, ge=0.0)  # ingest silence before a transport HOLD
     mediamtx_api_port: int = 9997
+    ingest_bind_host: str = "127.0.0.1"  # 0.0.0.0 only on purpose (LAN phone ingest) and with credentials
+    rtsp_port: int = 8554  # shielded tap only; the reader itself pulls over loopback RTMP
 
 
 class VisionConfig(_Model):
@@ -214,6 +271,7 @@ class EvalConfig(_Model):
 
 
 class OcrConfig(_Model):
+    det_model: Literal["v6_tiny", "v5_mobile"] = "v6_tiny"
     rec_max_crops: int = Field(8, ge=1)
     rec_budget_ms: int = Field(150, ge=10)
 
@@ -258,7 +316,8 @@ def default_categories() -> dict[Category, CategoryConfig]:
     out: dict[Category, CategoryConfig] = {}
     for c in _VIDEO_CATEGORIES:
         style = MaskStyle.SOLID if c in _STRONG_MASK else MaskStyle.BLUR
-        out[c] = CategoryConfig(style=style)
+        # RISKY_TEXT is a strike-guard signal, off until the streamer sets a blocklist
+        out[c] = CategoryConfig(style=style, enabled=c is not Category.RISKY_TEXT)
     for c in _AUDIO_CATEGORIES:
         out[c] = CategoryConfig()
     return out
@@ -318,6 +377,8 @@ class Config(BaseSettings):
     twitch_client_secret: SecretStr | None = None
     groq_api_key: SecretStr | None = None
     sarvam_api_key: SecretStr | None = None
+    ingest_publish_user: SecretStr | None = None  # MediaMTX publisher login (env INGEST_PUBLISH_USER)
+    ingest_publish_password: SecretStr | None = None
 
     @model_validator(mode="after")
     def _profile_limits(self) -> Config:

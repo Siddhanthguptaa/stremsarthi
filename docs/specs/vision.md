@@ -28,7 +28,7 @@ vision/
 
 ## 3. Inputs
 
-`Frame` (1280x720 BGR, read-only) per lane at the lane rate; `Config` (categories, detect, gpu); the enrolled allowlist (embeddings directory, `vision.allowlist_dir`); `Resources` (ORT session factory, allowlist handle, clock). **Ambiguity resolved:** `Resources` also carries `ocr: OcrProvider` (callable `ocr(frame) -> OcrResult`, memoised by `frame_seq`), so cards, plates, text and screens share one OCR pass; `OcrProvider` and `OcrResult` are defined in `contracts/protocols.py` (D-25).
+`Frame` (1280x720 BGR, read-only) per lane at the lane rate; `Config` (categories, detect, gpu); the enrolled allowlist (embeddings directory, `vision.allowlist_dir` (unused: embeddings live in the API's RAM store, D-41)); `Resources` (ORT session factory, allowlist handle, clock). **Ambiguity resolved:** `Resources` also carries `ocr: OcrProvider` (callable `ocr(frame) -> OcrResult`, memoised by `frame_seq`), so cards, plates, text and screens share one OCR pass; `OcrProvider` and `OcrResult` are defined in `contracts/protocols.py` (D-25).
 
 ## 4. Outputs
 
@@ -71,7 +71,7 @@ For each tracked `Detection` in a lane run:
 3. **Per-track voting** (replaces PrivaStream's shared vote buffer, which leaked a stranger's mask to the creator's votes): each track keeps its own last 7 samples; `allow=True` only when at least 5 of 7 match and the track has at least 3 samples. New or unconfirmed tracks are masked. A track that flips to non-match for 3 consecutive samples is masked again.
 4. Dilate each box 20 %; low-light CLAHE when mean luma is under 60 (adapt PrivaStream `face_detector.py`).
 5. `aux_quads["mouth"]` from YuNet landmarks (order: right eye, left eye, nose, right mouth corner, left mouth corner): centre on the two mouth corners, width `1.4 * d`, height `1.2 * d` where `d` is the corner distance.
-6. Enrolment (`faces/enroll.py`, library function used by `app/api`): at least 20 frames of the largest face, average the L2-normalised embeddings, re-normalise, store `{person_id, label, model: "sface_2021dec", embedding: [128], created}` as JSON in `vision.allowlist_dir` with file mode 0600; provide `delete_all()`. Embeddings are biometric data: gitignored, never logged, never sent out, and enrolment is user initiated. Do not use PrivaStream's `creator_embedding.json` (not in the copy) or buffalo_l.
+6. Enrolment (`faces/enroll.py`, library function used by `app/api`): at least `Config.enrol.min_frames` (5) usable frames, up to 12 per request of the largest face, average the L2-normalised embeddings, re-normalise, store `{person_id, label, model: "sface_2021dec", embedding: [128], created}` as JSON in `vision.allowlist_dir` (unused: embeddings live in the API's RAM store, D-41) with file mode 0600; provide `delete_all()`. Embeddings are biometric data: gitignored, never logged, never sent out, and enrolment is user initiated. Do not use PrivaStream's `creator_embedding.json` (not in the copy) or buffalo_l.
 7. Optional adapter for InsightFace buffalo_s behind an extra; marked "replace before commercial release" in `docs/THIRD_PARTY.md`.
 
 ### 5.6 `detectors/cards/` (T1.3)
@@ -123,7 +123,7 @@ Tilted, blurred, distant, glared or partly covered cards; many faces; tiny text;
 
 ## 8. Config keys used
 
-`detect.stride`, `detect.fast_hz`, `detect.accurate_hz`, `detect.accurate_width`, `gpu.enabled|mem_limit_mb|ort_provider`, `categories.<cat>.enabled|style|sensitivity|mask_when_unsure|padding_px`. Added to `Config` (D-25): `vision.allowlist_dir`, `vision.face_match_cos` (0.40), `vision.face_vote_window` (7), `vision.face_vote_min` (5), `ocr.rec_max_crops` (8), `ocr.rec_budget_ms` (150), `signboard.min_text_height_px` (14), `guard.risky_text_blocklist`.
+`detect.stride`, `detect.fast_hz`, `detect.accurate_hz`, `detect.accurate_width`, `gpu.enabled|mem_limit_mb|ort_provider`, `categories.<cat>.enabled|style|sensitivity|mask_when_unsure|padding_px`. Added to `Config` (D-25): `vision.allowlist_dir` (unused: embeddings live in the API's RAM store, D-41), `vision.face_match_cos` (0.40), `vision.face_vote_window` (7), `vision.face_vote_min` (5), `ocr.rec_max_crops` (8), `ocr.rec_budget_ms` (150), `signboard.min_text_height_px` (14), `guard.risky_text_blocklist`.
 
 ## 9. Test cases (CPU only, SPECIMEN data from `eval/`)
 

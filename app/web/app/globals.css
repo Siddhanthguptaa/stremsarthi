@@ -1,0 +1,137 @@
+/*
+ * Adapted from Saximn/privastream (Apache-2.0), src/web/frontend/app/globals.css. See LICENSE.privastream.
+ * Stream Sarthi theme: indigo primary, saffron accent, status colours, light/dark by system preference.
+ * Contrast pairs were chosen for WCAG 2.2 AA (4.5:1 text, 3:1 UI components).
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 25% 98%;
+    --foreground: 224 30% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 30% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 30% 11%;
+    --primary: 226 71% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 224 30% 15%;
+    --muted: 220 18% 95%;
+    --muted-foreground: 220 12% 36%;
+    --accent: 26 95% 92%;
+    --accent-foreground: 24 80% 22%;
+    --destructive: 0 72% 41%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 60% 26%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 95% 52%;
+    --warning-foreground: 30 80% 10%;
+    --border: 220 15% 86%;
+    --input: 220 10% 52%;
+    --ring: 226 71% 45%;
+    --chart-1: 226 71% 45%;
+    --chart-2: 173 58% 32%;
+    --chart-3: 26 90% 45%;
+    --chart-4: 280 50% 45%;
+    --chart-5: 340 70% 45%;
+    --radius: 0.75rem;
+    --font-sans: "Noto Sans Variable", "Noto Sans Devanagari Variable", system-ui, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: 224 30% 7%;
+      --foreground: 210 20% 96%;
+      --card: 224 28% 10%;
+      --card-foreground: 210 20% 96%;
+      --popover: 224 28% 10%;
+      --popover-foreground: 210 20% 96%;
+      --primary: 226 90% 74%;
+      --primary-foreground: 224 40% 10%;
+      --secondary: 224 22% 16%;
+      --secondary-foreground: 210 20% 96%;
+      --muted: 224 22% 15%;
+      --muted-foreground: 218 14% 68%;
+      --accent: 26 60% 22%;
+      --accent-foreground: 30 90% 92%;
+      --destructive: 0 72% 46%;
+      --destructive-foreground: 0 0% 100%;
+      --success: 152 55% 40%;
+      --success-foreground: 0 0% 6%;
+      --warning: 38 92% 55%;
+      --warning-foreground: 30 80% 8%;
+      --border: 224 18% 22%;
+      --input: 224 14% 46%;
+      --ring: 226 90% 74%;
+      --chart-1: 226 90% 74%;
+      --chart-2: 173 58% 50%;
+      --chart-3: 26 90% 60%;
+      --chart-4: 280 60% 72%;
+      --chart-5: 340 80% 68%;
+    }
+  }
+
+  /* Forced dark (the /live dashboard reduces glare regardless of the system setting). */
+  .dark {
+    --background: 224 30% 7%;
+    --foreground: 210 20% 96%;
+    --card: 224 28% 10%;
+    --card-foreground: 210 20% 96%;
+    --popover: 224 28% 10%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 226 90% 74%;
+    --primary-foreground: 224 40% 10%;
+    --secondary: 224 22% 16%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 224 22% 15%;
+    --muted-foreground: 218 14% 68%;
+    --accent: 26 60% 22%;
+    --accent-foreground: 30 90% 92%;
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 55% 40%;
+    --success-foreground: 0 0% 6%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 30 80% 8%;
+    --border: 224 18% 22%;
+    --input: 224 14% 46%;
+    --ring: 226 90% 74%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    margin: 0;
+    min-width: 320px;
+    overflow-wrap: anywhere;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
