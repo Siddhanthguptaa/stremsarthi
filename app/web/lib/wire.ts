@@ -424,13 +424,29 @@ export interface WsFrame<T extends WireTopic = WireTopic> {
   seq: number
   ts: string
   data: Wire<(typeof TOPIC_TYPES)[T]>
+  /** `chat.verdict` frames carry the API's running count of hidden messages (no text). */
+  meta?: { hidden_count: number }
 }
 export type AnyWsFrame = { [T in WireTopic]: WsFrame<T> }[WireTopic]
+
+/**
+ * Sent right after `subscribed` for a chat topic a late joiner asked for: `count` frames of the current state
+ * follow (the moderator's pending queue, the streamer's recently allowed messages). The client clears what it
+ * holds for `topic` when it sees this, so a reconnect never leaves stale items (or stale text) behind.
+ */
+export interface ReplayMarker {
+  type: "replay"
+  topic: WireTopic
+  count: number
+  hiddenCount: number
+  pendingCount: number | null
+}
 
 export type WsControl =
   | { type: "ping" }
   | { type: "subscribed"; topics: string[] }
   | { type: "error"; code: string; topics?: string[] }
+  | ReplayMarker
 
 export function isWireTopic(value: unknown): value is WireTopic {
   return typeof value === "string" && value in TOPIC_TYPES
@@ -453,11 +469,22 @@ export function parseWsFrame(text: string): AnyWsFrame | WsControl | null {
     const topics = Array.isArray(raw.topics) ? raw.topics.filter((t): t is string => typeof t === "string") : undefined
     return { type: "error", code: raw.code, topics }
   }
+  if (raw.type === "replay" && isWireTopic(raw.topic) && typeof raw.count === "number") {
+    return {
+      type: "replay",
+      topic: raw.topic,
+      count: raw.count,
+      hiddenCount: typeof raw.hidden_count === "number" ? raw.hidden_count : 0,
+      pendingCount: typeof raw.pending_count === "number" ? raw.pending_count : null,
+    }
+  }
   if (!isWireTopic(raw.topic) || typeof raw.seq !== "number" || typeof raw.ts !== "string") return null
   try {
     const data = decodeWire(raw.data)
     if (data.t !== TOPIC_TYPES[raw.topic]) return null
-    return { topic: raw.topic, seq: raw.seq, ts: raw.ts, data } as AnyWsFrame
+    const hidden = isRecord(raw.meta) ? raw.meta.hidden_count : undefined
+    const meta = typeof hidden === "number" ? { hidden_count: hidden } : undefined
+    return { topic: raw.topic, seq: raw.seq, ts: raw.ts, data, ...(meta ? { meta } : {}) } as AnyWsFrame
   } catch {
     return null
   }
@@ -478,6 +505,20 @@ export interface HealthResponse {
   contract_ok: boolean
   version: string
   contract_version: string
+}
+
+/** `POST /api/mod/action`. */
+export interface ModActionRequest {
+  message_id: string
+  platform: Platform
+  action: "approve" | "delete" | "timeout" | "dismiss"
+  timeout_seconds?: number
+}
+
+export interface WhoAmI {
+  role: "streamer" | "moderator" | "hotkey" | "viewer-readonly"
+  session_id: string
+  expires_at: number
 }
 
 export interface ApiErrorBody {

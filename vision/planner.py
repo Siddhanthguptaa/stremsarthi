@@ -2,7 +2,8 @@
 
 Per lane run, for each tracked detection:
 1. drop disabled categories; ``allow=True`` faces yield no request (they go to ``aux_detections`` when
-   they carry ``aux_quads``); ``RISKY_TEXT`` yields a request only if its category is enabled;
+   they carry ``aux_quads``); ``RISKY_TEXT`` yields a request only if its category is enabled; an
+   ``allow=True`` face also releases the held mask of its own track (``_release_allowed``);
 2. sensitivity floor: minimum confidence is ``1 - sensitivity`` clamped to 0.15-0.85, lowered by 0.15 for
    ``mask_when_unsure`` on cards, QR codes and faces;
 3. track (``vision.tracking``: ByteTrack association, K-confirm, hold), then place the quad: a moving track
@@ -209,6 +210,24 @@ def min_confidence(cfg: CategoryConfig, category: Category) -> float:
     return floor
 
 
+def _inter_area(a: Quad, b: Quad) -> float:
+    ax1, ay1, ax2, ay2 = a.bbox()
+    bx1, by1, bx2, by2 = b.bbox()
+    return max(0.0, min(ax2, bx2) - max(ax1, bx1)) * max(0.0, min(ay2, by2) - max(ay1, by1))
+
+
+def _inside(inner: Quad, outer: Quad, frac: float = 0.5) -> bool:
+    """At least ``frac`` of ``inner``'s box lies inside ``outer``'s box."""
+    area = inner.area_bbox()
+    return area > 0.0 and _inter_area(inner, outer) >= frac * area
+
+
+def _overlaps(a: Quad, b: Quad, frac: float = 0.5) -> bool:
+    """The overlap covers at least ``frac`` of the smaller of the two boxes."""
+    smaller = min(a.area_bbox(), b.area_bbox())
+    return smaller <= 0.0 or _inter_area(a, b) >= frac * smaller
+
+
 def _pad_px(quad: Quad, category: Category, cfg: CategoryConfig) -> float:
     if category is Category.FACE:
         x1, y1, x2, y2 = quad.bbox()
@@ -348,6 +367,10 @@ class MaskPlanner:
         self.rate_hz = lane_rate_hz(lane, config)
         self._can_fall_back = False
         self.fell_back = False
+        # planner track id -> (detector, detector-side track id) of its last masked FACE detection, and the
+        # planner tracks whose held mask was released because the detector confirmed them allowlisted
+        self._owner: dict[int, tuple[str, int | None]] = {}
+        self._released: set[int] = set()
         if tracker is None or tracker == "bytetrack":
             self.tracker: Tracker = ByteTrackHold(config.categories, frame_rate=self.rate_hz)
             self._can_fall_back = True
@@ -385,7 +408,70 @@ class MaskPlanner:
             self.tracker = IouHoldTracker(self.config.categories)
             self._can_fall_back = False
             self.fell_back = True
+            self._owner.clear()  # track ids belong to the old tracker
+            self._released.clear()
             return self.tracker.update(usable, pts)
+
+    def _release_allowed(
+        self,
+        tracked: list[TrackedDetection],
+        detections: Sequence[Detection],
+        usable: Sequence[Detection],
+        pts: float,
+    ) -> list[TrackedDetection]:
+        """Drop the held mask of a face track whose detector has just confirmed it allowlisted.
+
+        ``allow=True`` detections never reach the tracker, so the hold entry left by the track's earlier
+        masked (unconfirmed) detections would keep masking an enrolled face for the rest of its hold. A held
+        FACE entry is released only when ALL of these hold: the entry was last seen as a detection of the
+        same detector and the same detector-side ``track_id`` as an ``allow=True`` FACE detection of this
+        run (the detector's own per-track votes decided it), and that detection sits on the entry. Other
+        categories, other tracks, tracks seen on this run and entries a non-allowed face now overlaps are
+        never released, so a track swapped to a stranger is masked again at once. Entries not released (any
+        doubt, unknown owner) stay masked: this only ever removes a held mask.
+        """
+        live = {td.track_id for td in tracked if td.track_id is not None}
+        # remember which detector track each planner track last came from (by quad identity: both trackers
+        # keep the input quad object), and forget tracks the tracker no longer emits
+        origin = {id(d.quad): (d.detector, d.track_id) for d in usable if d.track_id is not None}
+        for td in tracked:
+            if td.track_id is not None and not td.held and td.detection.category is Category.FACE:
+                src = origin.get(id(td.detection.quad))
+                if src is None:
+                    self._owner.pop(td.track_id, None)
+                else:
+                    self._owner[td.track_id] = src
+        for tid in [t for t in self._owner if t not in live]:
+            del self._owner[tid]
+        self._released &= live
+        allowed = [
+            d for d in detections if d.allow and d.category is Category.FACE and d.track_id is not None
+        ]
+        strangers = [d for d in usable if d.category is Category.FACE]
+        if not self._released and not (allowed and self._owner):
+            return tracked
+        out: list[TrackedDetection] = []
+        for td in tracked:
+            tid = td.track_id
+            if tid is None or td.detection.category is not Category.FACE:
+                out.append(td)
+                continue
+            if not td.held:
+                self._released.discard(tid)  # seen as a masked detection on this run
+                out.append(td)
+                continue
+            held_quad = self.place(td, pts)[0]
+            if tid not in self._released:
+                src = self._owner.get(tid)
+                if src is not None and any(
+                    (d.detector, d.track_id) == src and _inside(d.quad, held_quad) for d in allowed
+                ):
+                    self._released.add(tid)
+            if tid in self._released and any(_overlaps(d.quad, held_quad) for d in strangers):
+                self._released.discard(tid)  # a face that must be masked is on this entry
+            if tid not in self._released:
+                out.append(td)
+        return out
 
     def place(self, td: TrackedDetection, pts: float) -> tuple[Quad, float]:
         """The quad to mask for a tracked detection at run time ``pts`` and the PTS it is valid at."""
@@ -419,7 +505,7 @@ class MaskPlanner:
             if d.confidence < min_confidence(cfg, d.category):
                 continue
             usable.append(d)
-        tracked = self._track(usable, pts)
+        tracked = self._release_allowed(self._track(usable, pts), detections, usable, pts)
         items: list[_Item] = []
         for td in tracked:
             category = td.detection.category

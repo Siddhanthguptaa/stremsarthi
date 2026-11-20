@@ -120,6 +120,14 @@ record() {
   if [ "$PLAN" = 1 ]; then echo "PLAN: [$1] (not run) ${3:-}"; else gate_record "$@"; fi
 }
 
+# defined before the first step so that a failed preflight still reports into --report-dir
+GATE_REPORT_HOOK=phase1_report
+phase1_report() {
+  local extra=()
+  if [ -n "$REPORT_DIR" ]; then extra+=(--report-dir "$REPORT_DIR"); fi
+  python -m eval.run phase1-report --dir "$OUT" --results "$1" --phase-name "$PHASE_NAME" $BASELINE_FLAG "${extra[@]}"
+}
+
 if [ "$PLAN" = 0 ]; then
   command -v python >/dev/null 2>&1 || { echo "python not on PATH: run through scripts/ss.sh" >&2; exit 2; }
   mkdir -p "$OUT"
@@ -174,10 +182,4 @@ if [ "$PLAN" = 1 ]; then
   exit 0
 fi
 
-GATE_REPORT_HOOK=phase1_report
-phase1_report() {
-  local extra=()
-  if [ -n "$REPORT_DIR" ]; then extra+=(--report-dir "$REPORT_DIR"); fi
-  python -m eval.run phase1-report --dir "$OUT" --results "$1" --phase-name "$PHASE_NAME" $BASELINE_FLAG "${extra[@]}"
-}
 gate_finish

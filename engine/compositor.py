@@ -110,9 +110,13 @@ class Compositor:
             request = projected.request
             style = self.style_overrides.get(request.category, request.style)
             for quad in projected.quads:
-                jobs.append((_STRICTNESS[style], style, request.category, np.asarray(quad.pts, np.float64), 0))
+                jobs.append(
+                    (_STRICTNESS[style], style, request.category, np.asarray(quad.pts, np.float64), 0)
+                )
         for quad in decision.mouth_quads:  # MOUTH_OF_SPEAKER: always a strong blur, whatever the face style
-            jobs.append((0, MaskStyle.BLUR, Category.FACE, np.asarray(quad.pts, np.float64), MIN_MOUTH_KERNEL))
+            jobs.append(
+                (0, MaskStyle.BLUR, Category.FACE, np.asarray(quad.pts, np.float64), MIN_MOUTH_KERNEL)
+            )
         if decision.full_frame:
             self.stats["collapsed"] += 1
             return Composed(self._solid(), "solid", LIVE, None, len(jobs), 1.0, True)

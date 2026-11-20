@@ -1,0 +1,31 @@
+{
+ "game": "freefire",
+ "anchor": [
+  28.0,
+  142.0,
+  454.0,
+  80.0
+ ],
+ "threshold": 0.8,
+ "weak": false,
+ "regions": [
+  {
+   "category": "room_credential",
+   "rect": [
+    65,
+    268,
+    400,
+    64
+   ]
+  },
+  {
+   "category": "room_credential",
+   "rect": [
+    65,
+    392,
+    400,
+    66
+   ]
+  }
+ ]
+}

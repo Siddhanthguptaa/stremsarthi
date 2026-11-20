@@ -188,7 +188,19 @@ def card_stats(frames: list[TapFrame], warmup_s: float = 1.0) -> dict[str, Any]:
     """
     live = [f for f in frames if f.kind in ("live", "slate") and f.counter is not None]
     if not live:
-        return {"visible_frames": 0, "leaked_frames": 0, "unreadable_recall": None}
+        return {
+            "warmup_s": warmup_s,
+            "visible_frames": 0,
+            "leaked_frames": 0,
+            "leaked_in_warmup": 0,
+            "unreadable_recall": None,
+            "recall_ci": None,
+            "ocr_checked": 0,
+            "ocr_valid_reads": 0,
+            "ocr_exact_reads": 0,
+            "max_similarity": None,
+            "leaked_counters": [],
+        }
     first = min(f.t_read for f in live)
     scored = [f for f in live if f.card_visible and f.leaked is not None]
     after = [f for f in scored if f.t_read - first >= warmup_s]

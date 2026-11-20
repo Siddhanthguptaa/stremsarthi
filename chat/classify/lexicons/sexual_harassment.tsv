@@ -1,0 +1,30 @@
+# Sexual harassment and sexual violence terms. Hand-curated. category: sexual
+# Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)
+rape	sexual	3	en	word
+raped	sexual	3	en	word
+rapist	sexual	3	en	word
+balatkar	sexual	3	hi	word
+balatkari	sexual	3	hi	word
+nudes	sexual	2	en	word
+nude bhej	sexual	2	hi	word
+nude bhejo	sexual	2	hi	word
+nangi	sexual	2	hi	word
+boobs	sexual	2	en	word
+tits	sexual	2	en	word
+chudai	sexual	2	hi	word
+chudwa	sexual	2	hi	word
+chodna hai	sexual	2	hi	word
+sex karega	sexual	2	hi	word
+sex karoge	sexual	2	hi	word
+kapde utaar	sexual	2	hi	word
+kapde utar	sexual	2	hi	word
+send nudes	sexual	2	en	word
+show boobs	sexual	2	en	word
+show tits	sexual	2	en	word
+बलात्कार	sexual	3	hi	word
+बलात्कारी	sexual	3	hi	word
+रेप	sexual	3	hi	word
+चुदाई	sexual	2	hi	word
+न्यूड	sexual	2	hi	word
+नंगी	sexual	2	hi	word
+कपड़े उतार	sexual	2	hi	word

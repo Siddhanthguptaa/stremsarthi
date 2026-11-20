@@ -250,3 +250,62 @@ def test_apply_cost_per_frame_is_under_half_a_millisecond():
         worst, median = max(costs), float(np.median(costs))
         print(f"mute apply ({mode}): median {median:.3f} ms, max {worst:.3f} ms per 1600-sample frame")
         assert median < 0.5
+
+
+# ------------------------------------------------------------------ bounded book never forgets unemitted audio
+
+
+def test_cap_evicts_only_emitted_spans_and_keeps_every_unemitted_failsafe_span():
+    book = MuteBook(max_spans=8)
+    for k in range(6):  # six spans that have already left, then more than the cap of unemitted ones
+        book.add_range(MuteRange(f"old{k}", k * 1000, k * 1000 + 500, "silence"))
+    book.emitted_through = 6000  # (the old ones are all behind the emit cursor now)
+    fail = [MuteRange(f"f{k}", 10_000 + k * 1000, 10_000 + k * 1000 + 500, "silence", True) for k in range(8)]
+    for rng in fail:
+        book.add_range(rng)
+    assert len(book) <= 8
+    assert not any(k.startswith("old") for k in book._spans)  # emitted ones went first
+    pcm = dc(30_000)
+    book.apply(pcm, 6000)
+    for rng in fail:  # every failsafe span still silences its own samples
+        lo = rng.start - 6000
+        assert not pcm[lo + FADE_SAMPLES : lo + 500].any() or rng.end - rng.start < 2 * FADE_SAMPLES
+
+
+def test_cap_with_every_span_unemitted_unites_the_oldest_and_never_drops_audio():
+    book = MuteBook(max_spans=4)
+    spans = [
+        MuteRange(f"s{k}", 100_000 + k * 20_000, 100_000 + k * 20_000 + 5000, "silence", k == 0)
+        for k in range(10)
+    ]
+    for rng in spans:
+        book.add_range(rng)
+    assert len(book) == 4 and book.united == 6
+    pcm = dc(400_000)
+    book.apply(pcm, 0, advance=False)
+    for rng in spans:  # every original span is still fully silent between its fades
+        assert not pcm[rng.start + FADE_SAMPLES : rng.end - FADE_SAMPLES].any(), rng.span_id
+    assert np.array_equal(pcm[:100_000], dc(100_000))  # nothing before the first span is touched
+
+
+def test_united_span_cannot_be_shrunk_by_a_revision():
+    book = MuteBook(max_spans=2)
+    book.add_range(MuteRange("a", 1000, 3000, "silence"))
+    book.add_range(MuteRange("b", 5000, 7000, "silence"))
+    book.add_range(MuteRange("c", 20_000, 22_000, "silence"))  # a and b are united under "a"
+    book.add_range(MuteRange("a", 1000, 1500, "silence"))  # a shorter revision of "a"
+    covered = np.zeros(8000, bool)
+    for r in book.merged_ranges:
+        covered[r.start : min(r.end, 8000)] = True
+    assert covered[1000:7000].all()
+
+
+def test_hard_ranges_are_never_dropped_beyond_the_cap():
+    book = MuteBook()
+    for k in range(200):
+        book.add_silence(k * 1000, k * 1000 + 100)
+    assert len(book._hard) <= 64
+    pcm = dc(200_000)
+    book.apply(pcm, 0, advance=False)
+    for k in range(200):
+        assert not pcm[k * 1000 : k * 1000 + 100].any(), k

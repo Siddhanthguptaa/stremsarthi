@@ -13,7 +13,11 @@ Video detector SDK and the T1.3 card pipeline. Spec: `docs/specs/vision.md`.
   Installed in `VisionResources.ocr` (lazy; CPU default, CUDA with `gpu.*`). `normalize.py`, `layout.py` are shared helpers.
 - `patterns/`    Verhoeff, Aadhaar runs, PAN (+ OCR-confusion repair). Pure text.
 - `detectors/cards/`  Aadhaar + PAN: OCR hit -> whole-card quad (contour, text block, padded), `card_shape_unsure`, `card_like`.
+- `ocr/multi.py`, `ocr/scripts.py`  Indic enrichment (T2.4): Devanagari/Tamil/Telugu recognisers re-read empty or low-confidence
+  boxes of the shared pass (`read_ocr(res, frame)`); Kannada/Bengali stay unread and are covered by the signboard mask-all rule.
+- `patterns/`    also phone, PIN (cue-gated), UPI ID, e-mail. `detectors/text/`  PHONE/PIN/UPI/EMAIL, SIGNBOARD, RISKY_TEXT.
 - `ort*.py`, `options.py`, `resources.py`, `probe.py`  ORT session factory and static PP-OCR graphs (T0.5; IRL Shield, MIT).
+- `testing_text.py`, `accept_text.py`  T2.4 SPECIMEN text scenes and acceptance (`python -m vision.accept_text`).
 - `testing.py`, `accept_cards.py`  SPECIMEN scene generator/scoring and the T1.3 acceptance runner. Licences: `LICENSE.irl-shield`, `LICENSE.privastream`.
 
 ```

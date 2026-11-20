@@ -76,7 +76,9 @@ class EncoderSettings:
     video_kbps: int = 4500
     audio_kbps: int = 128
     keyframe_seconds: float = 2.0
-    threads: int = 4  # x264 worker threads (0 = the encoder's choice, one per core: too greedy beside the engine)
+    threads: int = (
+        4  # x264 worker threads (0 = the encoder's choice, one per core: too greedy beside the engine)
+    )
 
     def __post_init__(self) -> None:
         if self.codec not in CODECS:
@@ -226,7 +228,9 @@ class StreamInfo:
     width: int
     height: int
     fps: int
-    video_extradata: bytes = b""  # the encoder's own (Annex B) SPS/PPS: tells the FLV muxer to convert packets
+    video_extradata: bytes = (
+        b""  # the encoder's own (Annex B) SPS/PPS: tells the FLV muxer to convert packets
+    )
 
 
 def time_base(kind: int, fps: int) -> Fraction:
@@ -357,7 +361,9 @@ def _encode_worker(channel: socket.socket, settings: EncoderSettings, video_mem:
         resampler = av.AudioResampler(format="fltp", layout="stereo", rate=AUDIO_RATE)
         image = np.frombuffer(video_mem, dtype=np.uint8).reshape(settings.height, settings.width, 3)
         samples = np.frombuffer(audio_mem, dtype=np.int16)
-        _message(channel, ("ok", {"header": bytes(sink.buffer), "extradata": bytes(context.extradata or b"")}))
+        _message(
+            channel, ("ok", {"header": bytes(sink.buffer), "extradata": bytes(context.extradata or b"")})
+        )
         while True:
             command, value = _receive(channel)
             if command == "close":
@@ -472,7 +478,9 @@ class EncoderProcess:
             raise EncoderError(code, str(details.get("error_class")) if isinstance(details, dict) else None)
         return status, details
 
-    def encode(self, video_index: int, image: np.ndarray, audio_items: Sequence[tuple[int, np.ndarray]]) -> list[EncodedPacket]:
+    def encode(
+        self, video_index: int, image: np.ndarray, audio_items: Sequence[tuple[int, np.ndarray]]
+    ) -> list[EncodedPacket]:
         if self._channel is None or not self.alive:
             raise EncoderError("encoder-exited")
         assert self._video_view is not None and self._audio_view is not None
@@ -636,7 +644,9 @@ class Encoder:
         self._retry_at = self._clock() + delay * (1.0 + random.uniform(0.0, self._jitter))
         self._event("encoder_down")
 
-    def encode(self, pts: float, image: np.ndarray, chunks: Sequence[tuple[float, np.ndarray]]) -> EncodeResult | None:
+    def encode(
+        self, pts: float, image: np.ndarray, chunks: Sequence[tuple[float, np.ndarray]]
+    ) -> EncodeResult | None:
         """Encode one frame plus its audio chunks. ``None`` means the frame was dropped (encoder down)."""
         if self._closed:
             raise EncoderError("encoder-closed")

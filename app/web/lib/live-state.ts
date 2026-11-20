@@ -1,11 +1,12 @@
 /**
  * State of the /live dashboard apart from the hold button: engine status and the alert feed.
  *
- * Privacy: an alert keeps category, action, time and confidence only. The bounding box, the event's
- * free-form codes (`source`, `detail_code`) and everything else on a SafetyEvent are dropped on arrival.
+ * Privacy: an alert keeps modality, category, action, time, confidence and the mask's duration only. The
+ * bounding box, the event's free-form codes (`source`, `detail_code`) and everything else on a SafetyEvent
+ * are dropped on arrival, whether it came over the WebSocket or from `GET /api/alerts`.
  */
 
-import type { Category, EngineStatus, SafetyAction, SafetyEvent } from "@/lib/wire"
+import type { Category, EngineStatus, Modality, SafetyAction, SafetyEvent } from "@/lib/wire"
 
 export const MAX_ALERTS = 200
 
@@ -13,10 +14,32 @@ export interface Alert {
   id: string
   /** ISO-8601 wall time from the event. */
   at: string
+  modality: Modality
   category: Category
   action: SafetyAction
   /** 0..1 */
   confidence: number
+  /** How long the mask or mute lasted; null until the engine reports the end. */
+  durationMs: number | null
+}
+
+/** One row of `GET /api/alerts` (already reduced by the API). */
+export interface ApiAlert {
+  id: string
+  at: string
+  modality: Modality
+  category: Category
+  action: SafetyAction
+  confidence: number
+  duration_ms: number | null
+}
+
+/** Which alerts the feed shows. `guard` and `system` events only appear under "all". */
+export type AlertFilter = "all" | "video" | "audio" | "chat"
+export const ALERT_FILTERS: readonly AlertFilter[] = ["all", "video", "audio", "chat"]
+
+export function filterAlerts(alerts: readonly Alert[], filter: AlertFilter): readonly Alert[] {
+  return filter === "all" ? alerts : alerts.filter((a) => a.modality === filter)
 }
 
 export interface LiveState {
@@ -35,6 +58,8 @@ export const initialLiveState: LiveState = { engine: null, engineAt: null, alert
 export type LiveEvent =
   | { type: "engine"; status: EngineStatus; at: number }
   | { type: "safety"; event: SafetyEvent }
+  /** Alerts read over REST (first load, after a reconnect): adds the ones missed, never duplicates. */
+  | { type: "backfill"; alerts: readonly ApiAlert[] }
   | { type: "clear-engine" }
   | { type: "api"; down: boolean }
 
@@ -42,11 +67,28 @@ export function toAlert(event: SafetyEvent): Alert {
   return {
     id: event.event_id,
     at: event.wall_ts,
+    modality: event.modality,
     category: event.category,
     action: event.action,
     confidence: event.confidence,
+    durationMs: event.duration_ms,
   }
 }
+
+export function fromApiAlert(a: ApiAlert): Alert {
+  return {
+    id: a.id,
+    at: a.at,
+    modality: a.modality,
+    category: a.category,
+    action: a.action,
+    confidence: a.confidence,
+    durationMs: a.duration_ms,
+  }
+}
+
+const sameAlert = (a: Alert, b: Alert): boolean =>
+  a.durationMs === b.durationMs && a.action === b.action && a.confidence === b.confidence
 
 export function liveReducer(state: LiveState, event: LiveEvent): LiveState {
   switch (event.type) {
@@ -58,11 +100,27 @@ export function liveReducer(state: LiveState, event: LiveEvent): LiveState {
       return state.engine === null ? state : { ...state, engine: null }
     case "safety": {
       const alert = toAlert(event.event)
-      // The server replays nothing for safety.event, but a reconnect can overlap: ignore a repeated id.
-      if (state.alerts.some((a) => a.id === alert.id)) return state
+      // The engine republishes an event with its duration when the mask ends: update the row in place
+      // (same position, not counted twice). A reconnect can also repeat an id: identical -> no change.
+      const at = state.alerts.findIndex((a) => a.id === alert.id)
+      if (at !== -1) {
+        if (sameAlert(state.alerts[at], alert)) return state
+        const alerts = state.alerts.slice()
+        alerts[at] = alert
+        return { ...state, alerts }
+      }
       const alerts = [alert, ...state.alerts]
       if (alerts.length > MAX_ALERTS) alerts.length = MAX_ALERTS
       return { ...state, alerts, alertsTotal: state.alertsTotal + 1 }
+    }
+    case "backfill": {
+      const known = new Set(state.alerts.map((a) => a.id))
+      const added = event.alerts.filter((a) => !known.has(a.id)).map(fromApiAlert)
+      if (added.length === 0) return state
+      // Newest first by event time; the sort is stable so equal times keep their arrival order.
+      const alerts = [...state.alerts, ...added].sort((x, y) => Date.parse(y.at) - Date.parse(x.at) || 0)
+      if (alerts.length > MAX_ALERTS) alerts.length = MAX_ALERTS
+      return { ...state, alerts, alertsTotal: state.alertsTotal + added.length }
     }
   }
 }

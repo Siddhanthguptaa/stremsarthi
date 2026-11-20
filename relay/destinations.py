@@ -13,7 +13,6 @@ backoff; stream keys are ``SecretStr`` and appear only in the URL string built a
 
 from __future__ import annotations
 
-import io
 import logging
 import os
 import random
@@ -33,13 +32,11 @@ from contracts.enums import Category, HoldSource, Modality, Topic
 from contracts.events import HoldCommand, SafetyEvent, StageTiming
 from relay.encoder import (
     AUDIO_RATE,
-    KIND_AUDIO,
-    KIND_VIDEO,
     EncodedPacket,
     EncodeResult,
     StreamInfo,
-    time_base,
 )
+from relay.muxer import ProcessMuxer
 from relay.tls_forwarder import TLSForwarder
 
 log = logging.getLogger("relay.destinations")
@@ -125,7 +122,11 @@ def build_destinations(
         name = entry.kind if counts[entry.kind] == 1 else f"{entry.kind}{counts[entry.kind]}"
         if entry.kind == KIND_TAP:
             if tap_url:
-                specs.append(DestinationSpec(name, KIND_TAP, "127.0.0.1", 0, "shielded", None, SecretStr(tap_url), False))
+                specs.append(
+                    DestinationSpec(
+                        name, KIND_TAP, "127.0.0.1", 0, "shielded", None, SecretStr(tap_url), False
+                    )
+                )
             else:
                 skipped.append(f"{name}:no_tap")
             continue
@@ -143,63 +144,6 @@ def build_destinations(
     return BuiltDestinations(tuple(specs), tuple(skipped))
 
 
-# ------------------------------------------------------------------------------------------ muxing
-class AvFlvMuxer:
-    """Muxes already-encoded packets into an FLV/RTMP connection with PyAV (no re-encode)."""
-
-    def __init__(self, url: str, info: StreamInfo, *, timeout_s: float = 8.0):
-        import av
-
-        av.logging.set_level(None)  # libav messages can contain credentialed URLs
-        self._av, self._fps = av, info.fps
-        template = av.open(io.BytesIO(info.header), format="flv")
-        self._out: Any = None
-        try:
-            options = {"flvflags": "no_duration_filesize"}
-            self._out = av.open(url, "w", format="flv", options=options, timeout=timeout_s)
-            self._streams: dict[int, Any] = {}
-            for stream in template.streams:
-                copied = self._out.add_stream_from_template(stream, opaque=True)
-                copied.time_base = stream.time_base
-                if stream.type == "video":
-                    # The header-only template has no picture size; the encoder owns the real one.
-                    copied.width, copied.height = info.width, info.height
-                    # The encoder emits Annex B packets. The FLV muxer converts them to length-prefixed
-                    # AVC only when it is given the encoder's own (Annex B) extradata.
-                    if info.video_extradata:
-                        copied.codec_context.extradata = info.video_extradata
-                else:
-                    try:  # the FLV header only knows 44.1 kHz; the AAC config says 48 kHz
-                        copied.codec_context.sample_rate = AUDIO_RATE
-                    except Exception:  # noqa: BLE001 - the muxer then keeps the header value
-                        pass
-                self._streams[KIND_VIDEO if stream.type == "video" else KIND_AUDIO] = copied
-            if set(self._streams) != {KIND_VIDEO, KIND_AUDIO}:
-                raise ValueError("encoder header lacks a stream")
-            self._out.start_encoding()
-        except BaseException:
-            self.close()
-            raise
-        finally:
-            template.close()
-
-    def write(self, packet: EncodedPacket) -> None:
-        clone = self._av.Packet(packet.data)
-        clone.pts, clone.dts, clone.duration = packet.pts, packet.dts, packet.duration
-        clone.time_base = time_base(packet.kind, self._fps)
-        clone.is_keyframe = packet.keyframe
-        clone.stream = self._streams[packet.kind]
-        self._out.mux(clone)
-
-    def close(self) -> None:
-        out, self._out = self._out, None
-        if out is not None:
-            try:
-                out.close()
-            except Exception:  # noqa: BLE001 - libav text can contain the URL; keep nothing
-                pass
-
-
 def _debug_traceback() -> None:
     """Local debugging only (``STREAMSARTHI_RELAY_DEBUG=1``): libav text may contain a stream key."""
     if os.environ.get("STREAMSARTHI_RELAY_DEBUG"):
@@ -212,7 +156,8 @@ Opener = Callable[[str, StreamInfo], Any]
 
 
 def default_opener(url: str, info: StreamInfo) -> Any:
-    return AvFlvMuxer(url, info)
+    """Connect in a killable worker process: libav holds the GIL while it connects (see ``relay/muxer.py``)."""
+    return ProcessMuxer(url, info)
 
 
 # --------------------------------------------------------------------------------------- publisher
@@ -251,6 +196,7 @@ class DestinationPublisher:
         self._overflow = False
         self._attempt = 0
         self._retry_at = 0.0
+        self._current: Any = None  # the live muxer, so abort() can kill a stuck worker
         self.state = "idle"  # idle | connecting | up | down
         self._up_announced = False
         self.down_since: float | None = None
@@ -287,9 +233,15 @@ class DestinationPublisher:
             self._cond.notify()
 
     def abort(self) -> None:
-        """Unblock a stalled native write by cutting the loopback-to-TLS connection."""
+        """Unblock a stalled write: cut the loopback-to-TLS connection and kill the muxer worker."""
         if self.forwarder is not None:
             self.forwarder.reset_connections()
+        killer = getattr(self._current, "kill", None)
+        if killer is not None:
+            try:
+                killer()
+            except Exception:  # noqa: BLE001
+                pass
 
     def stats(self) -> dict[str, Any]:
         with self._cond:
@@ -342,8 +294,8 @@ class DestinationPublisher:
         self._retry_at = self._clock() + delay * (1.0 + random.uniform(0.0, self._jitter))
         self._set_state("down", code)
 
-    @staticmethod
-    def _drop(muxer: Any) -> None:
+    def _drop(self, muxer: Any) -> None:
+        self._current = None
         if muxer is not None:
             try:
                 muxer.close()
@@ -355,7 +307,11 @@ class DestinationPublisher:
         with self._cond:
             chosen = -1
             for index, queued in enumerate(self._queue):
-                if queued.generation == entry.generation and queued.packet.is_video and queued.packet.keyframe:
+                if (
+                    queued.generation == entry.generation
+                    and queued.packet.is_video
+                    and queued.packet.keyframe
+                ):
                     chosen = index
             if chosen < 0:
                 return entry
@@ -388,7 +344,9 @@ class DestinationPublisher:
                     if self.state == "up":
                         self._set_state("connecting")
                 if muxer is None:
-                    if self._clock() < self._retry_at or not (entry.packet.is_video and entry.packet.keyframe):
+                    if self._clock() < self._retry_at or not (
+                        entry.packet.is_video and entry.packet.keyframe
+                    ):
                         continue
                     muxer = self._connect(entry)
                     if muxer is None:
@@ -416,6 +374,7 @@ class DestinationPublisher:
             self._fail("connect-failed")
             return None
         self.busy_since = None
+        self._current = muxer
         self.connects += 1
         return muxer
 
@@ -467,6 +426,7 @@ class DestinationSet:
         self._hold_after, self._stall_after = hold_after_s, stall_after_s
         self.hold_active = False
         self.holds = 0
+        self._primary: DestinationPublisher | None = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._monitor: threading.Thread | None = None
@@ -502,10 +462,13 @@ class DestinationSet:
             publisher.offer(entries)
 
     def primary(self) -> DestinationPublisher | None:
-        for publisher in self.publishers:
-            if publisher.state == "up":
-                return publisher
-        return None
+        """The destination whose ``egress_write`` is the stage timing: sticky while it stays up (one per frame)."""
+        with self._lock:
+            current = self._primary
+            if current is not None and current.state == "up":
+                return current
+            self._primary = next((p for p in self.publishers if p.state == "up"), None)
+            return self._primary
 
     @property
     def healthy_count(self) -> int:

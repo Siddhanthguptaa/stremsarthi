@@ -55,7 +55,12 @@ def test_defaults_enable_youtube_and_tap_and_skip_youtube_without_a_key():
 def test_keys_come_from_secretstr_config_or_the_environment():
     from_config = build_destinations(cfg(youtube_stream_key=SecretStr(KEY)), tap_url=None, environ={})
     youtube = next(s for s in from_config.specs if s.kind == "youtube")
-    assert (youtube.host, youtube.port, youtube.app, youtube.tls) == ("a.rtmps.youtube.com", 443, "live2", True)
+    assert (youtube.host, youtube.port, youtube.app, youtube.tls) == (
+        "a.rtmps.youtube.com",
+        443,
+        "live2",
+        True,
+    )
     assert youtube.url(5555) == f"rtmp://127.0.0.1:5555/live2/{KEY}"
     from_env = build_destinations(cfg(), tap_url=None, environ={"YOUTUBE_STREAM_KEY": KEY2})
     assert from_env.specs[0].key.get_secret_value() == KEY2
@@ -172,8 +177,12 @@ def make(names, openers, *, bus=None, hold_after=0.1, **kw):
     forwarders = kw.get("forwarders", {})
     publishers = [
         DestinationPublisher(
-            spec(name), fps=30, opener=openers[name], forwarder=forwarders.get(name) or FakeForwarder(),
-            backoff=(0.05, 0.05), jitter=0.0,
+            spec(name),
+            fps=30,
+            opener=openers[name],
+            forwarder=forwarders.get(name) or FakeForwarder(),
+            backoff=(0.05, 0.05),
+            jitter=0.0,
         )  # fmt: skip
         for name in names
     ]
@@ -205,12 +214,18 @@ def test_a_destination_joins_on_a_keyframe_and_its_timestamps_start_at_zero():
 def test_one_failing_destination_never_interrupts_the_others():
     good_a, good_b, bad = Opener(), Opener(), Opener(fail=True)
     bus = InProcessBus()
-    dset = make(["youtube", "twitch", "mediamtx_tap"], {"youtube": good_a, "twitch": bad, "mediamtx_tap": good_b}, bus=bus)
+    dset = make(
+        ["youtube", "twitch", "mediamtx_tap"],
+        {"youtube": good_a, "twitch": bad, "mediamtx_tap": good_b},
+        bus=bus,
+    )
     try:
         feed(dset, 0, 60)
         assert wait_until(lambda: good_a.video_dts and len(good_a.video_dts) >= 50)
         assert wait_until(lambda: len(good_b.video_dts) >= 50)
-        assert good_a.video_dts == sorted(good_a.video_dts) == list(range(len(good_a.video_dts)))  # none lost, in order
+        assert (
+            good_a.video_dts == sorted(good_a.video_dts) == list(range(len(good_a.video_dts)))
+        )  # none lost, in order
         twitch = next(p for p in dset.publishers if p.name == "twitch")
         assert twitch.state == "down" and twitch.failures >= 1 and twitch.last_error == "connect-failed"
         assert dset.hold_active is False and not bus.of(Topic.HOLD)  # two destinations are fine: no hold
@@ -341,7 +356,9 @@ def test_egress_write_timing_comes_from_the_primary_destination_only():
         feed(dset, 0, 60)
         assert wait_until(lambda: len(a.video_dts) >= 55 and len(b.video_dts) >= 55)
         timings = [t for t in bus.of(Topic.TIMING) if t.stage == "egress_write"]
-        assert len(timings) >= 50 and len({t.seq for t in timings}) == len(timings)  # one per frame, not per destination
+        assert len(timings) >= 50 and len({t.seq for t in timings}) == len(
+            timings
+        )  # one per frame, not per destination
         assert all(t.t_end >= t.t_start for t in timings)
     finally:
         dset.close()
@@ -356,7 +373,13 @@ def test_no_stream_key_in_logs_events_stats_or_errors(caplog):
         feed(dset, 0, 40)
         assert wait_until(lambda: dset.hold_active)
         text = "\n".join(
-            [caplog.text, repr(dset.stats()), repr(bus.history), repr(dset.publishers), repr(dset.publishers[0].spec)]
+            [
+                caplog.text,
+                repr(dset.stats()),
+                repr(bus.history),
+                repr(dset.publishers),
+                repr(dset.publishers[0].spec),
+            ]
         )
         assert KEY not in text, "the stream key leaked"
         assert "cannot connect" not in caplog.text  # libav-style text (which holds the URL) is never logged

@@ -252,6 +252,8 @@ def test_a_failed_preflight_stops_before_any_leg_runs(fakepy, tmp_path):
     assert p.returncode == 2, p.stdout + p.stderr
     assert [x.split()[0] for x in legs] == ["preflight"]
     assert "no leg is run" in p.stdout and "ENVIRONMENT ERROR" in p.stdout
+    # the report of a failed preflight goes to --report-dir too (it used to land in eval/reports/)
+    assert list((tmp_path / "reports").glob("*-phase1-ref.md"))
 
 
 def test_missing_gpu_is_a_skip_unless_required(fakepy, tmp_path):

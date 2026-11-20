@@ -30,7 +30,7 @@ const VIDEO_ORDER = [
   "room_credential",
   "risky_text",
 ]
-const AUDIO_ORDER = ["spoken_phone", "spoken_upi", "spoken_address", "spoken_other_pii"]
+const AUDIO_ORDER = ["spoken_phone", "spoken_upi", "spoken_address", "spoken_other_pii", "spoken_unverified"]
 
 /** Which tab a category belongs to. Only categories the API returns are shown. */
 export function groupOf(category: string): CategoryGroup | null {
@@ -60,6 +60,26 @@ export function buildPatch(category: string, change: CategoryChange): ConfigPatc
   return { categories: { [category]: change } }
 }
 
+// --- speech languages (`audio.languages`) -----------------------------------------------------------------
+
+/** What the speech pipeline can transcribe; the API sends the same list as `audio.supported_languages`. */
+export const DEFAULT_SPEECH_LANGUAGES = ["hi", "en", "kn", "ta", "te", "bn"] as const
+
+/** `PATCH /api/config` body for a new language list. */
+export const buildLanguagesPatch = (languages: readonly string[]): ConfigPatch => ({ audio: { languages: [...languages] } })
+
+/**
+ * Turn one language on or off. The result keeps the supported order. The last language cannot be turned
+ * off (the speech check needs at least one), so that returns `null` and nothing is sent.
+ */
+export function toggleLanguage(current: readonly string[], code: string, on: boolean, supported: readonly string[]): string[] | null {
+  const set = new Set(current)
+  if (on) set.add(code)
+  else set.delete(code)
+  if (set.size === 0) return null
+  return supported.filter((c) => set.has(c))
+}
+
 export const sensitivityPercent = (value: number): number => Math.round(value * 100)
 
 // --- state --------------------------------------------------------------------------------------------
@@ -73,10 +93,23 @@ export interface ControlsState {
   categories: Record<string, CategorySettings>
   /** Edits sent and not yet answered, by edit id. */
   inflight: Record<number, { category: string; previous: CategoryChange }>
+  /** Speech languages being checked, and the ones that can be chosen. */
+  languages: string[]
+  supportedLanguages: string[]
+  /** Language edits sent and not yet answered, by edit id. */
+  languagesInflight: Record<number, { previous: string[] }>
   notice: ControlsNotice | null
 }
 
-export const initialControlsState: ControlsState = { status: "loading", categories: {}, inflight: {}, notice: null }
+export const initialControlsState: ControlsState = {
+  status: "loading",
+  categories: {},
+  inflight: {},
+  languages: [],
+  supportedLanguages: [...DEFAULT_SPEECH_LANGUAGES],
+  languagesInflight: {},
+  notice: null,
+}
 
 export type ControlsAction =
   | { type: "loaded"; config: PublicConfig }
@@ -84,12 +117,21 @@ export type ControlsAction =
   | { type: "edit"; id: number; category: string; change: CategoryChange }
   | { type: "saved"; id: number; config: PublicConfig }
   | { type: "failed"; id: number; reason: "restart" | "failed" }
+  | { type: "languages-edit"; id: number; languages: string[] }
+  | { type: "languages-saved"; id: number; config: PublicConfig }
+  | { type: "languages-failed"; id: number; reason: "restart" | "failed" }
   | { type: "dismiss-notice" }
 
 export function controlsReducer(state: ControlsState, action: ControlsAction): ControlsState {
   switch (action.type) {
     case "loaded":
-      return { ...state, status: "ready", categories: action.config.categories ?? {} }
+      return {
+        ...state,
+        status: "ready",
+        categories: action.config.categories ?? {},
+        languages: action.config.audio?.languages ?? state.languages,
+        supportedLanguages: action.config.audio?.supported_languages ?? state.supportedLanguages,
+      }
     case "load-failed":
       return { ...state, status: state.status === "ready" ? "ready" : "error" }
     case "edit": {
@@ -132,6 +174,39 @@ export function controlsReducer(state: ControlsState, action: ControlsAction): C
         inflight: rest,
         categories: current ? { ...state.categories, [sent.category]: { ...current, ...sent.previous } } : state.categories,
         notice: { kind: "reverted", category: sent.category, reason: action.reason },
+      }
+    }
+    case "languages-edit":
+      return {
+        ...state,
+        notice: null,
+        languages: action.languages,
+        languagesInflight: { ...state.languagesInflight, [action.id]: { previous: state.languages } },
+      }
+    case "languages-saved": {
+      if (!state.languagesInflight[action.id]) return state
+      const { [action.id]: _done, ...rest } = state.languagesInflight
+      void _done
+      // The API echoes the saved list: take it, unless a newer edit is on its way.
+      const server = action.config.audio?.languages
+      return {
+        ...state,
+        languagesInflight: rest,
+        languages: server && Object.keys(rest).length === 0 ? server : state.languages,
+        notice: { kind: "saved", category: "languages" },
+      }
+    }
+    case "languages-failed": {
+      const sent = state.languagesInflight[action.id]
+      if (!sent) return state
+      const { [action.id]: _done, ...rest } = state.languagesInflight
+      void _done
+      return {
+        ...state,
+        languagesInflight: rest,
+        // Put back the list from before this edit, unless a later edit already replaced it.
+        languages: Object.keys(rest).length === 0 ? sent.previous : state.languages,
+        notice: { kind: "reverted", category: "languages", reason: action.reason },
       }
     }
     case "dismiss-notice":

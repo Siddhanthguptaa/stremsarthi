@@ -184,3 +184,13 @@ def test_relay_ingest_settings_and_secrets(monkeypatch):
     c = make()
     assert c.ingest_publish_password.get_secret_value() == "publisher-secret"
     assert "publisher-secret" not in repr(c) + c.model_dump_json()
+
+
+def test_engine_audio_watchdog_defaults_and_limits():
+    c = make()
+    assert (c.engine.audio_watchdog_s, c.engine.audio_grace_s) == (3.0, 10.0)
+    assert make(engine={"audio_watchdog_s": 0}).engine.audio_watchdog_s == 0  # 0 turns it off
+    with pytest.raises(ValidationError):
+        make(engine={"audio_watchdog_s": -1})
+    with pytest.raises(ValidationError):
+        make(engine={"audio_grace_s": 61})

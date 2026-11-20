@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react"
 
 import type { ApiClient } from "@/lib/api"
 import {
+  buildLanguagesPatch,
   buildPatch,
   type CategoryChange,
   categoriesInGroup,
@@ -17,6 +18,7 @@ import {
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
 import { CategoryToggle } from "@/components/streamer/category-toggle"
+import { LanguagePicker } from "@/components/streamer/language-picker"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -67,6 +69,20 @@ export function ControlsPanel({ api }: { api: ControlsApi }) {
     [api],
   )
 
+  const editLanguages = React.useCallback(
+    async (languages: string[]) => {
+      const id = nextId.current++
+      dispatch({ type: "languages-edit", id, languages })
+      try {
+        const config = await api.patchConfig(buildLanguagesPatch(languages))
+        dispatch({ type: "languages-saved", id, config })
+      } catch (error) {
+        dispatch({ type: "languages-failed", id, reason: failureReason(error) })
+      }
+    },
+    [api],
+  )
+
   // "Saved" fades after a moment; a revert stays until the next edit so it is not missed.
   React.useEffect(() => {
     if (state.notice?.kind !== "saved") return
@@ -75,6 +91,7 @@ export function ControlsPanel({ api }: { api: ControlsApi }) {
   }, [state.notice])
 
   const groupLabel = { video: t("controls.group.video"), audio: t("controls.group.audio") } as const
+  const languagesSaving = Object.keys(state.languagesInflight).length > 0
   const groups = GROUPS.map((group) => ({ group, keys: categoriesInGroup(state.categories, group) })).filter(
     (g) => g.keys.length > 0,
   )
@@ -125,7 +142,15 @@ export function ControlsPanel({ api }: { api: ControlsApi }) {
             ))}
           </TabsList>
           {groups.map(({ group, keys }) => (
-            <TabsContent key={group} value={group}>
+            <TabsContent key={group} value={group} className="space-y-4">
+              {group === "audio" && state.languages.length > 0 ? (
+                <LanguagePicker
+                  selected={state.languages}
+                  supported={state.supportedLanguages}
+                  saving={languagesSaving}
+                  onChange={editLanguages}
+                />
+              ) : null}
               <ul className="grid gap-4 md:grid-cols-2">
                 {keys.map((key) => (
                   <li key={key}>

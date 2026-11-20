@@ -45,6 +45,9 @@ RESTART_KEYS = frozenset({"delay_seconds"})
 # Names and phone numbers the streamer wants protected (``chat.streamer_private.*``) and the channel
 # login. Never returned, never accepted here: the chat module reads them from its own config.
 PRIVATE_PREFIXES = ("chat.streamer_private", "chat.twitch.channel_login")
+# Languages the speech pipeline can transcribe (docs/specs/audio.md): Hinglish/Hindi, English, Kannada,
+# Tamil, Telugu, Bengali. Native names are for the UI; the API only checks the codes.
+SUPPORTED_AUDIO_LANGUAGES = ("hi", "en", "kn", "ta", "te", "bn")
 MAX_DEPTH = 5
 MAX_KEY_CHARS = 64
 
@@ -127,7 +130,8 @@ class ConfigStore:
             "audio": {
                 k: dump["audio"][k]
                 for k in ("languages", "mute_mode", "failsafe_mute_voiced", "address_mute", "stt_order")
-            },
+            }
+            | {"supported_languages": list(SUPPORTED_AUDIO_LANGUAGES)},
             "hold": dump["hold"],
             "chat": chat,
             "guard": guard,
@@ -149,6 +153,9 @@ class ConfigStore:
             if kind == "restart" and live:
                 raise ApiError(409, "requires_restart", f"{path} cannot change while a session is active")
 
+        if "audio.languages" in leaves:
+            leaves["audio.languages"] = self._checked_languages(leaves["audio.languages"])
+
         secrets = {name: getattr(self.config, name) for name in SECRET_FIELDS}
         current = self.config.model_dump(mode="json", exclude=set(SECRET_FIELDS))
         merged = copy.deepcopy(current)
@@ -164,6 +171,17 @@ class ConfigStore:
         diff = {p: _get(new_dump, p) for p in leaves if _get(new_dump, p) != _get(current, p)}
         new_config = validated.model_copy(update=secrets)
         return new_config, diff
+
+    @staticmethod
+    def _checked_languages(value: Any) -> list[str]:
+        """A non-empty list of supported language codes, in the given order, without repeats."""
+        if not isinstance(value, list) or not value or not all(isinstance(v, str) for v in value):
+            raise ApiError(422, "invalid_config", "audio.languages must be a non-empty list of codes")
+        if any(v not in SUPPORTED_AUDIO_LANGUAGES for v in value):
+            raise ApiError(
+                422, "invalid_config", f"audio.languages: use only {', '.join(SUPPORTED_AUDIO_LANGUAGES)}"
+            )
+        return list(dict.fromkeys(value))
 
     def change_for(self, diff: dict[str, Any], actor: str) -> ConfigChange:
         try:

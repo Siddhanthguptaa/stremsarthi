@@ -254,7 +254,9 @@ class FacesDetector:
         if self._tracker is None:
             rate = max(1.0, self._fps / max(1, ctx.stride))
             self._tracker = ByteTracker(
-                ByteTrackParams(frame_rate=rate, lost_track_buffer=15, low_threshold=0.0, new_track_threshold=0.0)
+                ByteTrackParams(
+                    frame_rate=rate, lost_track_buffer=15, low_threshold=0.0, new_track_threshold=0.0
+                )
             )
         boxes = np.array([(f.x1, f.y1, f.x2, f.y2) for f in faces], dtype=np.float64).reshape(-1, 4)
         scores = np.array([f.score for f in faces], dtype=np.float64)

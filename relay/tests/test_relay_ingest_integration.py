@@ -299,7 +299,7 @@ def test_internal_login_publishes_the_shielded_tap_and_loopback_reads_it_anonymo
 
 
 def test_build_returns_working_endpoints_and_closes_everything():
-    """``relay.runtime:build`` starts MediaMTX, returns the reader and a counting null sink."""
+    """``relay.runtime:build`` starts MediaMTX, returns the reader and the real egress sink."""
     from relay.runtime import build
 
     address = free_address()
@@ -318,7 +318,7 @@ def test_build_returns_working_endpoints_and_closes_everything():
         first = next(frames)
         assert first.pts == 0.0 and first.image.shape == (720, 1280, 3)
         endpoints.sink.write(first.pts, first.image, np.zeros(1600, np.int16))
-        assert endpoints.sink.frames == 1
+        assert endpoints.sink.stats()["submitted"] == 1
     finally:
         endpoints.source.close()
         endpoints.sink.close()

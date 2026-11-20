@@ -127,7 +127,9 @@ class SpanPlanner:
             end = hi + self.pad_s + (self.tail_ext_s if tail else 0.0)
             reason = _code(("ambiguous:" if s.ambiguous else "") + s.reason)
             raw.append(
-                PlannedSpan(max(0.0, lo - self.pad_s), end, s.category, s.confidence, reason, gran, tail, anchor)
+                PlannedSpan(
+                    max(0.0, lo - self.pad_s), end, s.category, s.confidence, reason, gran, tail, anchor
+                )
             )
         raw.sort(key=lambda p: p.pts_start)
         merged: list[PlannedSpan] = []

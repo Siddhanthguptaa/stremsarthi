@@ -104,6 +104,13 @@ def test_moderator_gets_modqueue_and_only_chat_safety_events(client, app, publis
     token = app.state.tokens.issue("moderator")
     ws, conn = open_ws(client, token, ["chat.modqueue", "safety.event"])
     try:
+        assert conn.receive_json() == {  # replay marker: a late console resets, then gets the pending queue
+            "type": "replay",
+            "topic": "chat.modqueue",
+            "count": 0,
+            "hidden_count": 0,
+            "pending_count": 0,
+        }
         publish(Topic.CHAT_MODQUEUE, sample("ModQueueItem"))
         assert frame(conn)["topic"] == "chat.modqueue"
 
@@ -136,6 +143,7 @@ def test_hotkey_role_gets_no_topics(client, app):
 def test_streamer_chat_verdict_has_no_text(client, streamer_token, publish, sample):
     ws, conn = open_ws(client, streamer_token, ["chat.verdict"])
     try:
+        assert conn.receive_json()["type"] == "replay"  # the hidden count so far
         publish(Topic.CHAT_VERDICT, sample("ChatVerdict"))
         data = frame(conn)["data"]["d"]
         assert "text" not in data and "author_display" not in data

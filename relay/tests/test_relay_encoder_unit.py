@@ -20,8 +20,8 @@ from relay.encoder import (
     KIND_AUDIO,
     KIND_VIDEO,
     AudioAligner,
-    Encoder,
     EncodedPacket,
+    Encoder,
     EncoderError,
     EncoderProcess,
     EncoderSettings,
@@ -72,7 +72,17 @@ def test_settings_reject_bad_values():
 def test_describe_command_shows_keyframes_bitrate_and_audio_but_no_key():
     settings = EncoderSettings()
     text = describe_command(settings, ["youtube", "twitch", "mediamtx_tap"])
-    for needle in ("-g 60", "-bf 0", "-b:v 4500k", "-maxrate 4500k", "-bufsize 9000k", "-c:a aac", "-b:a 128k", "-ar 48000", "-ac 2"):
+    for needle in (
+        "-g 60",
+        "-bf 0",
+        "-b:v 4500k",
+        "-maxrate 4500k",
+        "-bufsize 9000k",
+        "-c:a aac",
+        "-b:a 128k",
+        "-ar 48000",
+        "-ac 2",
+    ):
         assert needle in text
     assert text.count("-f flv") == 3  # one encode feeds three muxers
     assert KEY not in text and "<redacted:youtube>" in text
@@ -130,7 +140,10 @@ def test_nvenc_probe_handles_a_missing_ffmpeg():
         raise FileNotFoundError
 
     assert nvenc_available(runner=boom) is False
-    assert nvenc_available(runner=lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired("x", 1))) is False
+    assert (
+        nvenc_available(runner=lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired("x", 1)))
+        is False
+    )
 
 
 # -------------------------------------------------------------------------- audio on the PTS clock
@@ -243,7 +256,7 @@ IMG = np.zeros((16, 16, 3), np.uint8)
 def test_encoder_maps_pts_to_video_index_and_audio_to_the_same_clock():
     script, clock = Script(), Clock()
     encoder = make_encoder(script, clock).start()
-    for i, pts in enumerate((50.0, 50.0 + 1 / 30, 50.0 + 3 / 30)):  # the last frame skipped one
+    for pts in (50.0, 50.0 + 1 / 30, 50.0 + 3 / 30):  # the last frame skipped one
         result = encoder.encode(pts, IMG, [(pts, _chunk())])
         assert result is not None and result.generation == 1
     process = script.processes[0]

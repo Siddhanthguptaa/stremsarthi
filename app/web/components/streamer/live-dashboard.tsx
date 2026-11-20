@@ -1,8 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { WifiOff } from "lucide-react"
-
 import { ApiRequestError } from "@/lib/api"
 import {
   AUTO_SOURCES,
@@ -13,21 +11,24 @@ import {
   intentForPress,
   shouldHandleHoldKey,
 } from "@/lib/hold-machine"
+import { chatOverlayReducer, initialChatOverlay } from "@/lib/chat-state"
 import { chipFor, engineIsFresh, initialLiveState, liveReducer } from "@/lib/live-state"
-import type { ConnectionState } from "@/lib/ws"
 import type { WireTopic } from "@/lib/wire"
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
+import { ConnectionBanner } from "@/components/shell/connection-banner"
 import { AlertFeed } from "@/components/streamer/alert-feed"
+import { ChatOverlay } from "@/components/streamer/chat-overlay"
 import { EngineChip } from "@/components/streamer/engine-chip"
 import { HoldButton } from "@/components/streamer/hold-button"
+import { ModeratorInvite } from "@/components/streamer/moderator-invite"
 import { useRealtime } from "@/components/streamer/use-realtime"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { ToastAction } from "@/components/ui/toast"
 import { toast } from "@/components/ui/use-toast"
 
-const LIVE_TOPICS: readonly WireTopic[] = ["control.hold", "engine.status", "safety.event"]
+const LIVE_TOPICS: readonly WireTopic[] = ["control.hold", "engine.status", "safety.event", "chat.allowed", "chat.verdict"]
 
 /** The /live dashboard: HOLD button, status chip, alert feed, connection state. */
 export function LiveDashboard() {
@@ -53,7 +54,9 @@ function Dashboard() {
   const { client, state: connection } = useRealtime(LIVE_TOPICS, status === "ready")
   const [hold, dispatchHold] = React.useReducer(holdReducer, initialHoldState)
   const [live, dispatchLive] = React.useReducer(liveReducer, initialLiveState)
+  const [chat, dispatchChat] = React.useReducer(chatOverlayReducer, initialChatOverlay)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [alertsFailed, setAlertsFailed] = React.useState(false)
   const now = useNow(1000)
 
   // The /live page is dark by default to reduce glare (docs/specs/app-web.md 5.6).
@@ -79,7 +82,22 @@ function Dashboard() {
         case "safety.event":
           dispatchLive({ type: "safety", event: frame.data.d })
           break
+        case "chat.allowed":
+          dispatchChat({ type: "allowed", message: frame.data.d })
+          break
+        case "chat.verdict":
+          if (frame.meta) dispatchChat({ type: "hidden-count", count: frame.meta.hidden_count })
+          break
       }
+    })
+  }, [client])
+
+  // A (re)connect replays the recent allowed messages and the hidden count: start the overlay again first.
+  React.useEffect(() => {
+    if (!client) return
+    return client.onReplay((marker) => {
+      if (marker.topic === "chat.allowed") dispatchChat({ type: "reset", hiddenCount: marker.hiddenCount })
+      else if (marker.topic === "chat.verdict") dispatchChat({ type: "hidden-count", count: marker.hiddenCount })
     })
   }, [client])
 
@@ -93,6 +111,15 @@ function Dashboard() {
       const [holdNow, statusNow] = await Promise.all([api.getHold(), api.getStatus()])
       dispatchLive({ type: "api", down: false })
       dispatchHold({ type: "snapshot", sources: holdNow.sources })
+      // The feed's earlier alerts (first load, and what was missed while reconnecting). A failure here only
+      // means the history is missing: live alerts keep arriving over the WebSocket.
+      api
+        .getAlerts({ limit: 50 })
+        .then((r) => {
+          setAlertsFailed(false)
+          dispatchLive({ type: "backfill", alerts: r.alerts })
+        })
+        .catch(() => setAlertsFailed(true))
       if (statusNow.engine) dispatchLive({ type: "engine", status: statusNow.engine.d, at: Date.now() - (statusNow.engine_age_s ?? 0) * 1000 })
     } catch (err) {
       if (err instanceof ApiRequestError && err.isNetwork) dispatchLive({ type: "api", down: true })
@@ -199,7 +226,11 @@ function Dashboard() {
 
       <EngineChip kind={chip} engine={engineFresh ? live.engine : null} />
 
-      <AlertFeed alerts={live.alerts} total={live.alertsTotal} />
+      <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
+
+      <ChatOverlay state={chat} />
+
+      <ModeratorInvite />
 
       <WakeLockSwitch />
 
@@ -224,25 +255,6 @@ function Dashboard() {
         </div>
       </div>
     </div>
-  )
-}
-
-function ConnectionBanner({ state, apiDown }: { state: ConnectionState; apiDown: boolean }) {
-  const { t } = useLanguage()
-  if (apiDown) {
-    return (
-      <p role="alert" className="flex items-start gap-2 rounded-md border border-destructive bg-card p-3 text-sm font-medium">
-        <WifiOff aria-hidden className="mt-0.5 size-5 shrink-0 text-destructive" />
-        {t("conn.offline")}
-      </p>
-    )
-  }
-  if (state === "open" || state === "idle") return null
-  const key = state === "connecting" ? "conn.connecting" : state === "unauthorized" ? "conn.expired" : "conn.reconnecting"
-  return (
-    <p role="status" className="rounded-md border bg-card p-3 text-sm font-medium">
-      {t(key)}
-    </p>
   )
 }
 

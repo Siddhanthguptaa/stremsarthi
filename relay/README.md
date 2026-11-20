@@ -10,6 +10,7 @@ Spec: `docs/specs/relay.md`.
 | `encoder.py` | Killable spawned encoder (shared-memory frame, one in flight, 5 s reply deadline, backoff 0.5 to 8 s). libx264 veryfast or h264_nvenc, 720p30, 4500 kbps, GOP = 2 s, no B-frames, AAC 128 kbps 48 kHz stereo. One encode, N muxers. Audio is placed on the video PTS clock |
 | `egress.py` | `EgressWriter` (single replaceable slot, engine tick never blocks) and `Egress` (encode, then fan out; `encode` timing) |
 | `destinations.py` | YouTube, Twitch, `mediamtx_tap`: per-destination thread, queue, FLV muxer, backoff, `egress_write` timing, `AUTO_EGRESS` hold only when ALL are down |
+| `muxer.py` | `ProcessMuxer`: the libav RTMP connect runs in a killable worker process (PyAV holds the GIL in `avio_open`, which would freeze the engine and deadlock the in-process TLS forwarder). `AvFlvMuxer` is the worker's FLV muxer |
 | `tls_forwarder.py` | One verified-TLS loopback forwarder per destination (system CAs, pinned host; `cafile` for tests) |
 | `security.py`, `sink.py`, `runtime.py` | Bind rules and credentials; `EgressFrameSink` and `NullFrameSink`; `build(config, bus) -> RelayEndpoints` |
 

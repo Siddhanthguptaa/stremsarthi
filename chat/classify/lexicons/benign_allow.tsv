@@ -1,0 +1,33 @@
+# False-positive guard. These tokens or phrases are blanked out before lexicon matching.
+# Tokens/phrases that contain an abusive substring (surnames, places, brands, a streamer-community name, holiday words).
+# Columns: term<TAB>category(benign)<TAB>severity(0)<TAB>lang<TAB>match(word)
+mc stan	benign	0	hi	word
+mc donalds	benign	0	en	word
+mc donald	benign	0	en	word
+mcdonalds	benign	0	en	word
+bc stan	benign	0	hi	word
+chaudhary	benign	0	hi	word
+choudhary	benign	0	hi	word
+chaudhari	benign	0	hi	word
+choudhury	benign	0	hi	word
+chowdhury	benign	0	hi	word
+chodhury	benign	0	hi	word
+bhosle	benign	0	hi	word
+bhosale	benign	0	hi	word
+gandhi	benign	0	hi	word
+gandhinagar	benign	0	hi	word
+gandhidham	benign	0	hi	word
+gandhar	benign	0	hi	word
+gandhi ji	benign	0	hi	word
+randhir	benign	0	hi	word
+randhawa	benign	0	hi	word
+randeep	benign	0	hi	word
+brandi	benign	0	en	word
+scunthorpe	benign	0	en	word
+cockburn	benign	0	en	word
+chutney	benign	0	hi	word
+chutki	benign	0	hi	word
+chutti	benign	0	hi	word
+chhutti	benign	0	hi	word
+chhuti	benign	0	hi	word
+lundquist	benign	0	en	word

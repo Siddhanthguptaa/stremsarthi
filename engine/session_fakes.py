@@ -32,6 +32,8 @@ from contracts import (
     MaskStyle,
     Quad,
     RelayEndpoints,
+    StageTiming,
+    Topic,
 )
 from contracts.fakes import FakeDetector, FakeFrameSource
 
@@ -225,7 +227,12 @@ class FakeLaneHost:
             )
         self._pending.append(
             LaneResult(
-                self.lane, frame.seq, frame.pts, done, ok=True, requests=tuple(requests),
+                self.lane,
+                frame.seq,
+                frame.pts,
+                done,
+                ok=True,
+                requests=tuple(requests),
                 aux_detections=tuple(aux),
             )  # fmt: skip
         )
@@ -280,5 +287,32 @@ def build_vision(config: Config, bus: Any) -> FakeLaneHost:
     return FakeLaneHost(card_detector(FAKE_FRAMES, SyntheticSource(1, config.fps).card_quad))
 
 
+class HeartbeatAudioHost(FakeAudioHost):
+    """``FakeAudioHost`` that publishes ``audio_heartbeat`` timings once a second, like the real host."""
+
+    def __init__(self, bus: Any, period_s: float = 1.0) -> None:
+        super().__init__()
+        self._bus, self._period = bus, period_s
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        super().start()
+        self._thread = threading.Thread(target=self._beat, name="fake-audio-heartbeat", daemon=True)
+        self._thread.start()
+
+    def _beat(self) -> None:
+        seq = 0
+        while not self._stop.is_set():
+            now = time.monotonic()
+            self._bus.publish(Topic.TIMING, StageTiming("audio_heartbeat", seq, None, now, now))
+            seq += 1
+            self._stop.wait(self._period)
+
+    def close(self) -> None:
+        self._stop.set()
+        super().close()
+
+
 def build_audio(config: Config, bus: Any) -> FakeAudioHost:
-    return FakeAudioHost()
+    return HeartbeatAudioHost(bus)

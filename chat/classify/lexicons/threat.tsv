@@ -1,0 +1,37 @@
+# Threats of violence (Hinglish, Devanagari, English). Hand-curated. category: threat
+# Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)
+maar dunga	threat	3	hi	word
+maar dalunga	threat	3	hi	word
+maar daalunga	threat	3	hi	word
+maar dunga tujhe	threat	3	hi	word
+jaan se maar	threat	3	hi	word
+jaan se mar	threat	3	hi	word
+jaan se marwa	threat	3	hi	word
+kaat dunga	threat	3	hi	word
+kaat dalunga	threat	3	hi	word
+goli maar	threat	3	hi	word
+goli mar dunga	threat	3	hi	word
+tujhe utha lunga	threat	3	hi	word
+utha lenge tujhe	threat	3	hi	word
+marwa dunga	threat	3	hi	word
+tera ghar jala	threat	3	hi	word
+ghar jala denge	threat	3	hi	word
+family ko maar	threat	3	hi	word
+acid phek	threat	3	hi	word
+dekh lunga tujhe	threat	2	hi	word
+tujhe dekh lunga	threat	2	hi	word
+ghar aake maarunga	threat	3	hi	word
+ghar aa ke maarunga	threat	3	hi	word
+kill you	threat	3	en	word
+kill yourself	threat	3	en	word
+i will find you	threat	2	en	word
+i will hurt you	threat	3	en	word
+i will beat you	threat	2	en	word
+मार दूंगा	threat	3	hi	word
+मार डालूंगा	threat	3	hi	word
+जान से मार	threat	3	hi	word
+काट दूंगा	threat	3	hi	word
+गोली मार	threat	3	hi	word
+उठा लूंगा	threat	3	hi	word
+घर जला दूंगा	threat	3	hi	word
+देख लूंगा	threat	2	hi	word

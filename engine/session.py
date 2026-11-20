@@ -67,6 +67,11 @@ log = logging.getLogger("streamsarthi.engine.session")
 
 ANALYSIS_RATE = 16_000
 RESYNC_SAMPLES = RATE // 50  # 20 ms: audio and video clocks further apart than this are re-aligned
+# Audio watchdog: the audio host publishes StageTiming(stage="audio_heartbeat") on Topic.TIMING about once a
+# second while it is healthy. Without one for ``audio_watchdog_s`` the audio is unchecked and goes out muted.
+AUDIO_HEARTBEAT_STAGE = "audio_heartbeat"
+AUDIO_WATCHDOG_S = 3.0  # default silence tolerated between heartbeats
+AUDIO_GRACE_S = 10.0  # default startup grace before the first heartbeat (the host loads its models)
 
 
 class AudioRing:
@@ -161,6 +166,8 @@ class Session:
         clock: Callable[[], float] = time.monotonic,
         session_id: str | None = None,
         tick_s: float = 0.004,
+        audio_watchdog_s: float | None = None,
+        audio_grace_s: float | None = None,
     ) -> None:
         self.config = config
         self.source, self.sink = source, sink
@@ -188,6 +195,25 @@ class Session:
         if bus is not None and self.timing_log.enabled:
             self.timing_log.attach(bus)
         self._highwater = -1  # highest capture sequence submitted: the fence's high-water mark
+        # audio watchdog. Timeout: kwarg, else ``engine.audio_watchdog_s`` when the config has it, else 3 s;
+        # at most delay - 0.5 s so the unchecked speech is still in the delay buffer when it fires; 0 disables.
+        timeout = audio_watchdog_s
+        if timeout is None:
+            timeout = getattr(config.engine, "audio_watchdog_s", AUDIO_WATCHDOG_S)
+        self.audio_watchdog_s = 0.0 if not timeout or timeout <= 0 else max(0.5, min(timeout, delay - 0.5))
+        grace = audio_grace_s
+        if grace is None:
+            grace = getattr(config.engine, "audio_grace_s", AUDIO_GRACE_S)
+        self.audio_grace_s = max(0.0, float(grace))
+        self._wd_lock = threading.Lock()
+        self._wd_start: float | None = None  # when the audio path started (first block or first tick)
+        self._wd_last_beat: float | None = None  # engine clock at the last heartbeat
+        self._wd_beat_index = -1  # newest ring sample when that heartbeat arrived
+        self._wd_first_index: int | None = None  # first sample ingested (nothing was ever checked before it)
+        self._wd_stale_from = 0
+        self.audio_heartbeats = 0
+        self._audio_stale = False
+        self._audio_stale_since: float | None = None
         self._arrivals: dict[int, float] = {}
         self._arrival_order: deque[int] = deque()
         self._generation: Any = None
@@ -201,7 +227,7 @@ class Session:
             "emitted": 0, "LIVE": 0, "PROTECT": 0, "HOLD": 0, "fenced": 0, "bad_frames": 0,
             "sink_errors": 0, "lane_errors": 0, "audio_errors": 0, "audio_resyncs": 0,
             "rejected_requests": 0, "compose_errors": 0, "config_ignored": 0,
-            "late_spans": 0, "tardy_spans": 0,
+            "late_spans": 0, "tardy_spans": 0, "audio_watchdog": 0,
         }  # fmt: skip
         self.emit_lag: deque[float] = deque(maxlen=4096)
         self.compose_ms: deque[float] = deque(maxlen=4096)
@@ -222,6 +248,7 @@ class Session:
             on(Topic.HOLD, self.apply_hold),
             on(Topic.CONFIG, self.apply_config),
             on(Topic.MUTE_SPAN, self.on_mute),
+            on(Topic.TIMING, self._on_timing_event),
             on(Topic.MASK_REQUEST, self.on_mask_request),
             on(Topic.ALLOWLIST, self._on_allowlist),
             on(Topic.SESSION, self._on_session_command),
@@ -230,6 +257,70 @@ class Session:
     def _on_allowlist(self, update: AllowlistUpdate) -> None:
         if self.status is not None:
             self.status.allowlist_version = update.version
+
+    # ------------------------------------------------------------------ audio watchdog
+
+    def _on_timing_event(self, timing: StageTiming) -> None:
+        if timing.stage == AUDIO_HEARTBEAT_STAGE:
+            self.audio_heartbeat()
+
+    def audio_heartbeat(self, now: float | None = None) -> None:
+        """The audio host is alive (arrival is stamped on the engine clock, not the event's own time)."""
+        now = self.clock() if now is None else now
+        with self._wd_lock:
+            self._wd_last_beat = now
+            self._wd_beat_index = self.ring.latest
+            self.audio_heartbeats += 1
+
+    def _check_audio_watchdog(self, now: float) -> None:
+        """Fail-safe for a dead or silent audio module. With no heartbeat for ``audio_watchdog_s`` (or none
+        within ``audio_grace_s`` of the start) the audio is unchecked: the samples ingested since the last
+        heartbeat are hard-muted (they are still in the delay buffer, which is why the timeout is below the
+        delay) and everything emitted until the heartbeats resume is muted. A failsafe safety event and an
+        ``audio`` entry in ``EngineStatus.lanes_stale`` follow."""
+        if self.audio_host is None or not self.audio_watchdog_s:
+            return
+        since: float | None = None
+        resumed_at = -1
+        with self._wd_lock:
+            if self._wd_start is None:
+                self._wd_start = now
+            beat = self._wd_last_beat
+            limit = self._wd_start + self.audio_grace_s if beat is None else beat + self.audio_watchdog_s
+            dead = now > limit
+            trigger = dead and not self._audio_stale
+            recover = (
+                self._audio_stale and not dead and beat is not None and beat > (self._audio_stale_since or 0)
+            )
+            from_index = self._wd_beat_index if beat is not None else (self._wd_first_index or 0)
+            if trigger:
+                self._audio_stale, self._audio_stale_since = True, now
+                self._wd_stale_from = max(0, from_index)
+            elif recover:
+                self._audio_stale = False
+                since, self._audio_stale_since = self._audio_stale_since, None
+                resumed_at = self._wd_beat_index
+        if trigger:
+            if self.ring.latest >= from_index:
+                self.mutes.add_silence(max(0, from_index), self.ring.latest + 1)
+            self.counts["audio_watchdog"] += 1
+            log.warning("audio watchdog: no heartbeat from the audio module, audio is muted")
+            if self.safety is not None:
+                self.safety.audio_unchecked(True, self._last_pts)
+            if self.status is not None:
+                self.status.audio_stale = True
+        elif recover:
+            # what was ingested while the module was silent is still unchecked when it is emitted later
+            self.mutes.add_silence(self._wd_stale_from, resumed_at + 1)
+            log.warning("audio watchdog: the audio module is back, audio is checked again")
+            if self.safety is not None:
+                self.safety.audio_unchecked(False, self._last_pts, round((now - (since or now)) * 1000.0))
+            if self.status is not None:
+                self.status.audio_stale = False
+
+    @property
+    def audio_unchecked(self) -> bool:
+        return self._audio_stale
 
     def _on_session_command(self, command: SessionCommand) -> None:
         # Go-live orchestration belongs to the API (T6.1); the engine is always on and ignores it.
@@ -301,6 +392,8 @@ class Session:
         self.ring.write(int(index), samples)
         if self.audio_host is None:
             return
+        if self._wd_first_index is None:
+            self._wd_first_index = int(index)
         try:
             chunk = AudioChunk(
                 seq=self._audio_seq,
@@ -327,7 +420,10 @@ class Session:
         return state
 
     def apply_hold(self, command: HoldCommand) -> None:
-        self.hold(command.source, command.active)
+        received = self.clock()
+        # the eval harness reads this point event for its "slate within 1 frame of the command" check
+        self.timing_log.event("hold_received", received, "on" if command.active else "off")
+        self.hold(command.source, command.active, received)
 
     def apply_config(self, change: ConfigChange) -> None:
         """Runtime toggles the engine owns; keys for other modules are not an error."""
@@ -360,14 +456,22 @@ class Session:
         now = self.clock() if now is None else now
         outcome = self.mutes.add(span)
         origin = self.engine.origin
-        if outcome.accepted and origin is not None and now > origin + span.pts_start + self.engine.delay_seconds - 0.1:
+        if (
+            outcome.accepted
+            and origin is not None
+            and now > origin + span.pts_start + self.engine.delay_seconds - 0.1
+        ):
             self.counts["tardy_spans"] += 1  # after span_start_arrival + D - 0.1, but its audio had not left
         late = outcome.late or outcome.leaked_samples > 0
         if late:
             self.counts["late_spans"] += 1
             log.warning("late-span: mute span arrived after (part of) its audio was emitted")
             self._publish_timing(
-                "late_span", round(span.pts_start * self.fps), span.pts_start, min(span.completed_at, now), now
+                "late_span",
+                round(span.pts_start * self.fps),
+                span.pts_start,
+                min(span.completed_at, now),
+                now,
             )
         if self.safety is None or not (outcome.accepted or outcome.late):
             return
@@ -400,6 +504,7 @@ class Session:
         self._drain_lanes(now)
         self._sync_lanes(now)
         self._apply_retro_audio()
+        self._check_audio_watchdog(now)
         emitted = 0
         for decision in self.engine.poll(now):
             self._emit(decision, now)
@@ -505,6 +610,8 @@ class Session:
         began = time.monotonic()
         pcm = self.ring.read(first, n)
         self.mutes.apply(pcm, first)  # also marks [first, first + n) as emitted (late-span test)
+        if self._audio_stale:  # the audio module is silent: nothing it has not checked goes out
+            pcm[:] = 0
         self._mute_window = (began, time.monotonic())
         self.mute_ms.append((self._mute_window[1] - began) * 1000.0)
         return pcm
@@ -541,7 +648,11 @@ class Session:
                 self._publish_timing("audio_mute", seq, pts, *self._mute_window)
                 self._mute_window = None
             if decision.arrival is not None:
-                self._publish_timing("engine_delay", seq, pts, decision.arrival, self.clock())
+                # keyed by round(pts * fps), the key eval uses to align the tap and the relay's egress_write
+                # (the relay's own frame counter drifts from it after a dropped or late frame)
+                self._publish_timing(
+                    "engine_delay", round(pts * self.fps), pts, decision.arrival, self.clock()
+                )
             self._publish_timing(
                 "emit_lag", seq, pts, decision.deadline, max(decision.deadline, decision.emitted_at)
             )

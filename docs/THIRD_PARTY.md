@@ -58,7 +58,9 @@ Deliberately **not** reused: IRL Shield `relay/archive.py`, `seal.py` (store vid
 | YuNet 2023mar, SFace 2021dec (OpenCV Zoo) | MIT, Apache-2.0 | `vision/detectors/faces/` | none |
 | PP-OCRv5/v6 ONNX via RapidOCR | Apache-2.0 | `vision/detectors/text/` | none; SHA-pinned in `models/manifest.json` |
 | EasyOCR | Apache-2.0 | optional Kannada/Bengali crops | pulls torch (extra only) |
+| IRL Shield FLV muxer / loopback-to-TLS design (MIT) | MIT | `relay/muxer.py`, `relay/destinations.py`, `relay/tls_forwarder.py` | reworked: muxer now runs in a killable spawned worker over a socketpair; licence at `relay/LICENSE`. `relay/sinkfault.py` is new code |
 | Silero VAD | MIT | `audio/` | none |
+| PrivaStream `src/models/audio/training/src/pii_detector.py` (Luhn check, overlap-merge idea) | Apache-2.0 | `audio/pii/merge.py`, `audio/pii/rules.py` | adapted, not copied whole; no DeBERTa, no training; licence at `audio/pii/LICENSE-privastream-Apache-2.0` |
 | faster-whisper / CTranslate2 | MIT | local STT fallback | none |
 | YAMNet | Apache-2.0 | `guard/music/` | none |
 | Chromaprint / pyacoustid | LGPL-2.1 / MIT | fingerprinting | dynamic use only |

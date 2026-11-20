@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 
-import { ScreenPlaceholder } from "@/components/shell/screen-placeholder"
+import { ModConsole } from "@/components/mod/mod-console"
 
 export const metadata: Metadata = { title: "Moderator" }
 
 export default function Page() {
-  return <ScreenPlaceholder titleKey="page.mod.title" descKey="page.mod.desc" />
+  return <ModConsole />
 }

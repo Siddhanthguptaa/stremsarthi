@@ -75,7 +75,7 @@ def render_lobby(rng: random.Random, style: str, with_credentials: bool = True) 
         label = "ID:" if style == "bgmi" else "UID:"
         d.text((116, 92), label, font=load_font("latin", 22, 600), fill=accent, anchor="ls")
         off = int(load_font("latin", 22, 600).getlength(label)) + 10
-        pid_box = _text_box(d, (116 + off, 92), pid, 24, 600, fg)
+        pid_box = _text_box(d, (116 + off, 92), pid, 28, 600, fg)
         targets.append(SpriteTarget("game_player_id", rect_quad(pid_box), {"style": style, "value": pid}))
         # room panel, right side
         px1, py1, px2, py2 = (760, 130, 1250, 560) if style == "bgmi" else (40, 150, 470, 560)

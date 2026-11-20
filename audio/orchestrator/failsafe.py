@@ -9,6 +9,10 @@ from __future__ import annotations
 
 from collections import deque
 
+from contracts.detection import MaskRequest, MuteSpan
+from contracts.enums import Category, MaskKind, MaskStyle
+from contracts.media import AudioChunk
+
 SOFT_MARGIN_S = 0.3
 HARD_MARGIN_S = 0.1
 
@@ -99,3 +103,50 @@ class Coverage:
 
     def prune(self, before: float) -> None:
         self._iv = [(a, b) for a, b in self._iv if b >= before]
+
+
+FALLBACK_CHUNK_S = 0.02  # a chunk is a multiple of 20 ms: used when its own duration cannot be computed
+
+
+def chunk_failsafe(
+    chunk: AudioChunk, span_id: str, now: float, mode: str, why: str
+) -> tuple[MuteSpan, MaskRequest]:
+    """Whole-chunk fail-safe mute (+ mouth blur) for audio that never reached the pipeline.
+
+    Covers exactly ``[chunk.pts_start, chunk.pts_end]``; never raises for a malformed chunk (a chunk whose
+    duration cannot be computed gets 20 ms). Carries codes only: no audio, no text.
+    """
+    lo = float(chunk.pts_start)
+    try:
+        hi = float(chunk.pts_end)
+        if not hi >= lo:
+            hi = lo + FALLBACK_CHUNK_S
+    except Exception:
+        hi = lo + FALLBACK_CHUNK_S
+    reason = "failsafe_" + why
+    span = MuteSpan(
+        span_id,
+        lo,
+        hi,
+        Category.SPOKEN_UNVERIFIED,
+        "failsafe",
+        0.5,
+        reason,
+        now,
+        mode if mode in ("silence", "bleep") else "silence",  # type: ignore[arg-type]
+    )
+    mask = MaskRequest(
+        f"{span_id}-mouth",
+        "audio",
+        Category.SPOKEN_UNVERIFIED,
+        MaskKind.MOUTH_OF_SPEAKER,
+        (),
+        lo,
+        lo,
+        hi,
+        MaskStyle.BLUR,
+        0.5,
+        reason,
+        now,
+    )
+    return span, mask

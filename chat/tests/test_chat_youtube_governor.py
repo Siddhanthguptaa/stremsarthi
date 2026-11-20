@@ -129,3 +129,16 @@ def test_never_exceeds_daily_budget(ops: list[str], seed: int) -> None:
 
 def test_unit_costs_match_the_quota_table() -> None:
     assert UNIT_COSTS == {"list": 5, "lookup": 1, "delete": 20, "ban": 200}
+
+
+def test_governor_from_config_matches_the_spec_pacing() -> None:
+    from contracts.config import YoutubeChatConfig
+
+    for hours, expect in ((3.0, 6.75), (2.0, 4.5)):
+        gov = QuotaGovernor.from_config(YoutubeChatConfig(planned_stream_hours=hours))
+        assert gov.action_budget == 2000 and gov.read_budget == 8000
+        assert abs(gov.read_interval() - expect) < 0.1
+    zero = QuotaGovernor.from_config(YoutubeChatConfig(action_budget_fraction=0.0))
+    assert not zero.can_afford("delete")  # 0 means: never act, read-only
+    restarted = QuotaGovernor.from_config(YoutubeChatConfig(), restarted=True)
+    assert restarted.used_read == 2000 and restarted.used_action == 500

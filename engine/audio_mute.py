@@ -21,7 +21,10 @@ Book rules:
 * ``granularity="failsafe"`` spans are final: they are never replaced, shortened or removed once
   accepted (only pruned after their samples have all been emitted);
 * retroactive-hold ranges (``add_silence``) are hard zeros without fades, kept in the book so audio
-  that reaches the ring late for an already-held time range is silenced as well.
+  that reaches the ring late for an already-held time range is silenced as well;
+* the book is bounded without ever forgetting audio still to be muted: only spans whose samples have
+  all been emitted are evicted; when the cap is reached with every span unemitted the oldest two are
+  united (over-muting the gap, ``final``), and hard ranges beyond 64 unite the closest pair.
 
 Cost: the envelope is computed for the emitted slice only (about 1600 samples per frame at 30 fps).
 """
@@ -39,6 +42,7 @@ from contracts import MuteSpan
 RATE = 48_000
 FADE_SAMPLES = RATE // 100  # 10 ms
 BLEEP_HZ = 1000.0
+MAX_HARD_RANGES = 64
 BLEEP_AMPLITUDE = round(32767 * 10 ** (-18.0 / 20.0))
 
 
@@ -140,7 +144,7 @@ class MuteBook:
         self._serial = 0
         self.emitted_through = -1
         self.mode_override: str | None = None  # runtime ``audio.mute_mode``; None follows each span
-        self.accepted = self.late = self.partly_late = self.replaced = 0
+        self.accepted = self.late = self.partly_late = self.replaced = self.united = 0
 
     # ------------------------------------------------------------------ adding
 
@@ -175,8 +179,7 @@ class MuteBook:
                 self.accepted += 1
             self._spans[rng.span_id] = rng
             if len(self._spans) > self._max:
-                for key in list(self._spans)[: len(self._spans) - self._max]:
-                    del self._spans[key]
+                self._shrink_spans_locked()
             self._merged = merge_ranges(list(self._spans.values()))
             return MuteOutcome(True, leaked_samples=leaked, replaced=replaced)
 
@@ -186,8 +189,39 @@ class MuteBook:
             return
         with self._lock:
             self._hard.append((start, end))
-            if len(self._hard) > 64:
-                del self._hard[: len(self._hard) - 64]
+            if len(self._hard) > MAX_HARD_RANGES:
+                self._shrink_hard_locked()
+
+    def _shrink_spans_locked(self) -> None:
+        """Bound the span table without ever forgetting audio that still has to be muted.
+
+        Spans whose samples have all left are dropped first. If the table is still over its cap (every
+        span is unemitted: only possible with a burst of more than ``max_spans`` spans inside the delay
+        window), the two oldest spans are united into one that covers the gap between them: over-muting
+        by a few hundred milliseconds is safe, dropping a span is not. A united span is ``final`` so a
+        later revision of either id cannot shrink it. Nothing is ever evicted while unemitted."""
+        through = self.emitted_through
+        for key in [k for k, r in self._spans.items() if r.end <= through]:
+            del self._spans[key]
+        while len(self._spans) > self._max and len(self._spans) >= 2:
+            first, second = sorted(self._spans.values(), key=lambda r: (r.start, r.end))[:2]
+            mode = "silence" if "silence" in (first.mode, second.mode) else first.mode
+            united = MuteRange(first.span_id, first.start, max(first.end, second.end), mode, True)
+            del self._spans[second.span_id]
+            self._spans[first.span_id] = united
+            self.united += 1
+
+    def _shrink_hard_locked(self) -> None:
+        """Keep at most ``MAX_HARD_RANGES`` hard-silence ranges by uniting the closest pair (never by
+        dropping one): retroactive-hold silence must cover every sample it covered before."""
+        self._hard.sort()
+        while len(self._hard) > MAX_HARD_RANGES:
+            best = min(
+                range(len(self._hard) - 1),
+                key=lambda i: self._hard[i + 1][0] - self._hard[i][1],
+            )
+            a, b = self._hard[best], self._hard[best + 1]
+            self._hard[best : best + 2] = [(min(a[0], b[0]), max(a[1], b[1]))]
 
     # ------------------------------------------------------------------ applying
 

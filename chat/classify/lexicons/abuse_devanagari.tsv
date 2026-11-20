@@ -1,0 +1,70 @@
+# Hindi abuse in Devanagari. Hand-curated. Nukta is stripped and chandrabindu mapped to anusvara at load and match time.
+# Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)
+मादरचोद	abuse	3	hi	substr
+मादर चोद	abuse	3	hi	word
+मादरचोदों	abuse	3	hi	word
+बहनचोद	abuse	3	hi	substr
+भेनचोद	abuse	3	hi	substr
+बहन चोद	abuse	3	hi	word
+भोसड़ीके	abuse	3	hi	substr
+भोसड़ी	abuse	3	hi	substr
+भोसडीके	abuse	3	hi	substr
+भोसड़ा	abuse	3	hi	substr
+बहन के लौड़े	abuse	3	hi	word
+चूतिया	abuse	2	hi	word
+चुतिया	abuse	2	hi	word
+चूतिये	abuse	2	hi	word
+चुतिये	abuse	2	hi	word
+चूतिए	abuse	2	hi	word
+चूत	abuse	3	hi	word
+चुत	abuse	3	hi	word
+गांडू	abuse	2	hi	word
+गान्डू	abuse	2	hi	word
+गांड	abuse	2	hi	word
+गाण्ड	abuse	2	hi	word
+लंड	abuse	3	hi	word
+लण्ड	abuse	3	hi	word
+लौड़ा	abuse	3	hi	word
+लौडा	abuse	3	hi	word
+लौड़े	abuse	3	hi	word
+लवड़ा	abuse	3	hi	word
+लवडा	abuse	3	hi	word
+लोड़ू	abuse	2	hi	word
+रंडी	abuse	2	hi	word
+रांड	abuse	2	hi	word
+रण्डी	abuse	2	hi	word
+हरामी	abuse	2	hi	word
+हरामखोर	abuse	2	hi	word
+हरामजादा	abuse	2	hi	word
+हरामजादे	abuse	2	hi	word
+हरामजादी	abuse	2	hi	word
+हरामज़ादा	abuse	2	hi	word
+कुत्ता	abuse	2	hi	word
+कुत्ते	abuse	2	hi	word
+कुत्तिया	abuse	2	hi	word
+कुतिया	abuse	2	hi	word
+कुत्ते की औलाद	abuse	2	hi	word
+बकचोद	abuse	2	hi	word
+बकचोदी	abuse	1	hi	word
+भड़वा	abuse	2	hi	word
+भड़वे	abuse	2	hi	word
+भडवा	abuse	2	hi	word
+छिनाल	abuse	2	hi	word
+झांट	abuse	2	hi	word
+झाँट	abuse	2	hi	word
+हिजड़ा	abuse	2	hi	word
+हिजड़े	abuse	2	hi	word
+चक्का	abuse	2	hi	word
+नपुंसक	abuse	2	hi	word
+वेश्या	abuse	2	hi	word
+कमीना	abuse	1	hi	word
+कमीने	abuse	1	hi	word
+कमीनी	abuse	1	hi	word
+साला	abuse	1	hi	word
+साले	abuse	1	hi	word
+तेरी माँ की	abuse	2	hi	word
+तेरी मां की	abuse	2	hi	word
+तेरी बहन की	abuse	2	hi	word
+उल्लू का पट्ठा	abuse	1	hi	word
+बीसी	abuse	1	hi	word
+एमसी	abuse	1	hi	word

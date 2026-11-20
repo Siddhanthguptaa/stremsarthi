@@ -1,0 +1,76 @@
+# Kannada (kn), Tamil (ta), Telugu (te), Bengali (bn) abuse: romanised and native script. Hand-curated.
+# Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)
+sule maga	abuse	3	kn	word
+soole maga	abuse	3	kn	word
+sulemaga	abuse	3	kn	substr
+soolemaga	abuse	3	kn	substr
+bosudi	abuse	3	kn	word
+bosdi maga	abuse	3	kn	word
+boli maga	abuse	3	kn	word
+tika	abuse	2	kn	word
+huccha	abuse	1	kn	word
+otha	abuse	3	ta	word
+ottha	abuse	3	ta	word
+punda	abuse	3	ta	word
+pundai	abuse	3	ta	word
+pundamavan	abuse	3	ta	word
+thevidiya	abuse	3	ta	word
+thevdiya	abuse	3	ta	word
+thevidiyapaiyan	abuse	3	ta	word
+koothi	abuse	3	ta	word
+kuthi	abuse	2	ta	word
+sunni	abuse	2	ta	word
+naaye	abuse	1	ta	word
+loosu	abuse	1	ta	word
+lanja	abuse	3	te	word
+lanjakoduku	abuse	3	te	word
+lanjakodaka	abuse	3	te	word
+munda	abuse	2	te	word
+na kodaka	abuse	2	te	word
+dengey	abuse	3	te	word
+dengu	abuse	3	te	word
+pooku	abuse	3	te	word
+gudda	abuse	2	te	word
+magi	abuse	2	bn	word
+khanki	abuse	3	bn	word
+khankir	abuse	3	bn	word
+khankirchele	abuse	3	bn	word
+chudir	abuse	3	bn	word
+chudi	abuse	2	bn	word
+chodna	abuse	2	bn	word
+bokachoda	abuse	3	bn	word
+haramjada	abuse	2	bn	word
+haramjadi	abuse	2	bn	word
+kuttar bachha	abuse	2	bn	word
+kuttar baccha	abuse	2	bn	word
+ஓத்தா	abuse	3	ta	word
+ஒத்தா	abuse	3	ta	word
+புண்டை	abuse	3	ta	word
+தேவடியா	abuse	3	ta	word
+தேவிடியா	abuse	3	ta	word
+கூத்தி	abuse	3	ta	word
+சுன்னி	abuse	2	ta	word
+நாயே	abuse	1	ta	word
+தாயோளி	abuse	3	ta	word
+లంజ	abuse	3	te	word
+లంజకొడుకు	abuse	3	te	word
+ముండ	abuse	2	te	word
+దెంగు	abuse	3	te	word
+పూకు	abuse	3	te	word
+గుద్ద	abuse	2	te	word
+నా కొడకా	abuse	2	te	word
+ಸೂಳೆ	abuse	3	kn	word
+ಸೂಳೆಮಗ	abuse	3	kn	word
+ಸೂಳೆ ಮಗ	abuse	3	kn	word
+ಬೋಸುಡಿ	abuse	3	kn	word
+ಬೋಳಿ ಮಗ	abuse	3	kn	word
+ಬೋಳಿಮಗ	abuse	3	kn	word
+ಹುಚ್ಚ	abuse	1	kn	word
+মাগি	abuse	2	bn	word
+খানকি	abuse	3	bn	word
+চোদনা	abuse	3	bn	word
+চুদি	abuse	2	bn	word
+হারামজাদা	abuse	2	bn	word
+হারামজাদি	abuse	2	bn	word
+বোকাচোদা	abuse	3	bn	word
+কুত্তার বাচ্চা	abuse	2	bn	word

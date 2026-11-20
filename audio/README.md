@@ -1,7 +1,7 @@
 # audio/
 
-Audio path of Stream Sarthi. T0.6 delivers the core: VAD, segmenter and STT adapters. The orchestrator,
-PII rules, mute spans and captions come in T3.x and T5.3 (see `docs/specs/audio.md`).
+Audio path of Stream Sarthi. T0.6: VAD, segmenter, STT adapters. T3.2: orchestrator (race, spans, fail-safe).
+T3.3: spoken-PII rules. Captions come in T5.3 (see `docs/specs/audio.md`).
 
 | File | What |
 |---|---|
@@ -11,10 +11,13 @@ PII rules, mute spans and captions come in T3.x and T5.3 (see `docs/specs/audio.
 | `stt/sarvam.py` | Sarvam `saaras:v4` codemix, REST per segment, 55 req/min bucket, 1.8 s timeout |
 | `stt/groq.py` | Groq `whisper-large-v3-turbo`, word timestamps, 18 req/min, `GroqChunker` (>= 3 s chunks) |
 | `stt/local.py` | faster-whisper int8 CPU fallback (adapted from PrivaStream, Apache-2.0) |
+| `orchestrator/` | `build(config, bus)` AudioHost; `pipeline.py` (segments to MuteSpan + mouth MaskRequest), `race.py`, `mute.py`, `window.py`, `failsafe.py` |
+| `pii/` | number words (`data/number_words.yaml`), rules, UPI, address, Groq fallback (`llm.py`), `build_detector` |
+| `testing.py` | virtual-time loop, scripted STT, synthetic timelines for tests |
 | `models.py` | pinned/verified model downloads into `models/weights/audio/` (gitignored) |
 | `spikes/stt_spike.py` | latency and capability spike, writes `spikes/REPORT.md` |
 
-Licences: `stt/LICENSE-privastream-Apache-2.0` (PrivaStream), `licenses/silero-vad-MIT.txt` (Silero VAD).
+Licences: `stt/` and `pii/LICENSE-privastream-Apache-2.0` (PrivaStream), `licenses/silero-vad-MIT.txt` (Silero VAD).
 
 ## Run
 ```

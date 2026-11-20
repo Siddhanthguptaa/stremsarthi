@@ -60,6 +60,8 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
 
   const shownSensitivity = dragging ?? settings.sensitivity
   const off = !settings.enabled
+  // Speech is muted, not masked: there is no blur/pixelate/solid choice for it.
+  const isAudio = category.startsWith("spoken_")
 
   const setEnabled = (enabled: boolean) => {
     const change: CategoryChange = { enabled }
@@ -89,6 +91,10 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {category === "spoken_unverified" ? (
+          <p className="text-sm text-muted-foreground">{t("category.spoken_unverified.hint")}</p>
+        ) : null}
+        {isAudio ? null : (
         <div className="space-y-1.5">
           <Label htmlFor={`${id}-style`}>{t("controls.style")}</Label>
           <Select
@@ -104,6 +110,7 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
             ))}
           </Select>
         </div>
+        )}
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
@@ -128,7 +135,7 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <Label htmlFor={`${id}-unsure`}>{t("controls.unsure")}</Label>
+          <Label htmlFor={`${id}-unsure`}>{t(isAudio ? "controls.unsure.audio" : "controls.unsure")}</Label>
           <Switch
             id={`${id}-unsure`}
             checked={settings.mask_when_unsure}

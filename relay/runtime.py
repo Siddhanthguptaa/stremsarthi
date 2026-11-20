@@ -71,7 +71,9 @@ def build_egress_sink(
     """Encoder, destinations and the sink. ``cafile`` (tests only) is an extra trust anchor for the TLS peers."""
     codec, reason = select_encoder(config.relay.encoder, config.gpu.enabled)
     settings = EncoderSettings.from_config(config, codec)
-    built = build_destinations(config, tap_url=tap_url, environ=environ if environ is not None else dict(os.environ))
+    built = build_destinations(
+        config, tap_url=tap_url, environ=environ if environ is not None else dict(os.environ)
+    )
     for code in built.skipped:
         log.warning("destination skipped: %s", code)  # fixed codes such as youtube:no_key, never a value
     publishers: list[DestinationPublisher] = []
@@ -80,7 +82,9 @@ def build_egress_sink(
     try:
         for spec in built.specs:
             forwarder = TLSForwarder(spec.host, spec.port, cafile=cafile).start() if spec.tls else None
-            publishers.append(DestinationPublisher(spec, fps=settings.fps, forwarder=forwarder, opener=opener))
+            publishers.append(
+                DestinationPublisher(spec, fps=settings.fps, forwarder=forwarder, opener=opener)
+            )
         destinations = DestinationSet(
             publishers,
             bus=bus,

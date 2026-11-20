@@ -10,6 +10,11 @@ Protocol (docs/specs/app-api.md section 5.3):
 * Per-client bounded queue (500): telemetry drops oldest, ``control.hold`` and ``engine.status`` are
   never dropped; a client more than ``ws_lag_close_s`` behind is closed with 4408.
 * The socket is read-only apart from auth, subscribe and pong.
+* ``chat.verdict`` frames carry ``"meta":{"hidden_count":N}`` (the API's own count, no text).
+* A client that subscribes to a chat topic first gets ``{"type":"replay","topic":T,"count":N,
+  "hidden_count":H}`` and then N frames of the current state (the moderator's pending queue, the
+  streamer's recently allowed messages): a late-connecting console or overlay needs no extra call. The
+  client clears what it holds for T when it sees the marker.
 """
 
 from __future__ import annotations
@@ -39,6 +44,7 @@ from contracts.enums import NEVER_DROP_TOPICS
 
 from .auth import Principal, TokenService
 from .bus import API_TOPICS, BusClient
+from .chat_state import REPLAY_MAX, ChatState
 from .settings import ApiSettings
 
 log = logging.getLogger("streamsarthi.api.ws")
@@ -73,6 +79,7 @@ ROLE_TOPICS: dict[str, frozenset[Topic]] = {
     "viewer-readonly": frozenset(),  # report only
 }
 _MOD_SAFETY_MODALITIES = frozenset({Modality.CHAT, Modality.SYSTEM})
+CHAT_STATE_TOPICS = frozenset({Topic.CHAT_VERDICT, Topic.CHAT_MODQUEUE, Topic.CHAT_ALLOWED})
 
 
 def event_visible_to(role: str, topic: Topic, event: Any) -> bool:
@@ -133,10 +140,13 @@ class Client:
 class EventHub:
     """Subscribes once to the bus and fans events out to every connected client."""
 
-    def __init__(self, bus: BusClient, settings: ApiSettings, tokens: TokenService) -> None:
+    def __init__(
+        self, bus: BusClient, settings: ApiSettings, tokens: TokenService, chat: ChatState | None = None
+    ) -> None:
         self.bus = bus
         self.settings = settings
         self.tokens = tokens
+        self.chat = chat if chat is not None else ChatState()
         self.clients: set[Client] = set()
         self.seq = 0
         self.last_status: EngineStatus | None = None
@@ -183,7 +193,9 @@ class EventHub:
         return sorted(sources, key=lambda s: s.value)
 
     def _track(self, topic: Topic, event: Any) -> None:
-        if topic is Topic.ENGINE_STATUS:
+        if topic in CHAT_STATE_TOPICS:
+            self.chat.observe(topic, event)
+        elif topic is Topic.ENGINE_STATUS:
             self.last_status = event
             self._last_status_at = time.monotonic()
             self.contract_ok = event.contract_version.split(".")[0] == CONTRACT_VERSION.split(".")[0]
@@ -206,7 +218,8 @@ class EventHub:
 
     def frame(self, topic: Topic, seq: int, ts: str, event: Any) -> str:
         data = dumps(event).decode("utf-8")  # already JSON: embedded verbatim
-        return f'{{"topic":{json.dumps(topic.value)},"seq":{seq},"ts":"{ts}","data":{data}}}'
+        meta = f',"meta":{{"hidden_count":{self.chat.hidden_count}}}' if topic is Topic.CHAT_VERDICT else ""
+        return f'{{"topic":{json.dumps(topic.value)},"seq":{seq},"ts":"{ts}","data":{data}{meta}}}'
 
     def dispatch(self, topic: Topic, event: Any) -> None:
         self._track(topic, event)
@@ -236,6 +249,25 @@ class EventHub:
             for source in sorted(self.hold_sources, key=lambda s: s.value):
                 cmd = HoldCommand(source=source, active=True, actor="replay")
                 client.push(Topic.HOLD, self.frame(Topic.HOLD, self.seq, ts, cmd), now)
+        self._replay_chat(client, ts, now)
+
+    def _replay_chat(self, client: Client, ts: str, now: float) -> None:
+        """Current chat state for a late joiner, after a marker the client uses to reset its own copy."""
+        hidden = self.chat.hidden_count
+        for topic in (Topic.CHAT_MODQUEUE, Topic.CHAT_ALLOWED, Topic.CHAT_VERDICT):
+            if topic not in client.topics:
+                continue
+            events: list[Any] = []
+            if topic is Topic.CHAT_MODQUEUE:
+                events = self.chat.pending_items()[-REPLAY_MAX:]
+            elif topic is Topic.CHAT_ALLOWED:
+                events = self.chat.allowed_recent()
+            marker = {"type": "replay", "topic": topic.value, "count": len(events), "hidden_count": hidden}
+            if topic is Topic.CHAT_MODQUEUE:
+                marker["pending_count"] = self.chat.pending_count()
+            client.push(topic, json.dumps(marker, separators=(",", ":")), now)
+            for event in events:
+                client.push(topic, self.frame(topic, self.seq, ts, event), now)
 
     # --- connection ------------------------------------------------------------------------
     async def authenticate(self, ws: WebSocket) -> Principal | None:

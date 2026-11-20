@@ -1,0 +1,332 @@
+"""Audio orchestrator pipeline (docs/specs/audio.md 5.2-5.4, 5.8; task T3.2).
+
+16 kHz chunks -> VAD segmenter -> STT race -> transcript window -> PII detector -> padded ``MuteSpan`` (+ mouth
+``MaskRequest``). The spans go out on the bus as soon as they are ready, which has to be before
+``arrival + D - 0.1`` of the audio they cover (the engine's hard acceptance time).
+
+Fail-safe: a voiced segment that has no verdict by ``arrival + D - 0.3`` (or whose speech-to-text failed on every
+provider) is muted whole as ``SPOKEN_UNVERIFIED``/``failsafe``. Music and non-voiced audio pass. Transcript
+text lives only in memory and on the local-only ``Topic.TRANSCRIPT``; logs carry counts, ids and timings.
+
+Everything is driven by ``clock`` (default ``time.monotonic``); tests run it on a virtual-time loop.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from collections import deque
+from collections.abc import Callable
+from dataclasses import replace
+from typing import Any
+
+import numpy as np
+
+from audio.orchestrator.failsafe import ArrivalMap, Coverage, chunk_failsafe, hard_deadline, soft_deadline
+from audio.orchestrator.mute import Carry, PlannedSpan, SpanPlanner
+from audio.orchestrator.race import SttAllFailed, SttRace
+from audio.orchestrator.window import TranscriptWindowBuilder
+from audio.segmenter import Segment, Segmenter
+from contracts.config import Config
+from contracts.detection import MaskRequest, MuteSpan
+from contracts.enums import Category, MaskKind, MaskStyle, Topic
+from contracts.events import StageTiming
+from contracts.media import AudioChunk
+from contracts.protocols import EventBus, PiiSpanDetector
+
+log = logging.getLogger("audio.orchestrator")
+
+WINDOW_S = 8.0  # transcript window kept for the rules (5.4)
+RING_S = 8.0  # recent audio kept for the Groq context (>= 3 s requests)
+FAILSAFE_PAD_S = 0.1
+MAX_BOUNDS = 64
+
+
+class PcmRing:
+    """The last few seconds of 16 kHz audio on the source clock (for requests that need preceding audio)."""
+
+    def __init__(self, seconds: float = RING_S, rate: int = 16_000) -> None:
+        self.rate = rate
+        self.max_samples = int(seconds * rate)
+        self._chunks: deque[tuple[float, np.ndarray]] = deque()
+        self._n = 0
+
+    def add(self, pts_start: float, pcm: Any) -> None:
+        a = np.asarray(pcm, dtype=np.int16)
+        self._chunks.append((pts_start, a))
+        self._n += len(a)
+        while self._n > self.max_samples and len(self._chunks) > 1:
+            _, old = self._chunks.popleft()
+            self._n -= len(old)
+
+    def slice(self, lo: float, hi: float) -> tuple[np.ndarray, float]:
+        """Audio of ``[lo, hi]`` (zero-filled where the ring has a gap); returns ``(pcm, start_pts)``."""
+        if not self._chunks:
+            return np.zeros(0, dtype=np.int16), lo
+        lo = max(lo, self._chunks[0][0])
+        n = max(0, int(round((hi - lo) * self.rate)))
+        out = np.zeros(n, dtype=np.int16)
+        for pts, a in self._chunks:
+            i0 = int(round((pts - lo) * self.rate))
+            i1 = i0 + len(a)
+            if i1 <= 0 or i0 >= n:
+                continue
+            s0, s1 = max(i0, 0), min(i1, n)
+            out[s0:s1] = a[s0 - i0 : s1 - i0]
+        return out, lo
+
+
+class AudioPipeline:
+    """Event-loop side of the audio module. ``on_chunk`` must be called on the loop thread, in stream order."""
+
+    def __init__(
+        self,
+        config: Config,
+        bus: EventBus,
+        segmenter: Segmenter,
+        race: SttRace,
+        detector: PiiSpanDetector,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        planner: SpanPlanner | None = None,
+    ) -> None:
+        a = config.audio
+        self.cfg = config
+        self.bus = bus
+        self.segmenter = segmenter
+        self.race = race
+        self.detector = detector
+        self.clock = clock
+        self.delay = float(config.delay_seconds)
+        self.planner = planner or SpanPlanner(pad_s=a.pad_s)
+        self.window = TranscriptWindowBuilder(span_s=max(WINDOW_S, a.watch_window_s + 2.0))
+        self.ring = PcmRing()
+        self.arrivals = ArrivalMap()
+        self.coverage = Coverage()
+        self.lang = a.languages[0] if len(a.languages) == 1 else None
+        self._bounds: dict[int, tuple[float, float]] = {}
+        self._carry: Carry | None = None
+        self._prev_end: float | None = None
+        self._last_gate: asyncio.Future[None] | None = None
+        self._tasks: set[asyncio.Task[None]] = set()
+        self._n_span = 0
+        self.stats: dict[str, int] = dict.fromkeys(
+            (
+                "segments",
+                "voiced",
+                "verdicts",
+                "failsafe",
+                "spans",
+                "late_spans",
+                "stt_failed",
+                "dropped_chunks",
+                "chunk_failsafe",
+            ),
+            0,
+        )
+        self.latencies: deque[float] = deque(maxlen=4096)  # first sample of the segment -> span ready
+        self.margins: deque[float] = deque(
+            maxlen=4096
+        )  # engine hard deadline minus span ready (negative: late)
+        self.leaked_s = 0.0
+
+    # ------------------------------------------------------------------ input
+    def on_chunk(self, chunk: AudioChunk) -> None:
+        if chunk.sample_rate != 16_000:
+            self.stats["dropped_chunks"] += 1
+            self.failsafe_chunk(chunk, "bad_rate")  # cannot be analysed: never let it through unmuted
+            return
+        self.ring.add(chunk.pts_start, chunk.pcm)
+        for seg in self.segmenter.feed_chunk(chunk):
+            try:
+                self._start(seg)
+            except Exception as exc:  # a segment we cannot track must not pass unmuted
+                log.warning(
+                    "audio segment %d start failed (%s): fail-safe mute", seg.seg_id, type(exc).__name__
+                )
+                if seg.voiced:
+                    self._failsafe(seg, "error")
+
+    def failsafe_chunk(self, chunk: AudioChunk, why: str) -> None:
+        """Mute the whole chunk (loop thread). Never raises, never logs text or audio."""
+        try:
+            self.stats["chunk_failsafe"] += 1
+            now = self.clock()
+            probe, _ = chunk_failsafe(chunk, "probe", now, self.cfg.audio.mute_mode, why)
+            for lo, hi in self.coverage.uncovered(probe.pts_start, probe.pts_end, min_len=0.0):
+                self._n_span += 1
+                span, mask = chunk_failsafe(chunk, f"au-{self._n_span}", now, self.cfg.audio.mute_mode, why)
+                span = replace(span, pts_start=lo, pts_end=hi)
+                mask = replace(mask, pts_start=lo, pts_end=hi, frame_pts=lo)
+                self.coverage.add(lo, hi)
+                self.stats["spans"] += 1
+                self._account(span, now)
+                self.bus.publish(Topic.MUTE_SPAN, span)
+                self.bus.publish(Topic.MASK_REQUEST, mask)
+        except Exception as exc:
+            log.error("chunk fail-safe could not be published (%s)", type(exc).__name__)
+
+    def flush(self) -> None:
+        """End of stream: close the open segment."""
+        for seg in self.segmenter.flush():
+            self._start(seg)
+
+    async def drain(self) -> None:
+        """Wait for every segment in flight (each finishes by its soft deadline at the latest)."""
+        while self._tasks:
+            await asyncio.gather(*list(self._tasks), return_exceptions=True)
+
+    async def aclose(self) -> None:
+        for t in list(self._tasks):
+            t.cancel()
+        await asyncio.gather(*list(self._tasks), return_exceptions=True)
+        for stt in self.race.providers.values():
+            closer = getattr(stt, "aclose", None)
+            if closer is not None:
+                try:
+                    await closer()
+                except Exception as exc:
+                    log.debug("closing an stt adapter failed: %s", type(exc).__name__)
+
+    # ------------------------------------------------------------------ segments
+    def _start(self, seg: Segment) -> None:
+        self.stats["segments"] += 1
+        self.arrivals.add(seg.pts_start, seg.arrival)
+        self._bounds[seg.seg_id] = (seg.pts_start, seg.pts_end)
+        while len(self._bounds) > MAX_BOUNDS:
+            self._bounds.pop(next(iter(self._bounds)))
+        self.coverage.prune(seg.pts_start - 30.0)
+        self._timing("segment", seg, seg.arrival, self.clock())
+        if not seg.voiced:
+            return  # music, noise and silence pass
+        self.stats["voiced"] += 1
+        loop = asyncio.get_running_loop()
+        prev, done = self._last_gate, loop.create_future()
+        self._last_gate = done
+        task = loop.create_task(self._run(seg, prev, done), name=f"audio-seg-{seg.seg_id}")
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _run(self, seg: Segment, prev: asyncio.Future[None] | None, done: asyncio.Future[None]) -> None:
+        deadline = soft_deadline(seg.arrival, self.delay)
+        try:
+            remaining = deadline - self.clock()
+            if remaining <= 0:
+                raise TimeoutError
+            await asyncio.wait_for(self._verdict(seg, prev), remaining)
+        except TimeoutError:
+            self._failsafe(seg, "deadline")
+        except SttAllFailed:
+            self.stats["stt_failed"] += 1
+            self._failsafe(seg, "stt_failed")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # never leave voiced speech without a verdict
+            log.warning("audio segment %d failed (%s): fail-safe mute", seg.seg_id, type(exc).__name__)
+            self._failsafe(seg, "error")
+        finally:
+            if not done.done():
+                done.set_result(None)
+
+    def _context(self, seg: Segment, min_s: float) -> tuple[Any, float]:
+        return self.ring.slice(seg.pts_end - min_s, seg.pts_end)
+
+    async def _verdict(self, seg: Segment, prev: asyncio.Future[None] | None) -> None:
+        t0 = self.clock()
+        tr = await self.race.transcribe(seg, self.lang, self._context)
+        self._timing("stt", seg, t0, self.clock())
+        if prev is not None:
+            await asyncio.shield(prev)  # commit in stream order (the previous one ends by its own deadline)
+        self.bus.publish(Topic.TRANSCRIPT, tr)  # local only: never bridged
+        win = self.window.add(tr.words, seg.pts_start, seg.pts_end, self._prev_end)
+        self._prev_end = seg.pts_end
+        spans = list(self.planner.leading_numbers(self._carry, win))
+        spans += await self.detector.detect(win)
+        planned = self.planner.plan(spans, win, self._bounds, seg.pts_end)
+        tail = [p for p in planned if p.tail_extended]
+        self._carry = Carry(tail[-1].anchor_t1, tail[-1].category, tail[-1].confidence) if tail else None
+        self.stats["verdicts"] += 1
+        self._emit(planned, seg)
+
+    # ------------------------------------------------------------------ fail-safe
+    def _failsafe(self, seg: Segment, why: str) -> None:
+        self._carry = Carry(
+            seg.pts_end, Category.SPOKEN_UNVERIFIED, 0.5
+        )  # digits may continue into the next one
+        if not self.cfg.audio.failsafe_mute_voiced:
+            return
+        self.stats["failsafe"] += 1
+        lo = max(0.0, seg.pts_start - FAILSAFE_PAD_S)
+        hi = seg.pts_end + FAILSAFE_PAD_S
+        self._emit(
+            [PlannedSpan(lo, hi, Category.SPOKEN_UNVERIFIED, 0.5, "failsafe_" + why, "failsafe", False, hi)],
+            seg,
+        )
+
+    # ------------------------------------------------------------------ output
+    def _emit(self, planned: list[PlannedSpan], seg: Segment) -> None:
+        now = self.clock()
+        for p in planned:
+            # a fail-safe span keeps every sliver: a 10 ms gap at a segment edge would let a syllable through
+            min_len = 0.0 if p.granularity == "failsafe" else 0.02
+            for lo, hi in self.coverage.uncovered(p.pts_start, p.pts_end, min_len=min_len):
+                self._n_span += 1
+                sid = f"au-{self._n_span}"
+                span = MuteSpan(
+                    sid,
+                    lo,
+                    hi,
+                    p.category,
+                    p.granularity,
+                    p.confidence,
+                    p.reason,
+                    now,
+                    self.cfg.audio.mute_mode,  # type: ignore[arg-type]
+                )
+                self.coverage.add(lo, hi)
+                self.stats["spans"] += 1
+                self._account(span, now)
+                self.bus.publish(Topic.MUTE_SPAN, span)
+                self.bus.publish(
+                    Topic.MASK_REQUEST,
+                    MaskRequest(
+                        f"{sid}-mouth",
+                        "audio",
+                        p.category,
+                        MaskKind.MOUTH_OF_SPEAKER,
+                        (),
+                        lo,
+                        lo,
+                        hi,
+                        MaskStyle.BLUR,
+                        p.confidence,
+                        p.reason,
+                        now,
+                    ),  # fmt: skip
+                )
+        if planned:
+            self._timing("span_ready", seg, seg.arrival, now, pts=planned[0].pts_start)
+            self.latencies.append(now - seg.arrival)
+
+    def _account(self, span: MuteSpan, now: float) -> None:
+        arr = self.arrivals.arrival_of(span.pts_start)
+        if arr is None:
+            return
+        margin = hard_deadline(arr, self.delay) - now
+        self.margins.append(margin)
+        if margin < 0:
+            self.stats["late_spans"] += 1
+            gone = self.arrivals.pts_at(now - self.delay)  # audio before this pts has left the delay buffer
+            if gone is not None:
+                self.leaked_s += max(0.0, min(span.pts_end, gone) - span.pts_start)
+
+    def _timing(self, stage: str, seg: Segment, t0: float, t1: float, pts: float | None = None) -> None:
+        self.bus.publish(
+            Topic.TIMING,
+            StageTiming(stage, seg.seg_id, seg.pts_start if pts is None else pts, t0, max(t0, t1)),
+        )
+
+    def stage_timing(self, stage: str, t0: float, t1: float) -> None:
+        """Callback for the PII detector (``pii_rules``, ``pii_llm``)."""
+        self.bus.publish(Topic.TIMING, StageTiming(stage, self.stats["segments"], None, t0, max(t0, t1)))

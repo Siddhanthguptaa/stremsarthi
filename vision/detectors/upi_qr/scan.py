@@ -130,7 +130,9 @@ def _aruco_quads(det: cv2.QRCodeDetectorAruco, image: np.ndarray) -> list[np.nda
         return []
     if not ok or pts is None:
         return []
-    return [order_quad(p) for p in np.asarray(pts, dtype=np.float32).reshape(-1, 4, 2) if _side(p) >= MIN_SIDE_PX]
+    return [
+        order_quad(p) for p in np.asarray(pts, dtype=np.float32).reshape(-1, 4, 2) if _side(p) >= MIN_SIDE_PX
+    ]
 
 
 def _upscaled_crop(gray: np.ndarray, quad: np.ndarray) -> tuple[np.ndarray, float, int, int] | None:
@@ -213,7 +215,9 @@ def scan(
         if found:
             probe = image.copy()
             for f in found:
-                cv2.fillConvexPoly(probe, np.round(expand_quad(f.quad, 0.2)).astype(np.int32), (127, 127, 127))
+                cv2.fillConvexPoly(
+                    probe, np.round(expand_quad(f.quad, 0.2)).astype(np.int32), (127, 127, 127)
+                )
         cands = _aruco_quads(aruco, probe)
         lap("aruco")
         for quad in cands:

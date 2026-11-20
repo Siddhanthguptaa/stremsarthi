@@ -17,15 +17,19 @@ from . import API_VERSION
 from .allowlist import AllowlistStore
 from .auth import TokenService
 from .bus import BusClient, make_bus
+from .chat_state import ChatState
 from .config_store import ConfigStore
 from .enrol_service import MAX_ENROL_FRAMES, AllowlistService
 from .errors import install_error_handlers
 from .events import SafetyEventStore
 from .ratelimit import SlidingWindowLimiter
+from .routes import alerts as alerts_routes
 from .routes import auth_routes, control, health
+from .routes import chat as chat_routes
 from .routes import config as config_routes
 from .routes import enrol as enrol_routes
 from .routes import events as events_routes
+from .routes import mod as mod_routes
 from .routes import session as session_routes
 from .security import SecurityMiddleware
 from .sessions import SessionManager
@@ -44,8 +48,10 @@ def create_app(
     settings = settings or ApiSettings()
     tokens = TokenService(settings.secret(), room_id=secrets.token_urlsafe(9))
     bus = bus or make_bus(settings.bus_backend, settings.bus_sub_endpoint, settings.bus_pub_endpoint)
-    hub = EventHub(bus, settings, tokens)
     config = config if config is not None else load_config()
+    modq = config.chat.modqueue
+    chat_state = ChatState(max_items=modq.max_items, ttl_s=modq.ttl_s)
+    hub = EventHub(bus, settings, tokens, chat_state)
 
     enrol_cfg = config.enrol
     allowlist = AllowlistService(
@@ -68,6 +74,7 @@ def create_app(
         background = [
             asyncio.create_task(events.run(events.subscribe(bus)), name="safety-events"),
             asyncio.create_task(allowlist.run(allowlist.subscribe()), name="allowlist-sync"),
+            asyncio.create_task(chat_state.run_sweeper(), name="chat-sweeper"),
         ]
         try:
             yield
@@ -98,6 +105,9 @@ def create_app(
     app.state.max_enrol_frames = MAX_ENROL_FRAMES
     app.state.enrol_inflight = 0
     app.state.enrol_limiter = SlidingWindowLimiter(settings.enrol_rate_limit, settings.enrol_rate_window_s)
+    app.state.mod_action_limiter = SlidingWindowLimiter(
+        settings.mod_action_limit, settings.mod_action_window_s
+    )
     app.state.hold_release_limiter = SlidingWindowLimiter(
         settings.hold_release_limit, settings.hold_release_window_s
     )
@@ -109,6 +119,9 @@ def create_app(
     app.include_router(config_routes.router)
     app.include_router(enrol_routes.router)
     app.include_router(events_routes.router)
+    app.include_router(alerts_routes.router)
+    app.include_router(chat_routes.router)
+    app.include_router(mod_routes.router)
     app.include_router(session_routes.router)
     app.include_router(ws_router)
 

@@ -87,7 +87,7 @@ from .wire import (
     to_wire,
 )
 
-CONTRACT_VERSION = "1.1.0"
+CONTRACT_VERSION = "1.1.1"
 
 __all__ = [
     "CANVAS_H",

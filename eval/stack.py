@@ -282,6 +282,17 @@ def run_chain(spec: ChainSpec, on_engine_start: Callable[[int], None] | None = N
             if not ready:
                 tail = "\n".join((run_dir / "engine.log").read_text(errors="ignore").splitlines()[-8:])
                 raise EnvError(f"engine did not come up (exit {engine.poll()}); last log lines:\n{tail}")
+            # MediaMTX answers long before vision has loaded its models (CUDA init alone takes tens of seconds):
+            # start the sender only once the engine says it is ready, or the first seconds are measured cold
+            ready_by = time.monotonic() + spec.engine_ready_timeout_s
+            elog_path = run_dir / "engine.log"
+            while time.monotonic() < ready_by and engine.poll() is None:
+                if "engine ready" in elog_path.read_text(errors="ignore"):
+                    break
+                time.sleep(0.25)
+            else:
+                tail = "\n".join(elog_path.read_text(errors="ignore").splitlines()[-8:])
+                raise EnvError(f"engine never reported ready (exit {engine.poll()}); last log lines:\n{tail}")
             publish = _sender_url(spec.transport, ports, creds, "camera")
             tap_url = f"rtmp://127.0.0.1:{ports['rtmp']}/shielded"
             cpu = CpuSampler(engine.pid).start()
@@ -290,7 +301,12 @@ def run_chain(spec: ChainSpec, on_engine_start: Callable[[int], None] | None = N
         else:
             if find_mediamtx() is None:
                 raise EnvError("MediaMTX binary not found (run scripts/fetch_tools.sh)")
-            mtx = MediaMtx(run_dir).__enter__()
+            try:
+                mtx = MediaMtx(run_dir).__enter__()
+            except (
+                RuntimeError
+            ) as exc:  # a MediaMTX that cannot start is an environment error, not a failed criterion
+                raise EnvError(str(exc)) from exc
             ep = mtx.endpoints
             ports = {"rtmp": ep.rtmp_port, "srt": ep.srt_port, "rtsp": ep.rtsp_port, "api": 0}
             elog = (run_dir / "engine.log").open("w")

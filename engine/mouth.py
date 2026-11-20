@@ -13,8 +13,9 @@ request window the engine
    other mask (a quad that cannot be projected is skipped);
 3. pads each quad by ``MOUTH_PAD`` of its own size on every side.
 
-If no allowlisted face is visible nothing is painted: every non-allowlisted face is already masked by
-vision. The compositor paints the returned quads with a strong BLUR (``engine/compositor.py``).
+An allowlisted face without a usable mouth quad (vision could not locate the landmarks) falls back to
+the lower half of its face box, so the muted word is never left lip-readable. If no allowlisted face is
+visible nothing is painted: every non-allowlisted face is already masked by vision. The compositor paints the returned quads with a strong BLUR (``engine/compositor.py``).
 """
 
 from __future__ import annotations
@@ -30,8 +31,17 @@ Project = Callable[[list[list[list[float]]], int, int, float | None], list | Non
 
 
 def mouth_detections(result: LaneResult) -> tuple[Detection, ...]:
-    """The allowlisted faces of ``result`` that carry a mouth quad."""
-    return tuple(d for d in result.aux_detections if d.allow and "mouth" in d.aux_quads)
+    """The allowlisted faces of ``result`` (with a mouth quad, or with only a face box)."""
+    return tuple(d for d in result.aux_detections if d.allow)
+
+
+def mouth_region(det: Detection) -> Quad:
+    """The mouth quad of an allowlisted face; without one, the lower half of its face box."""
+    quad = det.aux_quads.get("mouth")
+    if quad is not None:
+        return quad
+    x1, y1, x2, y2 = det.quad.bbox()
+    return Quad.from_xyxy(x1, (y1 + y2) / 2.0, x2, y2)
 
 
 def pad_quad(quad: Quad, fraction: float = MOUTH_PAD) -> Quad:
@@ -52,17 +62,20 @@ def pick_source(
     window: tuple[int, int],
     max_age: Mapping[Lane, int],
 ) -> LaneResult | None:
-    """The usable result with allowlisted mouths nearest to frame ``index`` (newest on a tie)."""
+    """The usable result with allowlisted faces nearest to frame ``index`` (newest on a tie).
+
+    A result in which every allowlisted face has a mouth quad beats one that only has face boxes."""
     lo, hi = window
     best: LaneResult | None = None
-    best_key: tuple[int, int] | None = None
+    best_key: tuple[int, int, int] | None = None
     for result in results:
         if not result.ok or result.frame_seq < lo or result.frame_seq > hi or result.completed_at > deadline:
             continue
         age = abs(result.frame_seq - index)
         if age > max_age.get(result.lane, 0) or not mouth_detections(result):
             continue
-        key = (age, -result.frame_seq)
+        coarse = any("mouth" not in d.aux_quads for d in mouth_detections(result))
+        key = (int(coarse), age, -result.frame_seq)
         if best_key is None or key < best_key:
             best, best_key = result, key
     return best
@@ -81,7 +94,7 @@ def resolve_mouth_quads(
     source = pick_source(results, index, deadline, window, max_age)
     if source is None:
         return ()
-    quads: Sequence[Quad] = [d.aux_quads["mouth"] for d in mouth_detections(source)]
+    quads: Sequence[Quad] = [mouth_region(d) for d in mouth_detections(source)]
     flat = [[list(point) for point in quad.pts] for quad in quads]
     projected = project(flat, source.frame_seq, index, deadline)
     if projected is None:

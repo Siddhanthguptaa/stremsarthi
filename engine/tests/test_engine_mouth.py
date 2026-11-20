@@ -191,3 +191,23 @@ def test_mouth_paint_cost_is_under_three_milliseconds_per_frame():
     print(f"mouth paint: {paint_ms:.3f} ms per frame (median, 2 mouths, 720p); "
           f"compose with {1000 * np.median(with_mouth):.3f} ms, without {1000 * np.median(without):.3f} ms")  # fmt: skip
     assert paint_ms < 3.0
+
+
+def test_allowlisted_face_without_a_mouth_quad_gets_the_lower_half_of_its_box_blurred():
+    ident = lambda flat, src, dst, dl: flat  # noqa: E731
+    no_mouth = face(5, (0, 0, 1, 1), with_mouth=False)  # its face box is (-40, -90, 41, 11)
+    box = no_mouth.quad.bbox()
+    out = resolve_mouth_quads([result(5, no_mouth)], 5, 1e9, (0, 40), MAX_AGE, ident)
+    assert len(out) == 1
+    x1, y1, x2, y2 = out[0].bbox()
+    mid = (box[1] + box[3]) / 2.0
+    assert y2 >= box[3] and y1 <= mid  # covers the lower half (plus padding)
+    assert x1 <= box[0] and x2 >= box[2]
+    assert y1 > box[1]  # ... and is not the whole face
+
+
+def test_a_result_with_real_mouth_quads_beats_a_closer_one_with_only_face_boxes():
+    results = [result(12, face(12, (0, 0, 1, 1), with_mouth=False)), result(14, face(14, (1, 1, 11, 11)))]
+    assert pick_source(results, 12, 1e9, (0, 40), MAX_AGE).frame_seq == 14
+    only_box = [result(12, face(12, (0, 0, 1, 1), with_mouth=False))]
+    assert pick_source(only_box, 12, 1e9, (0, 40), MAX_AGE).frame_seq == 12  # the fallback still counts

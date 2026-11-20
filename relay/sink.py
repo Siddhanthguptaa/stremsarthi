@@ -6,6 +6,7 @@ import threading
 from typing import Any
 
 from relay.egress import Egress, EgressWriter
+from relay.sinkfault import SinkFault
 
 
 class EgressFrameSink:
@@ -20,14 +21,22 @@ class EgressFrameSink:
         self.egress = egress
         self.writer = EgressWriter(egress, shape=(canvas[1], canvas[0]))
         self._closed = False
+        # None unless SS_FAULT names a sink fault (fail-safe gate tests): one `is not None` test per call
+        self._fault = SinkFault.from_env(lambda: egress.encoder.kill_worker())
 
     def write(self, pts: float, image: Any, audio_pcm48k: Any) -> None:
         if self._closed:
             return
+        if self._fault is not None:
+            self._fault.start()
+            if self._fault.stalled():
+                return  # a stalled sink stops draining: nothing reaches the tap or any destination
         self.writer.write(float(pts), image, audio_pcm48k)
 
     @property
     def healthy(self) -> bool:
+        if self._fault is not None and self._fault.stalled():
+            return False
         return not self._closed and self.writer.alive and self.egress.healthy
 
     def stats(self) -> dict[str, Any]:

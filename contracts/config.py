@@ -214,6 +214,12 @@ class EngineConfig(_Model):
     max_mask_area_ratio: float = Field(0.6, gt=0.0, le=1.0)  # above this, collapse to one solid fill
     timing_log_path: str | None = None  # StageTiming JSONL (category/time only)
     cv_threads: int | None = Field(2, ge=1, le=16)  # cv2.setNumThreads cap; None leaves OpenCV's default
+    audio_watchdog_s: float = Field(
+        3.0, ge=0.0, le=10.0
+    )  # no audio_heartbeat for this long: mute audio (0 = off)
+    audio_grace_s: float = Field(
+        10.0, ge=0.0, le=60.0
+    )  # time allowed for the first audio_heartbeat after start
 
 
 def _default_modules() -> dict[str, str]:

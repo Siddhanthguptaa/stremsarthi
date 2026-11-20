@@ -77,6 +77,7 @@ class SafetyPublisher:
         self._wall = wall
         self._tracks: dict[tuple[Any, ...], _Track] = {}
         self._failsafe: tuple[str, float, str, float] | None = None  # event_id, start pts, reason, last pts
+        self._audio_failsafe: str | None = None
         self._warm = False
         self._holds: dict[HoldSource, tuple[float, float | None]] = {}  # source -> (monotonic since, pts)
         self.events = 0
@@ -237,6 +238,35 @@ class SafetyPublisher:
             )
         )
 
+    def audio_unchecked(self, active: bool, pts: float | None, duration_ms: int | None = None) -> None:
+        """Audio watchdog: one ``failsafe`` event when the audio module goes silent (audio is muted
+        unchecked), the same ``event_id`` republished with its duration when it recovers."""
+        if active:
+            if self._audio_failsafe is not None:
+                return
+            self._audio_failsafe = uuid.uuid4().hex
+        elif self._audio_failsafe is None:
+            return
+        event_id = self._audio_failsafe
+        if not active:
+            self._audio_failsafe = None
+        self._publish(
+            SafetyEvent(
+                event_id=event_id,
+                session_id=self.session_id,
+                wall_ts=self._wall(),
+                pts=pts,
+                modality=Modality.AUDIO,
+                category=Category.FAILSAFE,
+                action="failsafe",
+                confidence=1.0,
+                bbox=None,
+                duration_ms=None if active else duration_ms,
+                source="engine",
+                detail_code="audio-module-silent",
+            )
+        )
+
     # ------------------------------------------------------------------ held
 
     def hold(self, source: HoldSource, active: bool, now: float, pts: float | None) -> None:
@@ -274,6 +304,7 @@ class SafetyPublisher:
         self._tracks.clear()
         self._close_failsafe()
         now = time.monotonic() if now is None else now
+        self.audio_unchecked(False, None)
         for source in list(self._holds):
             self.hold(source, False, now, None)
 
@@ -307,6 +338,7 @@ class StatusPublisher:
         self._cpu_last: tuple[float, float] | None = None
         self._protect_age = 0.0
         self.allowlist_version = 0
+        self.audio_stale = False  # audio watchdog: the audio module is silent, audio goes out muted
         self.published = 0
 
     def observe(self, now: float, arrival: float | None, protect_age: float) -> None:
@@ -339,7 +371,7 @@ class StatusPublisher:
             cpu_cores=None if cores is None else round(cores, 2),
             vram_mb=None,  # the engine is CPU-only
             allowlist_version=self.allowlist_version,
-            lanes_stale=self.engine.lanes_stale(),
+            lanes_stale=(*self.engine.lanes_stale(), *(("audio",) if self.audio_stale else ())),
             protect_seconds=round(self._protect_age, 2),
             contract_version=CONTRACT_VERSION,
         )

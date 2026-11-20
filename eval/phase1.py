@@ -259,6 +259,18 @@ def analyse_hold(
         return [chk("hold and release were sent over the bus", 0.0, "==", 1.0)], m
     live = live_frames(frames)
     aligned = m["engine_alignment"]["valid"]
+    # spec 5.9: "within 1 frame of the command's engine-receipt time". When the engine logs the receipt
+    # (event "hold_received", see the hook list in eval/fault.py) use it; otherwise the time of the bus send.
+    receipts = [
+        float(e["t"])
+        for e in read_engine_timing(res.engine_timing_path).events
+        if e.get("name") == "hold_received" and t_hold <= float(e.get("t", 0.0)) <= t_hold + 1.0
+    ]
+    t_receipt = min(receipts) if receipts else None
+    if t_receipt is not None:
+        t_hold_eff = t_receipt
+    else:
+        t_hold_eff = t_hold
     out: dict[str, Any] = {"t_hold": t_hold, "t_release": t_release, "engine_alignment_valid": aligned}
     checks: list[Check] = [_alive_check(res)]
 
@@ -272,9 +284,13 @@ def analyse_hold(
 
     if aligned:
         emitted = [(f, f.extra.get("engine_emitted")) for f in live]
-        during = [f for f, e in emitted if e is not None and t_hold < e < t_release]
+        during = [f for f, e in emitted if e is not None and t_hold_eff < e < t_release]
         # frames the engine emitted live after the command: the first may already have been in flight
         out["live_frames_emitted_after_hold"] = len(during)
+        out["hold_reference"] = "engine_receipt_event" if t_receipt is not None else "bus_send_time"
+        out["live_emit_offsets_after_hold_ms"] = sorted(
+            round((e - t_hold) * 1000.0, 1) for f, e in emitted if e is not None and t_hold < e < t_release
+        )[:4]
         checks.append(
             chk(
                 "live frames emitted after the hold command (slate within 1 frame)",
@@ -579,6 +595,8 @@ def run_main(out: Path, engine: str, gpu: bool, seconds: float = MAIN_SECONDS) -
         print(f"ENV ERROR: {exc}")
         return EXIT_ENV
     _save_timing(res, out, leg)
+    if res.tap.errors:
+        print(f"tap errors: {res.tap.errors}")
     checks, m = analyse_main(res, label)
     _print_checks(leg, checks)
     return _write_leg(out, leg, checks, m, res)

@@ -1,7 +1,8 @@
 /** REST client for the Stream Sarthi API. Only the API origin is contacted (docs/specs/app-web.md 4). */
 
 import { API_URL } from "@/lib/config"
-import type { ApiErrorBody, HoldSource, Wire } from "@/lib/wire"
+import type { ApiAlert } from "@/lib/live-state"
+import type { ApiErrorBody, HoldSource, ModActionRequest, Wire, WhoAmI } from "@/lib/wire"
 
 export interface HoldView {
   active: boolean
@@ -53,11 +54,26 @@ export interface PublicConfig {
   delay_seconds?: number
   categories: Record<string, CategorySettings>
   captions?: { enabled: boolean; target_lang: string }
+  /** `languages` are the speech languages being checked; `supported_languages` is what can be chosen. */
+  audio?: { languages: string[]; supported_languages?: string[] }
   secrets?: Record<string, "***" | null>
 }
 
 /** A JSON merge patch for `PATCH /api/config`. */
 export type ConfigPatch = { categories?: Record<string, Partial<CategorySettings>> } & Record<string, unknown>
+
+/** `GET /api/alerts`: alerts are category, time, confidence and duration only. */
+export interface AlertsResponse {
+  alerts: ApiAlert[]
+  next_cursor: number
+  count: number
+}
+
+export interface AlertsQuery {
+  limit?: number
+  modality?: string
+  min_confidence?: number
+}
 
 const ENROL_TIMEOUT_MS = 30_000
 
@@ -162,6 +178,14 @@ export function createApi(options: ApiClientOptions) {
     getHold: (signal?: AbortSignal) => request<HoldView>("GET", "/api/hold", undefined, signal),
     getStatus: (signal?: AbortSignal) => request<StatusResponse>("GET", "/api/status", undefined, signal),
 
+    // --- alert feed: the latest alerts, newest first (first load and after a reconnect) --------------
+    getAlerts(query: AlertsQuery = {}, signal?: AbortSignal): Promise<AlertsResponse> {
+      const params = new URLSearchParams({ order: "desc", limit: String(query.limit ?? 50) })
+      if (query.modality) params.set("modality", query.modality)
+      if (query.min_confidence !== undefined) params.set("min_confidence", String(query.min_confidence))
+      return request<AlertsResponse>("GET", `/api/alerts?${params}`, undefined, signal)
+    },
+
     // --- face allowlist (docs/specs/app-api.md 5.5). Embeddings never reach the browser. ----------
     getEnrolled: (signal?: AbortSignal) => request<EnrolList>("GET", "/api/enrol", undefined, signal),
     /** Upload the captured JPEG frames once. The caller drops its own copies right after. */
@@ -173,6 +197,15 @@ export function createApi(options: ApiClientOptions) {
     },
     deleteEnrolled: (faceId: string, signal?: AbortSignal) =>
       request<{ deleted: true }>("DELETE", `/api/enrol/${encodeURIComponent(faceId)}`, undefined, signal),
+
+    // --- who am I, and the moderator console ---------------------------------------------------------
+    whoami: (signal?: AbortSignal) => request<WhoAmI>("GET", "/api/auth/whoami", undefined, signal),
+    /** Streamer only. The returned token is a moderator link credential: show it once, never store it. */
+    modInvite: (signal?: AbortSignal) =>
+      request<{ token: string; role: "moderator"; expires_in: number }>("POST", "/api/auth/mod-invite", {}, signal),
+    /** Moderator only. `{accepted:true}` means the chat shield was told; the outcome arrives on the WebSocket. */
+    modAction: (action: ModActionRequest, signal?: AbortSignal) =>
+      request<{ accepted: true; action: string }>("POST", "/api/mod/action", action, signal),
 
     // --- config (secrets arrive masked as "***" and are never rendered) ---------------------------
     getConfig: (signal?: AbortSignal) => request<PublicConfig>("GET", "/api/config", undefined, signal),

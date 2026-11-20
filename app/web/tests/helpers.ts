@@ -42,3 +42,30 @@ export function engineFrame(seq: number, over: Record<string, unknown> = {}) {
 }
 
 export const sampleData = <T = Record<string, unknown>>(name: string): T => sample(name).d as T
+
+const FRAME_TS = "2026-11-20T10:00:00.000+00:00"
+let chatSeq = 0
+
+export function chatMessage(id: string, over: Record<string, unknown> = {}) {
+  return { ...sampleData<Record<string, unknown>>("ChatMessage"), message_id: id, text: `text of ${id}`, ...over }
+}
+
+export function chatVerdict(id: string, over: Record<string, unknown> = {}) {
+  return { ...sampleData<Record<string, unknown>>("ChatVerdict"), message_id: id, ...over }
+}
+
+/** A `chat.modqueue` item. `message` and `verdict` overrides merge into the sample's. */
+export function modItem(id: string, over: { state?: string; message?: Record<string, unknown>; verdict?: Record<string, unknown> } = {}) {
+  const base = sampleData<Record<string, unknown>>("ModQueueItem")
+  return {
+    ...base,
+    message: chatMessage(id, over.message),
+    verdict: chatVerdict(id, over.verdict),
+    state: over.state ?? "pending",
+  }
+}
+
+export function chatFrame(topic: string, type: string, data: Record<string, unknown>, meta?: { hidden_count: number }) {
+  chatSeq += 1
+  return { topic, seq: chatSeq, ts: FRAME_TS, data: { t: type, v: 1, d: data }, ...(meta ? { meta } : {}) }
+}

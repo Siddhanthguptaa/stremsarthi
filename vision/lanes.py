@@ -13,6 +13,9 @@ only the exception type.
 
 from __future__ import annotations
 
+import json
+import os
+import re
 import threading
 import time
 from collections import deque
@@ -35,6 +38,131 @@ from contracts import (
 
 SLOW_LANE_HZ = 1.0
 RESULT_QUEUE_MAX = 256
+
+ENV_FAULT = "SS_FAULT"
+ENV_FAULT_LOG = "SS_FAULT_LOG"
+_FAULT_TIME_RE = re.compile(r"^(\d+(?:\.\d+)?)(ms|s)?$")
+
+
+def _fault_seconds(text: str) -> float:
+    m = _FAULT_TIME_RE.match(text.strip())
+    if not m:
+        raise ValueError(text)
+    value = float(m.group(1))
+    return value / 1000.0 if m.group(2) == "ms" else value
+
+
+@dataclass(frozen=True, slots=True)
+class _LaneFault:
+    mode: str  # "hang" | "crash"
+    at_s: float
+    for_s: float | None
+
+    def canonical(self, lane: str) -> str:
+        tail = f"t={self.at_s:g}s" + (f",for={self.for_s:g}s" if self.for_s is not None else "")
+        return f"lane:{lane}:{self.mode}@{tail}"
+
+
+def _parse_lane_faults(value: str | None, lane: str) -> list[_LaneFault]:
+    """Lane specs of an ``SS_FAULT`` value (``lane:<name>:<hang|crash>@t=<time>[,for=<time>]``, ``;``
+    separated; protocol in ``eval/fault.py``) that target ``lane``. Re-implemented here on purpose:
+    vision never imports ``eval``. Sink specs and malformed specs are ignored (the hook stays dormant)."""
+    out: list[_LaneFault] = []
+    for part in (value or "").split(";"):
+        head, _, params = part.strip().partition("@")
+        fields = head.split(":")
+        if len(fields) != 3 or fields[0] != "lane" or fields[1] != lane or fields[2] not in ("hang", "crash"):
+            continue
+        at: float | None = None
+        dur: float | None = None
+        try:
+            for item in params.split(","):
+                key, eq, val = item.partition("=")
+                if not eq:
+                    raise ValueError(item)
+                if key.strip() == "t":
+                    at = _fault_seconds(val)
+                elif key.strip() == "for":
+                    dur = _fault_seconds(val)
+                    if dur <= 0:
+                        raise ValueError(item)
+                else:
+                    raise ValueError(item)
+        except ValueError:
+            continue
+        if at is not None:
+            out.append(_LaneFault(fields[2], at, dur))
+    return out
+
+
+class _FaultHook:
+    """Per-lane SS_FAULT hook. Only built when a spec targets this lane. ``t = 0`` is the arrival of
+    the first frame offered to the lane; activation/clearing is appended once to ``SS_FAULT_LOG`` as one
+    JSON line in the same format as ``eval.fault.FaultInjector``."""
+
+    def __init__(self, lane: str, faults: list[_LaneFault], log_path: str | None) -> None:
+        self.lane = lane
+        self.faults = faults
+        self.log_path = log_path
+        self._t0: float | None = None
+        self._announced: set[tuple[str, str]] = set()
+
+    def start(self, first_frame_arrival: float) -> None:
+        if self._t0 is None:
+            self._t0 = first_frame_arrival
+
+    def check(self) -> _LaneFault | None:
+        """The fault active now (hang wins over crash), or None."""
+        if self._t0 is None:
+            return None
+        t = time.monotonic() - self._t0
+        found: _LaneFault | None = None
+        for f in self.faults:
+            if t < f.at_s:
+                continue
+            if f.for_s is None or t < f.at_s + f.for_s:
+                self._announce("fault_active", f)
+                if found is None or f.mode == "hang":
+                    found = f
+            else:
+                self._announce("fault_cleared", f)
+        return found
+
+    def hang(self, fault: _LaneFault) -> None:
+        """Block the calling (daemon) worker thread: forever, or until the ``for=`` window ends."""
+        if fault.for_s is None or self._t0 is None:
+            threading.Event().wait()
+            return
+        remaining = self._t0 + fault.at_s + fault.for_s - time.monotonic()
+        if remaining > 0:
+            time.sleep(remaining)
+        self._announce("fault_cleared", fault)
+
+    def _announce(self, event: str, fault: _LaneFault) -> None:
+        spec = fault.canonical(self.lane)
+        if (event, spec) in self._announced:
+            return
+        self._announced.add((event, spec))
+        if not self.log_path:
+            return
+        end = fault.at_s if event == "fault_active" else (fault.at_s + (fault.for_s or 0.0))
+        line = json.dumps(
+            {
+                "event": event,
+                "spec": spec,
+                "t_monotonic": round(end + (self._t0 or 0.0), 6),
+                "t_observed": round(time.monotonic(), 6),
+                "proc": "vision",
+            },
+            separators=(",", ":"),
+        )
+        try:
+            with open(self.log_path, "a", encoding="utf-8") as fh:
+                fh.write(line + "\n")
+                fh.flush()
+        except OSError:
+            pass
+
 
 # (frame, lane, detections of this run) -> (mask requests, aux detections). Planner/tracker hook.
 Assembler = Callable[
@@ -104,6 +232,14 @@ class LaneWorker:
         self._previous: tuple[Detection, ...] = ()
         self._stopping = False
         self._thread: threading.Thread | None = None
+        raw_fault = os.environ.get(ENV_FAULT)
+        lane_faults = _parse_lane_faults(raw_fault, lane.value) if raw_fault else []
+        # None unless SS_FAULT targets this lane: the production path pays one `is not None` test per run
+        self._fault: _FaultHook | None = (
+            _FaultHook(lane.value, lane_faults, os.environ.get(ENV_FAULT_LOG) or None)
+            if lane_faults
+            else None
+        )
         self.offered = self.skipped = self.dropped = self.completed = self.failed = 0
         self.last_error: dict[str, str] = {}  # detector id -> exception type name (never the message)
         self.service_seconds: deque[float] = deque(maxlen=4096)
@@ -123,6 +259,8 @@ class LaneWorker:
             if self._stopping:
                 raise RuntimeError(f"lane {self.lane.value} is closed")
             self.offered += 1
+            if self._fault is not None:
+                self._fault.start(frame.arrival)  # fault clock t=0: first frame offered
             if frame.seq % self.schedule.stride:
                 self.skipped += 1
                 return False
@@ -185,9 +323,22 @@ class LaneWorker:
                     return
                 frame, self._latest = self._latest, None
             assert frame is not None
+            crash = False
+            if self._fault is not None:
+                active = self._fault.check()
+                if active is not None and active.mode == "hang":
+                    self._fault.hang(active)  # blocks before the detector; no LaneResult is produced
+                    if self._stopping:
+                        return
+                elif active is not None:
+                    crash = True
             began = self._clock()
             next_allowed = began + self._period
-            result = self._run_once(frame, began)
+            result = (
+                self._fail(frame, "fault", RuntimeError("SS_FAULT lane crash"))
+                if crash
+                else self._run_once(frame, began)
+            )
             self.service_seconds.append(self._clock() - began)
             with self._cond:
                 self._results.append(result)

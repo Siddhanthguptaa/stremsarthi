@@ -4,9 +4,11 @@ import { engineFrame, safetyFrame, sampleData } from "./helpers"
 import { categoryKey, formatPercent, formatTime, holdSourceKey, safetyActionKey } from "@/lib/format"
 import { en, hi } from "@/lib/i18n"
 import {
+  type ApiAlert,
   chipFor,
   ENGINE_STALE_MS,
   initialLiveState,
+  filterAlerts,
   liveReducer,
   MAX_ALERTS,
   toAlert,
@@ -23,10 +25,10 @@ const status = (over: Partial<EngineStatus> = {}): EngineStatus => ({
 })
 
 describe("alert feed", () => {
-  it("keeps category, action, time and confidence only: no box, no codes, no text", () => {
+  it("keeps modality, category, action, time, confidence and duration only: no box, no codes, no text", () => {
     const e = event({ event_id: "e1", category: "aadhaar", action: "masked", confidence: 0.93 })
     const alert = toAlert(e)
-    expect(Object.keys(alert).sort()).toEqual(["action", "at", "category", "confidence", "id"])
+    expect(Object.keys(alert).sort()).toEqual(["action", "at", "category", "confidence", "durationMs", "id", "modality"])
     const serialised = JSON.stringify(alert)
     expect(serialised).not.toContain("bbox")
     expect(serialised).not.toContain(e.source)
@@ -53,6 +55,60 @@ describe("alert feed", () => {
     const e = event({ event_id: "dup" })
     const once = liveReducer(initialLiveState, { type: "safety", event: e })
     expect(liveReducer(once, { type: "safety", event: e })).toBe(once)
+  })
+
+  it("updates a row in place when the engine republishes it with a duration (not counted twice)", () => {
+    let s = initialLiveState
+    for (const id of ["a", "b", "c"]) s = liveReducer(s, { type: "safety", event: event({ event_id: id, duration_ms: null }) })
+    s = liveReducer(s, { type: "safety", event: event({ event_id: "b", duration_ms: 1800 }) })
+    expect(s.alerts.map((a) => [a.id, a.durationMs])).toEqual([["c", null], ["b", 1800], ["a", null]])
+    expect(s.alertsTotal).toBe(3)
+  })
+
+  const apiAlert = (id: string, at: string, over: Partial<ApiAlert> = {}): ApiAlert => ({
+    id,
+    at,
+    modality: "audio",
+    category: "spoken_phone",
+    action: "muted",
+    confidence: 0.8,
+    duration_ms: null,
+    ...over,
+  })
+
+  it("backfills missed alerts from REST in time order without duplicating live ones", () => {
+    let s = liveReducer(initialLiveState, { type: "safety", event: event({ event_id: "live1", wall_ts: "2026-11-21T09:00:05+00:00" }) })
+    s = liveReducer(s, {
+      type: "backfill",
+      alerts: [
+        apiAlert("live1", "2026-11-21T09:00:05+00:00"),
+        apiAlert("old2", "2026-11-21T09:00:03+00:00"),
+        apiAlert("old1", "2026-11-21T09:00:01+00:00"),
+        apiAlert("newer", "2026-11-21T09:00:09+00:00"),
+      ],
+    })
+    expect(s.alerts.map((a) => a.id)).toEqual(["newer", "live1", "old2", "old1"])
+    expect(s.alertsTotal).toBe(4)
+    const again = liveReducer(s, { type: "backfill", alerts: [apiAlert("old1", "2026-11-21T09:00:01+00:00")] })
+    expect(again).toBe(s)
+  })
+
+  it("a backfill never grows the list past 200", () => {
+    const many = Array.from({ length: 300 }, (_, i) => apiAlert(`x${i}`, new Date(1_700_000_000_000 + i * 1000).toISOString()))
+    const s = liveReducer(initialLiveState, { type: "backfill", alerts: many })
+    expect(s.alerts).toHaveLength(MAX_ALERTS)
+    expect(s.alerts[0].id).toBe("x299")
+  })
+
+  it("filters by modality; guard and system alerts only show under all", () => {
+    const alerts = [
+      toAlert(event({ event_id: "v", modality: "video" })),
+      toAlert(event({ event_id: "a", modality: "audio" })),
+      toAlert(event({ event_id: "g", modality: "guard" })),
+    ]
+    expect(filterAlerts(alerts, "all")).toHaveLength(3)
+    expect(filterAlerts(alerts, "audio").map((a) => a.id)).toEqual(["a"])
+    expect(filterAlerts(alerts, "chat")).toEqual([])
   })
 
   it("every category and action has a label in both languages", () => {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from audio.orchestrator.mute import is_number_token
@@ -47,21 +48,30 @@ class DigitRunPiiDetector:
         return out
 
 
-def load_pii_detector(config: Any) -> PiiSpanDetector:
-    """``audio.pii`` if it exports ``build_detector(config)`` (or ``build``), else the built-in fallback."""
+def load_pii_detector(
+    config: Any, on_timing: Callable[[str, float, float], None] | None = None
+) -> PiiSpanDetector:
+    """``audio.pii`` if it exports ``build_detector(config)`` (or ``build``), else the built-in fallback.
+
+    ``on_timing(stage, t0, t1)`` is passed to factories that accept it (``pii_rules``/``pii_llm`` timings)."""
     try:
         mod = importlib.import_module("audio.pii")
     except ImportError:
         log.warning("audio.pii is not available: using the built-in digit-run detector")
         return DigitRunPiiDetector()
     except Exception as exc:  # a half-written module must not stop the audio path
-        log.warning("audio.pii failed to import (%s): using the built-in digit-run detector", type(exc).__name__)
+        log.warning(
+            "audio.pii failed to import (%s): using the built-in digit-run detector", type(exc).__name__
+        )
         return DigitRunPiiDetector()
     for name in ("build_detector", "build"):
         factory = getattr(mod, name, None)
         if callable(factory):
             try:
-                det = factory(config)
+                try:
+                    det = factory(config, on_timing=on_timing)
+                except TypeError:
+                    det = factory(config)
             except Exception as exc:
                 log.warning("audio.pii.%s failed (%s): using the fallback", name, type(exc).__name__)
                 break

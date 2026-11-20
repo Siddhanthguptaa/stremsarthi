@@ -1,0 +1,82 @@
+# Spoken-number, cue and UPI-handle vocabulary for audio/pii (docs/specs/audio.md 5.5, 5.6).
+# Spellings are from the spec table and are UNVERIFIED against real ASR output: extend this file, not the code.
+# All entries are passed through ``normalise_text`` when loaded, so case, NFKC form and punctuation do not matter.
+digits:
+  "0": [zero, oh, shunya, ज़ीरो, जीरो, शून्य, sonne, ಸೊನ್ನೆ, poojyam, பூஜ்யம், sunna, సున్నా, shunyo, শূন্য]
+  "1": [one, ek, एक, ondu, ಒಂದು, onru, ஒன்று, okati, ఒకటి, এক]
+  "2": [two, do, दो, eradu, ಎರಡು, irandu, இரண்டு, rendu, రెండు, dui, দুই]
+  "3": [three, teen, तीन, mooru, ಮೂರು, moondru, மூன்று, moodu, మూడు, tin, তিন]
+  "4": [four, char, chaar, चार, naalku, ನಾಲ್ಕು, naangu, நான்கு, naalugu, నాలుగు, চার]
+  "5": [five, paanch, panch, पांच, पाँच, aidu, ಐದು, ainthu, ஐந்து, ఐదు, পাঁচ]
+  "6": [six, chhe, chhah, che, chheh, छह, छः, छे, aaru, ಆರು, ஆறு, ఆరు, choy, ছয়]
+  "7": [seven, saat, sat, सात, elu, ಏಳು, ezhu, ஏழு, edu, ఏడు, shat, সাত]
+  "8": [eight, aath, ath, आठ, entu, ಎಂಟು, ettu, எட்டு, enimidi, ఎనిమిది, aat, আট]
+  "9": [nine, nau, नौ, ombattu, ಒಂಬತ್ತು, onbathu, ஒன்பது, tommidi, తొమ్మిది, noy, নয়]
+# Counted as number tokens (a run stays contiguous across them) but never expanded into digits.
+compound: [das, दस, sau, सौ, hazaar, hazar, हज़ार, हजार, lakh, लाख, crore, करोड़]
+repeat:
+  double: 2
+  dabal: 2
+  डबल: 2
+  triple: 3
+  tripal: 3
+  ट्रिपल: 3
+plus: [plus, प्लस]
+ninety: [ninety, nainty, नब्बे]
+at_markers:            # token sequences that say "@"
+  strong: [["at", "the", "rate", "of"], ["at", "the", "rate"], ["एट", "द", "रेट"], ["एट", "दी", "रेट"], ["attherate"], ["@"]]
+  weak: [["at"], ["एट"]]
+handles: [oksbi, okhdfcbank, okicici, okaxis, ybl, ibl, axl, paytm, apl, upi, sbi, okhdfc, hdfcbank, icici, axisbank, fbl, ezetap]
+cues:
+  generic:
+    - [mera, number]
+    - [number, hai]
+    - [call, me]
+    - [whatsapp, number]
+    - [mobile, number]
+    - [phone, number]
+    - [contact]
+    - [otp]
+    - [password]
+    - [pin]
+    - [pincode]
+    - [pin, code]
+    - [passcode]
+    - [verification, code]
+    - [upi]
+    - [gpay]
+    - [phonepe]
+    - [paytm]
+    - [नंबर]
+    - [ओटीपी]
+    - [पासवर्ड]
+    - [पिन]
+    - [ಒಟಿಪಿ]
+    - [ஓடிபி]
+    - [ఓటిపి]
+    - [ওটিপি]
+  address_open:        # open an address region: the next tokens are muted
+    - [address]
+    - [ghar, ka, pata]
+    - [pata]
+    - [पता]
+    - [एड्रेस]
+address:
+  strong:
+    - [flat, number]
+    - [house, number]
+    - [ghar, number]
+    - [plot, number]
+    - [plot]
+    - [gali]
+    - [mohalla]
+    - [landmark]
+    - [pincode]
+    - [pin, code]
+  weak:                # need a watch window or another address cue nearby
+    - [road]
+    - [nagar]
+    - [sector]
+    - [near]
+    - [ke, paas]
+name_stop: [hai, hain, is, id, my, mera, meri, ka, ki, the, a, to, ye, yeh, number, upi, pay, gpay, phonepe, bhejo, send, "on", at, or, and, aur, toh, so, then]

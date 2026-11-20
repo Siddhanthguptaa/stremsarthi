@@ -282,7 +282,9 @@ RECIPES: list[dict[str, Any]] = [
 ]
 
 
-def augmented_set(n_positive: int = 72, n_other: int = 24, n_none: int = 24, seed: int = 4242) -> list[QrScene]:
+def augmented_set(
+    n_positive: int = 72, n_other: int = 24, n_none: int = 24, seed: int = 4242
+) -> list[QrScene]:
     """The acceptance set. Positives cycle through ``RECIPES`` (tilt up to 25 deg, blur sigma up to 1.6, partial
     glare, up to 15 % occlusion off the finder patterns, far codes); negatives are decodable non-payment codes
     (same recipes) and QR-free frames with finder-pattern and barcode look-alikes."""

@@ -1,0 +1,132 @@
+# Hinglish (Hindi in Latin letters) and English abuse. Hand-curated for Stream Sarthi (no third-party list copied).
+# Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)
+# category: abuse. Terms are written in lexicon form (lowercase, leet undone); the loader normalises them too.
+# Repeated letters are squeezed at match time, so list one spelling (chutiya also matches chutiyaaa).
+# Severity 3 = slur / severe sexual-family abuse, 2 = abusive, 1 = mild or ambiguous (goes to the LLM stage).
+madarchod	abuse	3	hi	substr
+maderchod	abuse	3	hi	substr
+madharchod	abuse	3	hi	substr
+madrchod	abuse	3	hi	substr
+mdarchod	abuse	3	hi	substr
+bahenchod	abuse	3	hi	substr
+behenchod	abuse	3	hi	substr
+bhenchod	abuse	3	hi	substr
+behnchod	abuse	3	hi	substr
+bhnchod	abuse	3	hi	substr
+bhosdike	abuse	3	hi	substr
+bhosdi	abuse	3	hi	substr
+bhosda	abuse	3	hi	substr
+bhosadi	abuse	3	hi	substr
+bsdk	abuse	3	hi	word
+bhosdk	abuse	3	hi	word
+chut	abuse	3	hi	word
+lund	abuse	3	hi	word
+lauda	abuse	3	hi	word
+lavda	abuse	3	hi	word
+lawda	abuse	3	hi	word
+laude	abuse	3	hi	word
+lavde	abuse	3	hi	word
+loda	abuse	2	hi	word
+lode	abuse	2	hi	word
+lodu	abuse	2	hi	word
+chutiya	abuse	2	hi	word
+chutiye	abuse	2	hi	word
+chutiyapa	abuse	2	hi	word
+chutiyapanti	abuse	2	hi	word
+chutia	abuse	2	hi	word
+chutiyo	abuse	2	hi	word
+chodu	abuse	2	hi	word
+gandu	abuse	2	hi	word
+gaandu	abuse	2	hi	word
+gaand	abuse	2	hi	word
+gand	abuse	2	hi	word
+gaandfat	abuse	2	hi	word
+randi	abuse	2	hi	word
+raand	abuse	2	hi	word
+randwa	abuse	2	hi	word
+randikhana	abuse	2	hi	word
+harami	abuse	2	hi	word
+haramkhor	abuse	2	hi	word
+haramzada	abuse	2	hi	word
+haramzade	abuse	2	hi	word
+haramzadi	abuse	2	hi	word
+haraamzaada	abuse	2	hi	word
+kutta	abuse	2	hi	word
+kutte	abuse	2	hi	word
+kuttiya	abuse	2	hi	word
+kutiya	abuse	2	hi	word
+kutte ki aulad	abuse	2	hi	word
+kutte ke bachche	abuse	2	hi	word
+suar ki aulad	abuse	2	hi	word
+bakchod	abuse	2	hi	word
+bakchodi	abuse	1	hi	word
+bkl	abuse	2	hi	word
+mkc	abuse	2	hi	word
+tmkc	abuse	2	hi	word
+mc	abuse	1	hi	word
+bc	abuse	1	hi	word
+bhadwa	abuse	2	hi	word
+bhadwe	abuse	2	hi	word
+bhadve	abuse	2	hi	word
+bhadwi	abuse	2	hi	word
+jhatu	abuse	2	hi	word
+jhaant	abuse	2	hi	word
+jhant	abuse	2	hi	word
+chinal	abuse	2	hi	word
+chinaal	abuse	2	hi	word
+kanjri	abuse	2	hi	word
+veshya	abuse	2	hi	word
+dhandhewali	abuse	2	hi	word
+hijra	abuse	2	hi	word
+hijda	abuse	2	hi	word
+chakka	abuse	2	hi	word
+napunsak	abuse	2	hi	word
+kamina	abuse	1	hi	word
+kamine	abuse	1	hi	word
+kameena	abuse	1	hi	word
+kamini	abuse	1	hi	word
+saala	abuse	1	hi	word
+saale	abuse	1	hi	word
+sala	abuse	1	hi	word
+tatti	abuse	1	hi	word
+chudail	abuse	1	hi	word
+ullu ka pattha	abuse	1	hi	word
+teri maa ki	abuse	2	hi	word
+teri maa ka	abuse	2	hi	word
+teri maa ko	abuse	2	hi	word
+teri behen ki	abuse	2	hi	word
+teri behen ko	abuse	2	hi	word
+tere baap ki	abuse	1	hi	word
+maa chod	abuse	3	hi	word
+maa ki chut	abuse	3	hi	word
+behen ke lode	abuse	3	hi	word
+bhen ke lode	abuse	3	hi	word
+bhen ke laude	abuse	3	hi	word
+gaand mara	abuse	2	hi	word
+gand mara	abuse	2	hi	word
+gaand me	abuse	2	hi	word
+gand me	abuse	2	hi	word
+fuck	abuse	2	en	word
+fucker	abuse	2	en	word
+fuk	abuse	2	en	word
+fck	abuse	2	en	word
+motherfucker	abuse	3	en	word
+mf	abuse	1	en	word
+fuck you	abuse	2	en	word
+fuck off	abuse	2	en	word
+bitch	abuse	2	en	word
+bastard	abuse	2	en	word
+asshole	abuse	2	en	word
+cunt	abuse	3	en	word
+slut	abuse	2	en	word
+whore	abuse	2	en	word
+nigger	abuse	3	en	word
+nigga	abuse	2	en	word
+faggot	abuse	3	en	word
+retard	abuse	2	en	word
+retarded	abuse	2	en	word
+dumbass	abuse	1	en	word
+idiot	abuse	1	en	word
+loser	abuse	1	en	word
+kys	abuse	3	en	word
+suck my	abuse	2	en	word

@@ -1,0 +1,22 @@
+{
+ "game": "specimen",
+ "anchor": [
+  20.0,
+  16.0,
+  92.0,
+  94.0
+ ],
+ "threshold": 0.8,
+ "weak": true,
+ "regions": [
+  {
+   "category": "game_id",
+   "rect": [
+    108,
+    62,
+    312,
+    42
+   ]
+  }
+ ]
+}

@@ -29,6 +29,13 @@ def add_arguments(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--faces-cache", default=DEFAULT_FACES_CACHE, help="where the public-domain portraits are cached"
     )
+    p.add_argument(
+        "--clips",
+        type=int,
+        default=2,
+        help="30 fps clips per clip bucket (0 = images only, default %(default)s)",
+    )
+    p.add_argument("--clip-seconds", type=float, default=5.0, help="clip length (spec: 5 to 10 s)")
     p.add_argument("--no-fetch", action="store_true", help="do not download missing portraits")
 
 
@@ -39,7 +46,15 @@ def run(a: argparse.Namespace) -> int:
     cache = a.faces_cache if Path(a.faces_cache).is_absolute() else str(ROOT / a.faces_cache)
     try:
         manifest = build_suite(
-            out, a.seed, a.n, tuple(a.buckets) if a.buckets else None, a.workers, cache, fetch=not a.no_fetch
+            out,
+            a.seed,
+            a.n,
+            tuple(a.buckets) if a.buckets else None,
+            a.workers,
+            cache,
+            fetch=not a.no_fetch,
+            clips_per_bucket=a.clips,
+            clip_seconds=a.clip_seconds,
         )
     except EnvError as exc:
         print(f"ENV ERROR: {exc}", file=sys.stderr)
@@ -55,6 +70,12 @@ def run(a: argparse.Namespace) -> int:
     print(f"ground truth: {n_targets} target quads, {n_dis} distractor quads")
     for b, n in counts.items():
         print(f"  {b:22s} {n}")
+    if "clips" in manifest:
+        ci = manifest["clips"]["items"]
+        print(
+            f"clips: {len(ci)} x {manifest['clips']['seconds']} s at {manifest['clips']['fps']} fps, "
+            f"{sum(c['visible_target_frames'] for c in ci)} visible target-frames"
+        )
     if "enroll_sets" in manifest:
         print(
             "  enrolment frames: "

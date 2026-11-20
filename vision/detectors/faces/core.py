@@ -233,7 +233,9 @@ def mouth_quad(landmarks: np.ndarray, width: int = CANVAS_W, height: int = CANVA
     c = (a + b) / 2.0
     hw, hh = MOUTH_WIDTH * d / 2.0, MOUTH_HEIGHT * d / 2.0
     pts = [c - u * hw - v * hh, c + u * hw - v * hh, c + u * hw + v * hh, c - u * hw + v * hh]
-    clamped = tuple((min(max(float(p[0]), 0.0), float(width)), min(max(float(p[1]), 0.0), float(height))) for p in pts)
+    clamped = tuple(
+        (min(max(float(p[0]), 0.0), float(width)), min(max(float(p[1]), 0.0), float(height))) for p in pts
+    )
     return Quad(clamped)  # type: ignore[arg-type]
 
 

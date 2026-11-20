@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { dumpsEnvelope, holdFrame, safetyFrame } from "./helpers"
+import { chatFrame, chatVerdict, dumpsEnvelope, holdFrame, modItem, safetyFrame } from "./helpers"
 import {
   backoffDelay,
   BACKOFF_MAX_MS,
@@ -322,5 +322,39 @@ describe("handlers", () => {
 describe("test helpers", () => {
   it("build frames the real parser accepts", () => {
     expect(dumpsEnvelope("HoldCommand", { source: "app", active: true, actor: "a" })).toContain('"t":"HoldCommand"')
+  })
+})
+
+describe("chat replay and meta", () => {
+  it("parses a replay marker and hands it to replay handlers, in order with the frames after it", () => {
+    const { client, sockets } = make({ topics: ["chat.modqueue", "chat.verdict"] })
+    const order: string[] = []
+    client.onReplay((m) => order.push(`replay:${m.topic}:${m.count}:${m.hiddenCount}:${m.pendingCount}`))
+    client.onFrame((f) => order.push(`frame:${f.topic}`))
+    client.start()
+    sockets[0].open()
+    sockets[0].recv(subscribed(["chat.modqueue", "chat.verdict"]))
+    sockets[0].recv({ type: "replay", topic: "chat.modqueue", count: 1, hidden_count: 2, pending_count: 1 })
+    sockets[0].recv(chatFrame("chat.modqueue", "ModQueueItem", modItem("a")))
+    expect(order).toEqual(["replay:chat.modqueue:1:2:1", "frame:chat.modqueue"])
+  })
+
+  it("keeps hidden_count from chat.verdict frames and ignores a bad meta", () => {
+    const { client, sockets } = make({ topics: ["chat.verdict"] })
+    const seen: Array<number | undefined> = []
+    client.onFrame((f) => seen.push(f.meta?.hidden_count))
+    client.start()
+    sockets[0].open()
+    sockets[0].recv(chatFrame("chat.verdict", "ChatVerdict", chatVerdict("a"), { hidden_count: 4 }))
+    sockets[0].recv({ ...chatFrame("chat.verdict", "ChatVerdict", chatVerdict("b")), meta: { hidden_count: "x" } })
+    expect(seen).toEqual([4, undefined])
+  })
+
+  it("replay handlers are unregistered like every other handler", () => {
+    const { client } = make()
+    const off = client.onReplay(() => {})
+    expect(client.handlerCount).toBe(1)
+    off()
+    expect(client.handlerCount).toBe(0)
   })
 })

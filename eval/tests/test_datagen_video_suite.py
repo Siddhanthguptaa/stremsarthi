@@ -83,7 +83,8 @@ def test_ground_truth_geometry(bucket):
             )
             xs, ys = [p[0] for p in rec["quad"]], [p[1] for p in rec["quad"]]
             if _key != "context":  # whole-screen context quads legitimately cover the stamp corner
-                assert max(xs) < sx1 or min(xs) > sx2 or max(ys) < sy1 or min(ys) > sy2  # never over the stamp
+                # never over the stamp
+                assert max(xs) < sx1 or min(xs) > sx2 or max(ys) < sy1 or min(ys) > sy2
             assert 0.0 <= rec["occlusion_fraction"] <= 1.0 and rec["in_frame_fraction"] >= 0.95
             assert rec["visible"] == (rec["in_frame_fraction"] >= 0.6 and rec["min_side_px"] >= 24)
         assert truth["n_visible_targets"] == sum(
@@ -258,6 +259,8 @@ def test_cli_writes_images_truth_files_and_manifest(tmp_path):
             "signboard_kannada",
             "--workers",
             "1",
+            "--clips",
+            "0",
         ]
     )
     assert rc == 0

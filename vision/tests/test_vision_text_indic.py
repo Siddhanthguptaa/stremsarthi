@@ -163,7 +163,7 @@ def test_a_confident_latin_number_with_a_junk_label_is_re_read_for_its_indic_lab
             60: ("8732279010", 0.99),
             80: ("8732279010", 0.99),
         },  # right digits but no Indic label: rejected
-        "telugu": {60: ("పిన్ - ௭௦௦ ௯௯௪", 0.96), 80: ("ఫోన్: 8732279010", 1.0)},
+        "telugu": {60: ("పిన్ - ౭౦౦ ౯౯౪", 0.96), 80: ("ఫోన్: 8732279010", 1.0)},
     }
     enr, recs = _enricher(table)
     out = enr(_frame(img), base)

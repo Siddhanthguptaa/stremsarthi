@@ -8,6 +8,8 @@
     python -m eval.run microbench ...             # callable latency (p50/p95/p99 JSON)
     python -m eval.run phase1 --leg main --engine real|ref|ref-broken [--gpu]   # one gate-1 leg (see eval/phase1.py)
     python -m eval.run phase1-report --dir D --results R.json   # eval/reports/<date>-phase1.md from the legs in D
+    python -m eval.run phase2 --leg preflight|offline|rescore|perf --data D --out O   # one gate-2 leg (eval/phase2/)
+    python -m eval.run phase2-report --dir O --results R.json   # eval/reports/<date>-phase2.md from the legs in O
 
 Exit codes: 0 pass, 1 a criterion failed, 2 environment error (nothing measured).
 """
@@ -89,6 +91,12 @@ def cmd_gen(a: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_gen_video(a: argparse.Namespace) -> int:
+    from .data_gen.video import cli
+
+    return cli.main(a.rest)
+
+
 def cmd_gate_report(a: argparse.Namespace) -> int:
     """Turn a gate's step results (JSON list written by scripts/gate_lib.sh) into reports/<date>-<phase>.md."""
     from .harness import report
@@ -148,6 +156,71 @@ def cmd_phase1_report(a: argparse.Namespace) -> int:
     )
 
 
+def cmd_phase2(a: argparse.Namespace) -> int:
+    from .phase2 import offline
+    from .phase2.rows import COVER_MIN, LEVELS
+
+    out = Path(a.out) if a.out else _run_dir("phase2")
+    data = Path(a.data)
+    if a.leg == "preflight":
+        rc, info = offline.preflight(data)
+        for i, st in info.get("detectors", {}).items():
+            print(f"  detector {i}: {st}")
+        for p in info["problems"]:
+            print(f"ENV ERROR: {p}")
+        if rc == EXIT_OK:
+            print(
+                f"preflight ok (dataset {info['dataset']['images']} images, {info['dataset']['clips']} clips)"
+            )
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "preflight.json").write_text(
+            json.dumps(info, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        return rc
+    if a.leg == "dataset-check":
+        ok, why = offline.dataset_matches(data, a.seed, a.n, a.clips)
+        print(f"dataset {data}: {why}")
+        return EXIT_OK if ok else EXIT_FAIL
+    if a.leg in ("offline", "rescore"):
+        opts = offline.OfflineOptions(
+            data=data,
+            out=out,
+            cover_min=a.cover_min if a.cover_min is not None else COVER_MIN,
+            gate_levels=tuple(a.gate_levels.split(",")) if a.gate_levels else LEVELS,
+            gate_sources=tuple(a.gate_sources.split(",")),
+            min_n=a.min_n,
+            min_windows=a.min_windows,
+            ocr_budget_ms=a.ocr_budget_ms,
+            fast_still_runs=a.fast_still_runs,
+            buckets=set(a.buckets) if a.buckets else None,
+            max_per_bucket=a.max_per_bucket,
+            faces_async=a.faces_async,
+        )
+        return offline.rescore(opts) if a.leg == "rescore" else offline.run_offline(opts)
+    from .phase2 import perf
+
+    problems = perf.preflight(a.engine)
+    if problems:
+        print(f"ENV ERROR: gate 2 cannot run the '{a.engine}' chain:")
+        for p in problems:
+            print(f"  - {p}")
+        return EXIT_ENV
+    return perf.run_perf(out, a.engine, a.gpu, a.seconds)
+
+
+def cmd_phase2_report(a: argparse.Namespace) -> int:
+    from .phase2 import report as p2report
+
+    return p2report.run(
+        Path(a.dir),
+        Path(a.results) if a.results else None,
+        a.date,
+        Path(a.report_dir) if a.report_dir else None,
+        not a.no_baseline,
+        a.phase_name,
+    )
+
+
 def cmd_microbench(a: argparse.Namespace) -> int:
     from . import microbench
 
@@ -181,6 +254,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--n", type=int, default=5, help="items per kind")
     sp.add_argument("--out", default=None)
     sp.set_defaults(fn=cmd_gen)
+
+    sp = sub.add_parser("gen-video", help="T2.1 video SPECIMEN suite: images, clips, ground truth, manifest")
+    sp.add_argument(
+        "rest", nargs=argparse.REMAINDER, help="options of `python -m eval.data_gen.video --help`"
+    )
+    sp.set_defaults(fn=cmd_gen_video)
 
     sp = sub.add_parser("gate-report")
     sp.add_argument("--phase", required=True)
@@ -218,6 +297,47 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.set_defaults(fn=cmd_phase1_report)
 
+    sp = sub.add_parser("phase2", help="one gate-2 leg: preflight, dataset-check, offline, rescore or perf")
+    sp.add_argument(
+        "--leg", required=True, choices=["preflight", "dataset-check", "offline", "rescore", "perf"]
+    )
+    sp.add_argument(
+        "--data", default="/tmp/ss_phase2_video", help="T2.1 dataset directory (manifest.json inside)"
+    )
+    sp.add_argument("--out", default=None, help="directory for the leg JSON, records and run data")
+    sp.add_argument("--seed", type=int, default=1234, help="dataset-check: expected generator seed")
+    sp.add_argument("--n", type=int, default=40, help="dataset-check: expected images per bucket")
+    sp.add_argument("--clips", type=int, default=4, help="dataset-check: expected clips per clip bucket")
+    sp.add_argument("--engine", choices=["real", "ref", "ref-broken"], default="real", help="perf leg chain")
+    sp.add_argument("--gpu", action="store_true", help="perf leg with gpu.enabled=true (run under flock)")
+    sp.add_argument("--seconds", type=float, default=120.0, help="perf leg length")
+    sp.add_argument(
+        "--gate-levels", default=None, help="comma list of clean,light,heavy the checks use (default all)"
+    )
+    sp.add_argument("--gate-sources", default="img,clip", help="img,clip: which sets the recall checks use")
+    sp.add_argument(
+        "--cover-min", type=float, default=None, help="share of the target quad a mask must cover (0.90)"
+    )
+    sp.add_argument("--min-n", type=int, default=20, help="fewer visible target frames than this is NOT RUN")
+    sp.add_argument("--min-windows", type=int, default=20, help="fewer flicker windows than this is NOT RUN")
+    sp.add_argument(
+        "--ocr-budget-ms", type=int, default=5000, help="lift the wall-clock OCR budget for repeatable recall"
+    )
+    sp.add_argument("--fast-still-runs", type=int, default=4, help="fast-lane runs per still image")
+    sp.add_argument("--buckets", nargs="*", default=None, help="only these dataset buckets")
+    sp.add_argument("--max-per-bucket", type=int, default=None, help="at most N images and clips per bucket")
+    sp.add_argument("--faces-async", action="store_true", help="let the face detector embed asynchronously")
+    sp.set_defaults(fn=cmd_phase2)
+
+    sp = sub.add_parser("phase2-report", help="write eval/reports/<date>-phase2.md from the leg JSONs")
+    sp.add_argument("--dir", required=True)
+    sp.add_argument("--results", default=None, help="gate step results JSON from scripts/gate_lib.sh")
+    sp.add_argument("--date", default=None)
+    sp.add_argument("--report-dir", default=None)
+    sp.add_argument("--no-baseline", action="store_true")
+    sp.add_argument("--phase-name", default="phase2", help="report name (phase2-quick, phase2-ref ...)")
+    sp.set_defaults(fn=cmd_phase2_report)
+
     sp = sub.add_parser("microbench")
     sp.add_argument("rest", nargs=argparse.REMAINDER)
     sp.set_defaults(fn=cmd_microbench)
@@ -225,6 +345,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if (
+        argv and argv[0] == "gen-video"
+    ):  # options are forwarded untouched (argparse REMAINDER drops a leading --opt)
+        return cmd_gen_video(argparse.Namespace(rest=argv[1:]))
     p = build_parser()
     a = p.parse_args(argv)
     if a.selftest and a.cmd is None:

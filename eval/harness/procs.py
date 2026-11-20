@@ -82,6 +82,7 @@ pprof: false
 playback: false
 hls: false
 webrtc: false
+moq: false
 rtsp: true
 rtspTransports: [tcp]
 rtspAddress: 127.0.0.1:{rtsp}

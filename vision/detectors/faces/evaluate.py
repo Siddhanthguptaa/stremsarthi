@@ -16,8 +16,10 @@ Per ground-truth face and run, using the planner's ``MaskRequest`` quads (so hol
 * a face that must be masked (a stranger, or anybody when the allowlist is empty): a request covers at least 50 %
   of its box;
 * an enrolled face: no request covers more than 20 % of its box and the detector said ``allow``.
-Only faces at least 50 % inside the frame count. "steady" skips the first ``WARMUP_RUNS`` runs of every clip (the
-confirmation window: a new track is masked until 5 of 7 samples match, by design); "all" keeps them.
+Only faces at least 50 % inside the frame count. "all" keeps every run; "steady" skips the first
+``WARMUP_RUNS`` (the confirmation window: a new track is masked until 5 of 7 samples match, by design); "settled"
+skips ``SETTLED_RUNS`` (also the planner's 0.8 s hold on the masks shown meanwhile). A 10 s clip therefore
+starts with up to 1.4 s of deliberate masking; the stranger numbers are unaffected.
 
 Limits, repeated in the output: astronaut portraits are frontal, well lit and not representative of Indian
 streamers on phone cameras; profile faces are simulated by squeezing the portrait (no real profiles); hard cases
@@ -46,7 +48,8 @@ from .enroll import Enroller
 STRIDE = 3
 FPS = 30
 RUNS = 100  # 10 s of stream at the dev stride
-WARMUP_RUNS = 8
+WARMUP_RUNS = 8  # "steady": after the 5-vote confirmation window (0.6 s at one embedding per run)
+SETTLED_RUNS = 14  # "settled": also past the planner's 0.8 s face hold on the masks shown while unconfirmed
 TILE_FACE_W = 240  # a tile is rendered at this face width, then scaled per scene
 ENROL_PHOTOS = 2  # the first photos of an enrolled person are used to enrol, the rest are shown in scenes
 ENROLLED = ("menon", "chari", "barron")
@@ -62,7 +65,21 @@ class Tile:
     person: str
     name: str
     image: np.ndarray  # BGR crop around the face, face width = TILE_FACE_W
+    alpha: (
+        np.ndarray
+    )  # float32 0..1, soft elliptical head-and-hair mask (tiles must not paint over a neighbour)
     box: tuple[float, float, float, float]  # face box in tile coordinates
+
+
+def _head_alpha(shape: tuple[int, int], box: tuple[float, float, float, float]) -> np.ndarray:
+    """Soft ellipse around the head (1.1 face widths wide, 1.5 high, feathered): the rectangular tile of a
+    neighbour used to paint over the face next to it, which made 'enrolled next to a stranger' unmeasurable."""
+    h, w = shape
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    fw = box[2] - box[0]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    r = np.sqrt(((xx - cx) / (0.62 * fw)) ** 2 + ((yy - cy) / (0.82 * fw)) ** 2)
+    return np.clip((1.15 - r) / 0.25, 0.0, 1.0).astype(np.float32)
 
 
 def load_people(photos: Path, models: FaceModels) -> dict[str, list[Tile]]:
@@ -93,7 +110,7 @@ def load_people(photos: Path, models: FaceModels) -> dict[str, list[Tile]]:
         tile = cv2.resize(crop, None, fx=k, fy=k, interpolation=cv2.INTER_AREA if k < 1 else cv2.INTER_CUBIC)
         box = ((f.x1 - x0) * k, (f.y1 - y0) * k, (f.x2 - x0) * k, (f.y2 - y0) * k)
         person, name = path.stem.split("__", 1)
-        people.setdefault(person, []).append(Tile(person, name, tile, box))
+        people.setdefault(person, []).append(Tile(person, name, tile, _head_alpha(tile.shape[:2], box), box))
     return people
 
 
@@ -145,9 +162,9 @@ def render(
         rot = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
         lin = rot @ np.diag([k * p.squeeze, k])
         m = np.hstack([lin, (np.array([cx, cy]) - lin @ fc)[:, None]])
-        cv2.warpAffine(
-            p.tile.image, m, (w, h), dst=canvas, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_TRANSPARENT
-        )
+        warped = cv2.warpAffine(p.tile.image, m, (w, h), flags=cv2.INTER_LINEAR).astype(np.float32)
+        cover = cv2.warpAffine(p.tile.alpha, m, (w, h), flags=cv2.INTER_LINEAR)[..., None]
+        canvas = (canvas.astype(np.float32) * (1.0 - cover) + warped * cover).astype(np.uint8)
         corners = np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]]) @ lin.T + m[:, 2]
         bx1, by1 = corners.min(axis=0)
         bx2, by2 = corners.max(axis=0)
@@ -182,7 +199,9 @@ def build_clips(people: dict[str, list[Tile]]) -> list[Clip]:
     ) -> None:
         seed = 1000 + len(clips)
         placements = [
-            Placement(tile, xs[i], CANVAS_H * 0.48, width, is_enrolled, angle, squeeze, phase=i * 1.3 + seed % 7)
+            Placement(
+                tile, xs[i], CANVAS_H * 0.48, width, is_enrolled, angle, squeeze, phase=i * 1.3 + seed % 7
+            )
             for i, (tile, is_enrolled) in enumerate(faces)
         ]
         clips.append(Clip(name, group, placements, tuple(enrolled) if allowlist else (), seed, brightness))
@@ -208,7 +227,14 @@ def build_clips(people: dict[str, list[Tile]]) -> list[Clip]:
         add(f"enrolled_among_two_strangers/{p}", "enrolled_among_two_strangers", trio, [320, 640, 960], 150)
     for i, p in enumerate(enrolled):  # nobody is allowlisted: everybody is masked, the enrolled person too
         s = strangers[i % len(strangers)]
-        add(f"empty_allowlist/{p}+{s}", "empty_allowlist", [(held[p][0], True), (people[s][0], False)], pair, 190, allowlist=False)
+        add(
+            f"empty_allowlist/{p}+{s}",
+            "empty_allowlist",
+            [(held[p][0], True), (people[s][0], False)],
+            pair,
+            190,
+            allowlist=False,
+        )
     # hard cases: one face per clip
     hard: dict[str, dict[str, Any]] = {
         "small": {"width": 62},
@@ -275,14 +301,19 @@ class Tally:
     ok_all: int = 0
     runs_steady: int = 0
     ok_steady: int = 0
+    runs_settled: int = 0
+    ok_settled: int = 0
     stranger_allowed: int = 0  # face runs where a face that must be masked carried allow=True
 
-    def add(self, ok: bool, steady: bool) -> None:
+    def add(self, ok: bool, run: int) -> None:
         self.runs_all += 1
         self.ok_all += ok
-        if steady:
+        if run >= WARMUP_RUNS:
             self.runs_steady += 1
             self.ok_steady += ok
+        if run >= SETTLED_RUNS:
+            self.runs_settled += 1
+            self.ok_settled += ok
 
 
 def _coverage(gt: tuple[float, float, float, float], boxes: list[tuple[float, float, float, float]]) -> float:
@@ -295,7 +326,14 @@ def _coverage(gt: tuple[float, float, float, float], boxes: list[tuple[float, fl
     return best
 
 
-def run_clip(clip: Clip, det: FacesDetector, config: Config, tallies: dict[str, Tally], times: list[float]) -> None:
+def run_clip(
+    clip: Clip,
+    det: FacesDetector,
+    config: Config,
+    tallies: dict[str, Tally],
+    times: list[float],
+    per_clip: dict[str, Tally] | None = None,
+) -> None:
     rng = np.random.default_rng(clip.seed)
     bg = _background(rng, (CANVAS_W, CANVAS_H))
     planner = MaskPlanner(Lane.FAST, config)
@@ -315,15 +353,20 @@ def run_clip(clip: Clip, det: FacesDetector, config: Config, tallies: dict[str, 
             allowed = any(d.allow and _coverage(gt, [d.quad.bbox()]) >= 0.5 for d in dets)
             must_show = p.enrolled and bool(clip.allowlist)
             role = "visible" if must_show else "masked"
-            tally = tallies.setdefault(f"{clip.group}:{role}", Tally())
-            if must_show:
-                tally.add(cov <= 0.2 and allowed, run >= WARMUP_RUNS)
-            else:
-                tally.stranger_allowed += int(allowed)
-                tally.add(cov >= 0.5, run >= WARMUP_RUNS)
+            owners = [tallies.setdefault(f"{clip.group}:{role}", Tally())]
+            if per_clip is not None:
+                owners.append(per_clip.setdefault(f"{clip.name}:{role}", Tally()))
+            for tally in owners:
+                if must_show:
+                    tally.add(cov <= 0.2 and allowed, run)
+                else:
+                    tally.stranger_allowed += int(allowed)
+                    tally.add(cov >= 0.5, run)
 
 
-def cosine_stats(people: dict[str, list[Tile]], models: FaceModels, enrolled: dict[str, tuple[float, ...]]) -> dict[str, Any]:
+def cosine_stats(
+    people: dict[str, list[Tile]], models: FaceModels, enrolled: dict[str, tuple[float, ...]]
+) -> dict[str, Any]:
     """Cosine of every held-out photo against each enrolled embedding, and a sweep of ``face_match_cos``."""
     genuine: list[float] = []
     impostor: list[float] = []
@@ -338,12 +381,25 @@ def cosine_stats(people: dict[str, list[Tile]], models: FaceModels, enrolled: di
                 (genuine if who == person else impostor).append(c)
     g, i = np.array(genuine), np.array(impostor)
     sweep = {
-        f"{t:.3f}": {"genuine_pass": round(float((g >= t).mean()), 3), "impostor_pass": round(float((i >= t).mean()), 4)}
+        f"{t:.3f}": {
+            "genuine_pass": round(float((g >= t).mean()), 3),
+            "impostor_pass": round(float((i >= t).mean()), 4),
+        }
         for t in (0.30, 0.363, 0.40, 0.45, 0.50)
     }
     return {
-        "genuine": {"n": len(g), "min": round(float(g.min()), 3), "p5": round(float(np.percentile(g, 5)), 3), "median": round(float(np.median(g)), 3)},
-        "impostor": {"n": len(i), "max": round(float(i.max()), 3), "p99": round(float(np.percentile(i, 99)), 3), "median": round(float(np.median(i)), 3)},
+        "genuine": {
+            "n": len(g),
+            "min": round(float(g.min()), 3),
+            "p5": round(float(np.percentile(g, 5)), 3),
+            "median": round(float(np.median(g)), 3),
+        },
+        "impostor": {
+            "n": len(i),
+            "max": round(float(i.max()), 3),
+            "p99": round(float(np.percentile(i, 99)), 3),
+            "median": round(float(np.median(i)), 3),
+        },
         "sweep": sweep,
     }
 
@@ -351,14 +407,20 @@ def cosine_stats(people: dict[str, list[Tile]], models: FaceModels, enrolled: di
 def _pool(tallies: dict[str, Tally], keys: list[str]) -> dict[str, Any]:
     sel = [tallies[k] for k in keys if k in tallies]
     out: dict[str, Any] = {"face_runs": sum(t.runs_all for t in sel)}
-    for label, runs, ok in (("all", "runs_all", "ok_all"), ("steady", "runs_steady", "ok_steady")):
+    for label, runs, ok in (
+        ("all", "runs_all", "ok_all"),
+        ("steady", "runs_steady", "ok_steady"),
+        ("settled", "runs_settled", "ok_settled"),
+    ):
         n, k = sum(getattr(t, runs) for t in sel), sum(getattr(t, ok) for t in sel)
         out[label] = round(k / n, 4) if n else None
     out["stranger_runs_with_allow_true"] = sum(t.stranger_allowed for t in sel)
     return out
 
 
-def evaluate(photos: Path, *, async_embed: bool = False, match_cos: float | None = None) -> dict[str, Any]:
+def evaluate(
+    photos: Path, *, async_embed: bool = False, match_cos: float | None = None, only: str | None = None
+) -> dict[str, Any]:
     cv2.setNumThreads(2)  # what the engine uses (engine.cv_threads)
     config = Config(profile="dev", _env_file=None)
     models = load_models()
@@ -367,22 +429,31 @@ def evaluate(photos: Path, *, async_embed: bool = False, match_cos: float | None
     enroller = Enroller(backend=models)
     rng = np.random.default_rng(7)
     enrolled = {
-        p: enrol_person(enroller, people[p], rng) for p in ENROLLED if p in people and len(people[p]) > ENROL_PHOTOS
+        p: enrol_person(enroller, people[p], rng)
+        for p in ENROLLED
+        if p in people and len(people[p]) > ENROL_PHOTOS
     }
-    clips = build_clips(people)
+    clips = [c for c in build_clips(people) if only is None or c.group.startswith(only)]
+    per_clip: dict[str, Tally] = {}
     params = {} if match_cos is None else {"face_match_cos": match_cos}
     tallies: dict[str, Tally] = {}
     times: list[float] = []
     for clip in clips:
-        det = make_detector(config, _Allow([(p, enrolled[p]) for p in clip.allowlist]), async_embed=async_embed, **params)
-        run_clip(clip, det, config, tallies, times)
+        det = make_detector(
+            config, _Allow([(p, enrolled[p]) for p in clip.allowlist]), async_embed=async_embed, **params
+        )
+        run_clip(clip, det, config, tallies, times, per_clip)
         det.close()
     standard = [g for g in tallies if not g.startswith("hard_")]
     summary = {
         "non_allowlisted_masked_standard": _pool(tallies, [g for g in standard if g.endswith(":masked")]),
         "allowlisted_visible_standard": _pool(tallies, [g for g in standard if g.endswith(":visible")]),
-        "hard_masked": _pool(tallies, [g for g in tallies if g.startswith("hard_") and g.endswith(":masked")]),
-        "hard_visible": _pool(tallies, [g for g in tallies if g.startswith("hard_") and g.endswith(":visible")]),
+        "hard_masked": _pool(
+            tallies, [g for g in tallies if g.startswith("hard_") and g.endswith(":masked")]
+        ),
+        "hard_visible": _pool(
+            tallies, [g for g in tallies if g.startswith("hard_") and g.endswith(":visible")]
+        ),
         "clips": len(clips),
         "people": len(people),
         "unique_photos_shown": len({(p.tile.person, p.tile.name) for c in clips for p in c.placements}),
@@ -399,17 +470,25 @@ def evaluate(photos: Path, *, async_embed: bool = False, match_cos: float | None
         "limits": LIMITS,
     }
     groups = {g: _pool(tallies, [g]) for g in sorted(tallies)}
-    return {"summary": summary, "groups": groups}
+    weak = {
+        k: {x: _pool(per_clip, [k])[x] for x in ("all", "steady", "settled")}
+        for k in sorted(per_clip)
+        if (_pool(per_clip, [k])["settled"] or 0.0) < 0.95
+    }
+    return {"summary": summary, "groups": groups, "clips_below_95_settled": weak}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="T2.6 faces acceptance run")
     ap.add_argument("--photos", type=Path, default=Path(".tmp/facedata/photos"))
     ap.add_argument("--json", type=Path)
-    ap.add_argument("--async-embed", action="store_true", help="embed on the worker thread (lane-time numbers)")
+    ap.add_argument(
+        "--async-embed", action="store_true", help="embed on the worker thread (lane-time numbers)"
+    )
     ap.add_argument("--match-cos", type=float)
+    ap.add_argument("--only", help="only clip groups starting with this prefix (e.g. enrolled_next)")
     args = ap.parse_args()
-    result = evaluate(args.photos, async_embed=args.async_embed, match_cos=args.match_cos)
+    result = evaluate(args.photos, async_embed=args.async_embed, match_cos=args.match_cos, only=args.only)
     text = json.dumps(result, indent=1)
     print(text)
     if args.json:

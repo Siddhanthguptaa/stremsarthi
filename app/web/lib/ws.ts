@@ -13,7 +13,14 @@
  */
 
 import { WS_URL } from "@/lib/config"
-import { type AnyWsFrame, type ClientFrame, parseWsFrame, type WireTopic, type WsControl } from "@/lib/wire"
+import {
+  type AnyWsFrame,
+  type ClientFrame,
+  parseWsFrame,
+  type ReplayMarker,
+  type WireTopic,
+  type WsControl,
+} from "@/lib/wire"
 
 export type ConnectionState = "idle" | "connecting" | "open" | "reconnecting" | "unauthorized"
 
@@ -61,6 +68,7 @@ export class RealtimeClient {
   private readonly opts: RealtimeOptions
   private readonly frameHandlers = new Set<(frame: AnyWsFrame) => void>()
   private readonly stateHandlers = new Set<(state: ConnectionState) => void>()
+  private readonly replayHandlers = new Set<(marker: ReplayMarker) => void>()
   private socket: SocketLike | null = null
   private attempt = 0
   private retryTimer: unknown = null
@@ -79,7 +87,7 @@ export class RealtimeClient {
 
   /** Number of registered handlers (frames plus state). Zero after every consumer has unmounted. */
   get handlerCount(): number {
-    return this.frameHandlers.size + this.stateHandlers.size
+    return this.frameHandlers.size + this.stateHandlers.size + this.replayHandlers.size
   }
 
   /** Register a data-frame handler. Returns the function that removes it. */
@@ -87,6 +95,17 @@ export class RealtimeClient {
     this.frameHandlers.add(handler)
     return () => {
       this.frameHandlers.delete(handler)
+    }
+  }
+
+  /**
+   * Register a replay-marker handler. The server sends a marker before it replays the current chat state to a
+   * late joiner, in the same order as the frames, so a handler that resets its copy here never loses a frame.
+   */
+  onReplay(handler: (marker: ReplayMarker) => void): () => void {
+    this.replayHandlers.add(handler)
+    return () => {
+      this.replayHandlers.delete(handler)
     }
   }
 
@@ -224,6 +243,14 @@ export class RealtimeClient {
     } else if (msg.type === "subscribed") {
       this.attempt = 0
       this.setState("open")
+    } else if (msg.type === "replay") {
+      for (const handler of [...this.replayHandlers]) {
+        try {
+          handler(msg)
+        } catch {
+          /* a failing consumer must not stop the replayed frames that follow */
+        }
+      }
     }
     // `error` frames (forbidden topic, unknown topic) are a programming error: nothing to retry.
   }

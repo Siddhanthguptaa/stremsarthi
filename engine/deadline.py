@@ -22,10 +22,11 @@ Rules (docs/specs/engine.md section 5):
 
 from __future__ import annotations
 
+import logging
 import math
 import threading
 import time
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
@@ -46,6 +47,8 @@ from contracts import (
 
 from .control import HOLD, LIVE, PROTECT, Control
 from .mouth import resolve_mouth_quads
+
+log = logging.getLogger("streamsarthi.engine.deadline")
 
 OutputState = Literal["LIVE", "PROTECT", "HOLD"]
 # "frame": the frame itself (LIVE, masks painted). "mean": PROTECT, mean-colour fill (first
@@ -194,11 +197,31 @@ class DeadlineEngine:
         if motion is None:
             from .motion import MotionHistory, MotionWorker
 
+            # The history must reach back from the newest submitted frame to the oldest frame still to be
+            # decided, i.e. the whole delay (``fps * D`` frames) plus the look-back window plus jitter. A
+            # fixed 120 frames equals ``fps * D`` at D=4 s, so the frame being decided was already evicted
+            # and every projection came back unresolved (G1 root cause).
             motion = MotionWorker(
-                MotionHistory(max_frames=120, analysis_width=320, mode="phase", phase_min_response=0.5),
+                MotionHistory(
+                    max_frames=self.motion_history_frames(fps, delay_seconds, self._before),
+                    analysis_width=320,
+                    mode="phase",
+                    phase_min_response=0.5,
+                ),
                 capacity=self._max_buffer,
             )
         self.motion: MotionPath = motion
+        needed = self.motion_history_frames(fps, delay_seconds, self._before)
+        held = getattr(motion, "history_capacity", None)
+        if held is not None and held < needed:
+            log.warning(
+                "motion history keeps %d frames but a %.1f s delay at %.0f fps needs %d: "
+                "every projection will be unresolved and every frame PROTECT",
+                held,
+                delay_seconds,
+                fps,
+                needed,
+            )
         self._lock = threading.RLock()
         self._lanes: tuple[Lane, ...] = ()
         self._timeline: dict[Lane, list[LaneResult]] = {}
@@ -214,6 +237,16 @@ class DeadlineEngine:
         self._emit_lag: deque[float] = deque(maxlen=4096)
         self.outputs = self.live_frames = self.protect_frames = self.hold_frames = 0
         self.late_ingest = self.buffer_evictions = self.resets = 0
+        # Per-frame coverage diagnostics (counters only: no pixels, no PII). ``reason_counts`` is keyed
+        # "STATE:reason"; ``lane_diag`` is keyed "<lane>:<what>" (see ``_diagnose``).
+        self.reason_counts: Counter[str] = Counter()
+        self.lane_diag: Counter[str] = Counter()
+        self._miss_distance: dict[str, deque[int]] = {}
+
+    @staticmethod
+    def motion_history_frames(fps: float, delay_seconds: float, window_before: int) -> int:
+        """Frames of motion history needed so the frame at its deadline can still be projected."""
+        return math.ceil(fps * (delay_seconds + 1)) + 8 + int(window_before)
 
     @classmethod
     def from_config(
@@ -509,6 +542,7 @@ class DeadlineEngine:
         else:
             self.hold_frames += 1
         self._emit_lag.append(now - deadline)
+        self.reason_counts[f"{state}:{reason}"] += 1
         self._last_ages = cover.ages
         return FrameDecision(
             seq=index,
@@ -591,10 +625,30 @@ class DeadlineEngine:
                     else "missing"
                 )
                 cover.ok, cover.reason = False, f"{kind}-{lane.value}"
+            if covered_age is None:
+                self._diagnose(lane, index, deadline)
         for request in self._extra.values():
             if _covers(request, pts):
                 self._collect(cover, pts, [(request, ())])
         return cover
+
+    def _diagnose(self, lane: Lane, index: int, deadline: float) -> None:
+        """Why a lane did not cover frame ``index``: counters of what the timeline held (lock held)."""
+        name = lane.value
+        timeline = self._timeline[lane]
+        if not timeline:
+            self.lane_diag[f"{name}:timeline-empty"] += 1
+            return
+        on_time = [abs(r.frame_seq - index) for r in timeline if r.ok and r.completed_at <= deadline]
+        late = [abs(r.frame_seq - index) for r in timeline if r.ok and r.completed_at > deadline]
+        if on_time:
+            nearest = min(on_time)
+            self.lane_diag[f"{name}:nearest-on-time>{self._max_age[lane]}"] += 1
+            self._miss_distance.setdefault(name, deque(maxlen=4096)).append(nearest)
+        elif late:
+            self.lane_diag[f"{name}:only-late-results"] += 1
+        else:
+            self.lane_diag[f"{name}:only-failed-results"] += 1
 
     def _seq_for(self, request: MaskRequest, result: LaneResult) -> int:
         delta = request.frame_pts - result.pts
@@ -698,11 +752,25 @@ class DeadlineEngine:
                     }
                     for lane, s in self._lane_stats.items()
                 },
+                "reason_counts": dict(self.reason_counts),
+                "lane_diag": dict(self.lane_diag),
+                "miss_distance": {k: list(v) for k, v in self._miss_distance.items()},
                 "motion_worker": getattr(self.motion, "stats", {}),
                 "transitions": self.control.transitions,
             }
 
     def close(self) -> None:
+        if self.outputs:
+            log.info(
+                "coverage summary: outputs=%d live=%d protect=%d hold=%d reasons=%s lane_diag=%s motion_unresolved=%s",
+                self.outputs,
+                self.live_frames,
+                self.protect_frames,
+                self.hold_frames,
+                dict(self.reason_counts),
+                dict(self.lane_diag),
+                getattr(self.motion, "stats", {}).get("unresolved"),
+            )
         close = getattr(self.motion, "close", None)
         if close is not None:
             close()

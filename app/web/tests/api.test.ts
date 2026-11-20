@@ -96,3 +96,23 @@ describe("errors", () => {
     await expect(make(plain).getHold()).rejects.toMatchObject({ status: 502, code: "http_error" })
   })
 })
+
+describe("alerts", () => {
+  it("GETs the latest alerts, newest first, with a limit and optional filters", async () => {
+    const seen: { url?: string; init?: RequestInit } = {}
+    const body = { alerts: [{ id: "a", at: "t", modality: "audio", category: "spoken_phone", action: "muted", confidence: 0.8, duration_ms: null }], next_cursor: 4, count: 1 }
+    const api = make(fakeFetch(200, body, seen))
+    expect(await api.getAlerts({ limit: 20, modality: "audio", min_confidence: 0.5 })).toEqual(body)
+    expect(seen.init?.method).toBe("GET")
+    const url = new URL(String(seen.url))
+    expect(url.pathname).toBe("/api/alerts")
+    expect(Object.fromEntries(url.searchParams)).toEqual({ order: "desc", limit: "20", modality: "audio", min_confidence: "0.5" })
+  })
+
+  it("defaults to 50 and surfaces an API error", async () => {
+    const seen: { url?: string; init?: RequestInit } = {}
+    const api = make(fakeFetch(403, { error: "forbidden", detail: "no" }, seen))
+    await expect(api.getAlerts()).rejects.toMatchObject({ status: 403, code: "forbidden" })
+    expect(new URL(String(seen.url)).searchParams.get("limit")).toBe("50")
+  })
+})

@@ -66,7 +66,9 @@ class SttRace:
         self._st: dict[str, _State] = {}
         for name, stt in providers.items():
             r = rpm.get(name)
-            self._st[name] = _State(stt, tmo.get(name, 1.5), TokenBucket(r, 2, clock) if r else None)
+            self._st[name] = _State(
+                stt, tmo.get(name, 1.5), TokenBucket(r, 5 if name == "sarvam" else 2, clock) if r else None
+            )
         self.order = [n for n in order if n in self._st]
         self.failover = [n for n in failover if n in self._st and n not in self.order]
         self.hedge_s = hedge_s
@@ -87,12 +89,17 @@ class SttRace:
             return False
         return s.bucket is None or s.bucket.retry_after_s() <= 0.0
 
-    def _sequence(self) -> list[str]:
-        seq = [n for n in self.order if self._healthy(n)]
-        fo = [n for n in self.failover if self._healthy(n) and n not in seq]
-        if self.order and self.order[0] not in seq:
-            return fo + seq
-        return seq + fo
+    def _plan(self) -> tuple[str | None, list[str], list[str]]:
+        """(first provider, hedge candidates, failover candidates), healthy ones only.
+
+        The hedge (slow answer) goes to the local engine; an error goes to the failover (Groq) first, then local.
+        With the primary in cool-down the failover leads and the local engine is its hedge."""
+        order = [n for n in self.order if self._healthy(n)]
+        fo = [n for n in self.failover if self._healthy(n)]
+        if self.order and self.order[0] in order:
+            return order[0], order[1:], fo + order[1:]
+        lead = fo + order
+        return (lead[0] if lead else None), lead[1:], lead[1:]
 
     def _note_failure(self, name: str, exc: BaseException) -> None:
         s = self._st[name]
@@ -126,32 +133,33 @@ class SttRace:
             tr = _restrict(tr, seg)
         return tr
 
-    async def transcribe(self, seg: Segment, lang: str | None = None, context: Context | None = None) -> Transcript:
-        seq = self._sequence()
-        if not seq:
+    async def transcribe(
+        self, seg: Segment, lang: str | None = None, context: Context | None = None
+    ) -> Transcript:
+        first, hedges, failovers = self._plan()
+        if first is None:
             raise SttAllFailed("no speech-to-text provider available")
         tasks: dict[asyncio.Task[Transcript], str] = {}
-        nxt = 0
+        started: set[str] = set()
 
-        def start_next() -> bool:
-            nonlocal nxt
-            if nxt >= len(seq):
-                return False
-            name = seq[nxt]
-            nxt += 1
-            tasks[asyncio.ensure_future(self._call(name, seg, lang, context))] = name
-            return True
+        def start(candidates: Sequence[str]) -> bool:
+            for name in candidates:
+                if name not in started:
+                    started.add(name)
+                    tasks[asyncio.ensure_future(self._call(name, seg, lang, context))] = name
+                    return True
+            return False
 
-        start_next()
+        start([first])
         hedge_at = self._clock() + self.hedge_s
         hedged = False
         try:
             while True:
-                timeout = None if hedged or nxt >= len(seq) else max(0.0, hedge_at - self._clock())
+                timeout = None if hedged else max(0.0, hedge_at - self._clock())
                 done, _ = await asyncio.wait(set(tasks), timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
-                if not done:  # hedge timer
+                if not done:  # hedge timer: the primary is slow
                     hedged = True
-                    if start_next():
+                    if start(hedges):
                         self.hedges += 1
                     continue
                 failed = False
@@ -159,8 +167,7 @@ class SttRace:
                     name = tasks.pop(t)
                     exc = t.exception()
                     if exc is None:
-                        st = self._st[name]
-                        st.failures = 0
+                        self._st[name].failures = 0
                         self.wins[name] += 1
                         return with_seg_id(t.result(), seg.seg_id)
                     self._note_failure(name, exc)
@@ -168,7 +175,7 @@ class SttRace:
                     log.info("stt %s failed (%s)", name, type(exc).__name__)
                 if failed:
                     hedged = True  # a failover replaces the timed hedge
-                    if not start_next() and not tasks:
+                    if not start(failovers) and not tasks:
                         raise SttAllFailed("every speech-to-text provider failed")
         finally:
             for t in tasks:

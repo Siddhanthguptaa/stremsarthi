@@ -27,6 +27,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from chat.common.clock import Clock, SystemClock
 from chat.common.logsafe import log_event
+from contracts.config import YoutubeChatConfig
 
 Kind = Literal["list", "lookup", "delete", "ban"]
 UNIT_COSTS: dict[str, int] = {"list": 5, "lookup": 1, "delete": 20, "ban": 200}
@@ -85,6 +86,26 @@ class QuotaGovernor:
         self._stream_started: float | None = None
         self._day = pacific_day(self._clock.wall())
         self._reset_counters()
+
+    @classmethod
+    def from_config(
+        cls,
+        config: YoutubeChatConfig,
+        *,
+        restarted: bool = False,
+        clock: Clock | None = None,
+        on_event: Callable[[str], None] | None = None,
+    ) -> QuotaGovernor:
+        """Build from ``Config.chat.youtube``. ``restarted`` assumes 25 % already spent (see below)."""
+        kwargs: dict[str, object] = {
+            "daily_units": config.daily_quota_units,
+            "action_budget_fraction": max(config.action_budget_fraction, 0.001),  # 0 means "no actions"
+            "planned_stream_hours": config.planned_stream_hours,
+            "min_poll_s": config.min_poll_s,
+            "clock": clock,
+            "on_event": on_event,
+        }
+        return cls.after_restart(**kwargs) if restarted else cls(**kwargs)  # type: ignore[arg-type]
 
     @classmethod
     def after_restart(cls, **kwargs: object) -> QuotaGovernor:

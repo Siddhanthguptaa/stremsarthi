@@ -26,10 +26,16 @@ class Check:
     target: float
     unit: str = ""
     note: str = ""
+    #: the criterion could not be evaluated (a detector is missing, no data): never a pass, shown as NOT RUN
+    not_run: bool = False
 
     @property
     def passed(self) -> bool:
-        return check(self.value, self.op, self.target)
+        return (not self.not_run) and check(self.value, self.op, self.target)
+
+    @property
+    def status(self) -> str:
+        return "NOT RUN" if self.not_run else ("PASS" if self.passed else "FAIL")
 
 
 @dataclass
@@ -49,6 +55,8 @@ class Report:
     failing_ids: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     baseline: dict[str, Any] | None = None
+    #: structured numbers for gates and tools; written to the JSON twin only (the markdown has tables for people)
+    data: dict[str, Any] = field(default_factory=dict)
 
     @property
     def passed(self) -> bool:
@@ -110,25 +118,33 @@ def _round(obj: Any) -> Any:
     return obj
 
 
+def _check_json(c: Check) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "name": c.name,
+        "value": c.value,
+        "op": c.op,
+        "target": c.target,
+        "unit": c.unit,
+        "passed": c.passed,
+        "note": c.note,
+    }
+    if c.not_run:
+        out["not_run"] = True
+    return out
+
+
 def to_json_obj(r: Report) -> dict[str, Any]:
+    body: dict[str, Any] = {}
+    if r.data:
+        body["data"] = r.data
     return _round(
-        {
+        body
+        | {
             "phase": r.phase,
             "date": r.date,
             "passed": r.passed,
             "header": r.header,
-            "checks": [
-                {
-                    "name": c.name,
-                    "value": c.value,
-                    "op": c.op,
-                    "target": c.target,
-                    "unit": c.unit,
-                    "passed": c.passed,
-                    "note": c.note,
-                }
-                for c in r.checks
-            ],
+            "checks": [_check_json(c) for c in r.checks],
             "tables": [{"title": t.title, "columns": t.columns, "rows": t.rows} for t in r.tables],
             "failing_ids": list(r.failing_ids),
             "notes": list(r.notes),
@@ -153,6 +169,10 @@ def _header_value(v: Any) -> str:
 
 def to_markdown(r: Report) -> str:
     lines = [f"# {r.phase} report ({r.date})", "", f"Result: **{'PASS' if r.passed else 'FAIL'}**", ""]
+    not_run = sum(1 for c in r.checks if c.not_run)
+    if not_run:
+        failed = sum(1 for c in r.checks if not c.passed and not c.not_run)
+        lines += [f"{failed} check(s) failed, {not_run} check(s) NOT RUN (never counted as a pass).", ""]
     lines += ["## Run", ""]
     for k in sorted(r.header):
         lines.append(f"- {k}: {_header_value(r.header[k])}")
@@ -163,7 +183,7 @@ def to_markdown(r: Report) -> str:
             note = f" ({c.note})" if c.note else ""
             lines.append(
                 f"| {_cell(c.name)} | {_cell(c.value)}{unit} | {c.op} {_cell(c.target)}{unit} | "
-                f"{'PASS' if c.passed else 'FAIL'}{note} |"
+                f"{c.status}{note} |"
             )
     for t in r.tables:
         lines += ["", f"## {t.title}", "", "| " + " | ".join(t.columns) + " |", "|" + "---|" * len(t.columns)]

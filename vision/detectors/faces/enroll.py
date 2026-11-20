@@ -65,7 +65,9 @@ class Enroller:
             return None
         h, w = image.shape[:2]
         scale = min(1.0, DETECT_MAX_SIDE / max(h, w))
-        small = image if scale == 1.0 else cv2.resize(image, (round(w * scale), round(h * scale)), cv2.INTER_AREA)
+        small = (
+            image if scale == 1.0 else cv2.resize(image, (round(w * scale), round(h * scale)), cv2.INTER_AREA)
+        )
         rows = self._backend.detect(small, MIN_SCORE)
         faces = faces_from_rows(rows, w / small.shape[1], h / small.shape[0])  # back to the frame's pixels
         faces = [f for f in faces if min(f.w, f.h) >= MIN_FACE_PX]
@@ -81,7 +83,7 @@ class Enroller:
         stack = np.stack(embeddings)
         total = stack.sum(axis=0)
         kept = []
-        for i, e in enumerate(embeddings):
+        for e in embeddings:
             rest = l2_normalise(total - e)  # mean of the other frames
             if float(e @ rest) >= OUTLIER_COS:
                 kept.append(e)
@@ -89,5 +91,7 @@ class Enroller:
 
     @staticmethod
     def _face_id(label: str, embedding: np.ndarray) -> str:
-        digest = hashlib.sha256(label.encode("utf-8") + b"\x00" + np.round(embedding, 4).astype("<f4").tobytes())
+        digest = hashlib.sha256(
+            label.encode("utf-8") + b"\x00" + np.round(embedding, 4).astype("<f4").tobytes()
+        )
         return "f_" + digest.hexdigest()[:16]

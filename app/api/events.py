@@ -80,6 +80,7 @@ class SafetyEventStore:
         since: float | None,
         until: float | None,
         session_id: str | None,
+        min_confidence: float | None = None,
     ) -> Iterable[_Entry]:
         for entry in self._by_id.values():
             e = entry.event
@@ -93,6 +94,8 @@ class SafetyEventStore:
                 continue
             if session_id is not None and e.session_id != session_id:
                 continue
+            if min_confidence is not None and e.confidence < min_confidence:
+                continue
             yield entry
 
     def query(
@@ -103,6 +106,7 @@ class SafetyEventStore:
         since: float | None = None,
         until: float | None = None,
         session_id: str | None = None,
+        min_confidence: float | None = None,
         cursor: int = 0,
         limit: int = 200,
         newest_first: bool = False,
@@ -121,6 +125,7 @@ class SafetyEventStore:
                 since,
                 until,
                 session_id,
+                min_confidence,
             )
         )
         if newest_first:

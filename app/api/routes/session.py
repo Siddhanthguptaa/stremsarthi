@@ -91,6 +91,7 @@ async def start_session(
         log.warning("session start publish failed")
         raise ApiError(503, "bus_unavailable", "could not reach the engine bus") from None
     store.commit(new_config)
+    state.hub.chat.reset_overlay()  # the hidden counter and overlay ring start again
     record = state.sessions.start(delay, profile, enabled)
     return {
         "session_id": record.session_id,

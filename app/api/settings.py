@@ -73,6 +73,9 @@ class ApiSettings(BaseSettings):
     hold_release_limit: int = 8
     hold_release_window_s: float = 10.0
     session_start_timeout_s: float = 30.0
+    # Moderator actions per moderator token (a held key or a script must not flood the platform APIs).
+    mod_action_limit: int = 30
+    mod_action_window_s: float = 10.0
 
     @field_validator("allowed_hosts", "allowed_origins", mode="before")
     @classmethod

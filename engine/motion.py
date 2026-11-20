@@ -11,7 +11,7 @@ OpenCV license: https://github.com/opencv/opencv/blob/4.11.0/LICENSE
 import math
 import threading
 import time
-from collections import deque
+from collections import Counter, deque
 
 import cv2
 import numpy as np
@@ -51,6 +51,7 @@ class MotionWorker:
         self.completed = self.dropped = 0
         self.busy = False
         self.errors = deque(maxlen=64)
+        self.unresolved: Counter[str] = Counter()  # why project_many returned None (counters only)
         self.wall_seconds = deque(maxlen=4096)
         self.cpu_seconds = deque(maxlen=4096)
         self.thread = threading.Thread(target=self._run, name="engine-motion", daemon=True)
@@ -112,9 +113,17 @@ class MotionWorker:
             with self.condition:
                 for index in range(min(source, target), max(source, target) + 1):
                     at = self.completed_at.get(index)
-                    if at is None or not math.isfinite(at) or at > deadline:
+                    if at is None or not math.isfinite(at):
+                        self.unresolved["motion-not-computed"] += 1
                         return None
-        return self.history.project_many(quads, source, target)
+                    if at > deadline:
+                        self.unresolved["motion-late"] += 1
+                        return None
+        projected = self.history.project_many(quads, source, target)
+        if projected is None:
+            explain = getattr(self.history, "explain_break", None)
+            self.unresolved[f"no-transform:{explain(source, target) if explain else 'unknown'}"] += 1
+        return projected
 
     def close(self):
         with self.condition:
@@ -131,6 +140,7 @@ class MotionWorker:
             "completed": self.completed,
             "dropped": self.dropped,
             "errors": list(self.errors),
+            "unresolved": dict(self.unresolved),
             "wall_seconds": list(self.wall_seconds),
             "thread_cpu_seconds": list(self.cpu_seconds),
             "running": self.thread.is_alive(),
@@ -349,6 +359,16 @@ class MotionHistory:
             except np.linalg.LinAlgError:
                 return None
         return transform
+
+    def explain_break(self, source_index, target_index):
+        """Why the path between two frames has no transform: the reason of the first broken step."""
+        with self._state_lock:
+            if source_index not in self._frames or target_index not in self._frames:
+                return "frame-evicted"
+            for index in range(min(source_index, target_index) + 1, max(source_index, target_index) + 1):
+                if self._transforms.get(index) is None:
+                    return str(self._diagnostics.get(index, {}).get("reason", "unknown"))
+        return "not-invertible"
 
     def diagnostics(self, index):
         """Return a copy of the incoming-motion verdict; the first frame has no estimate."""

@@ -1,6 +1,6 @@
 """``StageTiming`` JSONL writer for the eval harness (docs/specs/engine.md 4, 10).
 
-New code. One JSON object per line: ``{"stage", "seq", "pts", "t_start", "t_end", "ms"}``. The
+New code. One JSON object per line (plus ``{"type":"event","name","t"}`` point events): ``{"stage", "seq", "pts", "t_start", "t_end", "ms"}``. The
 times are ``time.monotonic()`` seconds, the stage is a code such as ``compose`` or ``lane_fast``.
 Nothing else is written: no images, no text, no detections. Attach it to the ``LocalBus`` and it
 records every ``Topic.TIMING`` event, the engine's own stages and the ingest stages the relay
@@ -70,6 +70,23 @@ class TimingLog:
             if now - self._last_flush >= self._flush_interval:
                 self._fh.flush()
                 self._last_flush = now
+
+    def event(self, name: str, t: float, detail: str | None = None) -> None:
+        """A point event ``{"type":"event","name","t"}`` (``t`` is ``time.monotonic()``), e.g. the engine
+        receiving a hold command: the eval harness reads ``hold_received`` for its slate-latency check."""
+        if self._fh is None:
+            return
+        obj: dict[str, object] = {"type": "event", "name": name, "t": round(t, 6)}
+        if detail is not None:
+            obj["detail"] = detail
+        line = json.dumps(obj, separators=(",", ":"))
+        with self._lock:
+            if self._fh is None:
+                return
+            self._fh.write(line + "\n")
+            self.written += 1
+            self._fh.flush()  # rare and latency-critical for the reader: do not wait for the interval
+            self._last_flush = time.monotonic()
 
     def flush(self) -> None:
         with self._lock:

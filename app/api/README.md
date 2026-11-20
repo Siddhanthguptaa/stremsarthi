@@ -50,3 +50,16 @@ token file survives an API restart); the web app sends `app`; others are `api`. 
 - `events.py` `SafetyEventStore`: ring of 5,000 keyed by `event_id` (upsert); `GET /api/events` (filters `modality`, `category`,
   `since`, `until`, `session_id`; `cursor`+`limit` paging or `order=desc`) and `GET /api/events/summary`. Streamer: all;
   moderator: chat and system only.
+
+## Moderator console and chat overlay (T4.6)
+- `chat_state.py` `ChatState` is the API's own copy of chat state, built from `chat.verdict`, `chat.modqueue` and `chat.allowed`
+  on the bus (the chat process owns the real queue). `hidden_count`: a message is hidden while its latest verdict is not ALLOW.
+  Pending queue items (text, RAM only, cap `chat.modqueue.max_items`, TTL `ttl_s`, swept every 30 s) lose their text when
+  resolved; a text-free stub stays. A ring of 50 already-allowed messages serves a refreshed overlay.
+- WebSocket: a client subscribing to a chat topic first gets `{"type":"replay","topic","count","hidden_count"}` then `count`
+  frames of current state (moderator: pending queue; streamer: recent allowed). `chat.verdict` frames carry
+  `"meta":{"hidden_count":N}`. The streamer never gets `chat.modqueue`.
+- `GET /api/mod/queue` (moderator only; `{as_of_seq, items[ModQueueItem], resolved[stub], pending_count, hidden_count}`),
+  `POST /api/mod/action` (moderator only; 404 `not_found`, 409 `not_pending` / `staff_message` / `busy`, 429, 503) publishes
+  `ModAction` on `chat.modaction`. Staff messages can be approved or dismissed, never deleted or timed out.
+  `GET /api/chat/overlay` (streamer): hidden count and allowed messages only.

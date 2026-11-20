@@ -402,3 +402,13 @@ def test_an_impossible_stamp_is_counted_as_unreadable_not_as_a_delay():
         implausible=tap.implausible,
     )
     assert stamp_stats(res)["stamp_unreadable_frac"] == 0.5
+
+
+def test_card_stats_with_no_frames_has_every_key_the_gate_reads():
+    # a run where nothing reached the tap must fail its criteria, not crash the analysis with a KeyError
+    from eval.tap import card_stats
+
+    s = card_stats([])
+    for key in ("visible_frames", "unreadable_recall", "ocr_valid_reads", "ocr_checked", "leaked_frames"):
+        assert key in s
+    assert s["visible_frames"] == 0 and s["unreadable_recall"] is None

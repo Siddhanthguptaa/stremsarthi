@@ -103,3 +103,27 @@ def test_rss_growth():
     # a warm-up ramp (first minute) is not counted as growth
     ramp = [(float(i * 5), 400.0 + min(i, 12) * 50.0, 40) for i in range(60)]
     assert abs(rss_growth_pct(ramp)["growth_pct"]) < 1.0
+
+
+def test_private_mediamtx_config_turns_off_every_unused_listener():
+    # a default MediaMTX also binds MoQ/WebRTC/HLS ports, which collide when several runs share the host
+    from eval.harness.procs import _CONFIG
+
+    for key in ("api", "metrics", "pprof", "hls", "webrtc", "moq"):
+        assert f"\n{key}: false\n" in _CONFIG
+
+
+def test_a_mediamtx_that_cannot_start_is_an_environment_error(monkeypatch, tmp_path):
+    from eval import stack
+
+    class Broken:
+        def __init__(self, run_dir):
+            pass
+
+        def __enter__(self):
+            raise RuntimeError("MediaMTX did not start; see mediamtx.log")
+
+    monkeypatch.setattr(stack, "MediaMtx", Broken)
+    monkeypatch.setattr(stack, "find_mediamtx", lambda: Path("/bin/true"))
+    with pytest.raises(EnvError, match="did not start"):
+        stack.run_chain(ChainSpec(tmp_path, "card_static:10", 10.0, engine="ref"))

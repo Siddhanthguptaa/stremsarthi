@@ -37,6 +37,7 @@ import numpy as np
 from ...sender.stamp import STAMP_EXCLUSION
 from ..common import fonts, identifiers, specimen
 from ..common.seeds import np_rng, py_rng
+from . import clips as clips_mod
 from . import faces as faces_mod
 from . import games, idcards, plates, screens, signboards, textpii
 from .augment import apply_effects, level_for, sample_params
@@ -53,7 +54,7 @@ from .compose import (
 )
 from .qr import render_qr_poster
 
-GENERATOR_VERSION = "specimen-video-1.0"
+GENERATOR_VERSION = "specimen-video-1.1"
 DEFAULT_N = 40
 DEFAULT_FACES_CACHE = "eval/data/generated/faces/src"
 
@@ -198,7 +199,10 @@ def _specs() -> dict[str, Spec]:
                 f"game_{style}",
                 "game",
                 (lambda s: lambda r, i, c: games.render_lobby(r, s))(style),
-                (0.55, 1.0),
+                (
+                    0.8,
+                    1.0,
+                ),  # player-ID text is small: farther than this it falls under the 24 px visible rule
                 mode="screen",
                 backdrops=("dark_room", "desk"),
             )
@@ -404,8 +408,13 @@ def build_suite(
     workers: int | None = None,
     faces_cache: str = DEFAULT_FACES_CACHE,
     fetch: bool = True,
+    clips_per_bucket: int = 0,
+    clip_seconds: float = clips_mod.DEFAULT_SECONDS,
 ) -> dict[str, Any]:
-    """Generate the suite. With `out_dir=None` nothing is written (used by determinism tests)."""
+    """Generate the suite. With `out_dir=None` nothing is written (used by determinism tests).
+
+    `clips_per_bucket` > 0 also renders 30 fps clips (``clips.py``) for the buckets in ``CLIP_BUCKETS``.
+    """
     t0 = time.monotonic()
     wanted = tuple(buckets) if buckets else BUCKETS
     unknown = [b for b in wanted if b not in SPECS]
@@ -431,11 +440,22 @@ def build_suite(
         for i in range(n_per_bucket)
     ]
     workers = workers if workers is not None else min(6, os.cpu_count() or 1)
+    clip_buckets = [b for b in wanted if b in clips_mod.CLIP_BUCKETS] if clips_per_bucket > 0 else []
+    clip_tasks = [
+        (b, i, seed, str(out_dir) if out_dir else None, faces_cache, clip_seconds)
+        for b in clip_buckets
+        for i in range(clips_per_bucket)
+    ]
+    if clip_tasks and out_dir is not None and clips_mod.ffmpeg_path() is None:
+        raise EnvError("ffmpeg not found on PATH: clips cannot be encoded")
+    clip_items: list[dict[str, Any]] = []
     if workers <= 1 or len(tasks) < 8:
         items = [_task(t) for t in tasks]
+        clip_items = [clips_mod.clip_task(t) for t in clip_tasks]
     else:
         with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("fork")) as ex:
             items = list(ex.map(_task, tasks, chunksize=4))
+            clip_items = list(ex.map(clips_mod.clip_task, clip_tasks, chunksize=1))
     manifest: dict[str, Any] = {
         "name": out_dir.name if out_dir is not None else "memory",
         "seed": seed,
@@ -447,6 +467,13 @@ def build_suite(
         "levels": {"clean": 0.2, "light": 0.4, "heavy": 0.4},
         "items": items,
     }
+    if clip_items:
+        manifest["clips"] = {
+            "fps": clips_mod.FPS,
+            "seconds": clip_seconds,
+            "per_bucket": clips_per_bucket,
+            "items": clip_items,
+        }
     if any(SPECS[b].needs_faces for b in wanted):
         manifest["enroll_sets"] = build_enroll_sets(out_dir, seed, faces_cache)
         manifest["face_sources"] = [
