@@ -181,21 +181,43 @@ def engine_frames(log: TimingLog) -> dict[int, EngineFrame]:
     }
 
 
-def align_to_engine(
-    frames: Sequence[TapFrame], engine: dict[int, EngineFrame], fps: float = 30.0
-) -> dict[str, Any]:
-    """Attach ``extra['engine']`` to tap frames through ``seq = round(pts * fps)``.
+def encoder_pts_map(log: TimingLog) -> dict[int, float]:
+    """Encoder sequence number -> engine frame PTS, from the relay's ``egress_write`` lines.
 
-    The relay encoder writes the engine's rebased frame PTS (first frame 0), so the stream PTS gives the
-    engine seq. The mapping is checked: for live frames ``arrival - capture`` is the ingest latency and must
-    be small and steady. Returns ``{"matched", "ingest_s_median", "ingest_s_std", "valid"}``.
+    The relay encoder numbers the frames it writes from 0 (that is the tap's stream PTS x fps) and logs the
+    engine PTS of each one, so this is the bridge from a tap frame to the engine's own ``seq``."""
+    return {
+        t["seq"]: float(t["pts"])
+        for t in log.timings
+        if t["stage"] == "egress_write" and t.get("pts") is not None
+    }
+
+
+def align_to_engine(
+    frames: Sequence[TapFrame],
+    engine: dict[int, EngineFrame],
+    fps: float = 30.0,
+    enc_map: dict[int, float] | None = None,
+) -> dict[str, Any]:
+    """Attach ``extra['engine_arrival'/'engine_emitted']`` to tap frames.
+
+    With ``enc_map`` (real relay) the tap PTS gives the encoder seq, which maps to the engine PTS and so to the
+    engine seq. Without it (the reference engine) the tap PTS is the engine PTS: ``seq = round(pts * fps)``.
+    The mapping is checked: for live frames ``arrival - capture`` is the ingest latency and must be small and
+    steady. Returns ``{"matched", "ingest_s_median", "ingest_s_std", "valid"}``.
     """
     ingest: list[float] = []
     matched = 0
     for f in frames:
         if f.pts_s is None:
             continue
-        ef = engine.get(round(f.pts_s * fps))
+        key = round(f.pts_s * fps)
+        if enc_map:
+            pts_e = enc_map.get(key)
+            if pts_e is None:
+                continue
+            key = round(pts_e * fps)
+        ef = engine.get(key)
         if ef is None:
             continue
         matched += 1

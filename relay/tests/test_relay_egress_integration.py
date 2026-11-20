@@ -124,7 +124,10 @@ class RtmpsSink:
         )
         self.log: list[str] = []
         self.process = subprocess.Popen(
-            [str(verified_binary()), str(config)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            [str(verified_binary()), str(config)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=directory,  # MediaMTX writes auto-generated certificates into its working directory
         )
         threading.Thread(target=self._read, daemon=True).start()
         assert wait_for(lambda: any("RTMPS" in line or "RTMP" in line for line in self.log), 8), self.log

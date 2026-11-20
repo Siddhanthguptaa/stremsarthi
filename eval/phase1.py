@@ -36,6 +36,7 @@ from .delay import (
     align_to_engine,
     delay_stats,
     egress_delays,
+    encoder_pts_map,
     engine_frames,
     fps_stats,
     gap_stats,
@@ -92,7 +93,7 @@ def _pct(values: Sequence[float], q: float) -> float | None:
 def common_measurements(res: ChainResult, warmup_s: float = 1.0) -> dict[str, Any]:
     frames = res.tap.frames
     eng_log = read_engine_timing(res.engine_timing_path)
-    align = align_to_engine(frames, engine_frames(eng_log))
+    align = align_to_engine(frames, engine_frames(eng_log), enc_map=encoder_pts_map(eng_log))
     egress = egress_delays(frames, eng_log, warmup_s=warmup_s)
     stamped = [f for f in frames if f.kind == "live"]
     window = [f for f in frames if stamped and stamped[0].t_read <= f.t_read <= stamped[-1].t_read]

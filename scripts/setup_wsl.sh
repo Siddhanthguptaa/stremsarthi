@@ -33,8 +33,10 @@ fi
 say "uv and Python 3.11"
 command -v uv >/dev/null 2>&1 || { curl -LsSf https://astral.sh/uv/install.sh | sh; }
 uv python install 3.11
-[ -d .venv ] || uv venv --python 3.11 .venv
-export VIRTUAL_ENV="$ROOT/.venv"
+VENV="${SS_VENV:-$HOME/.venvs/stremsarthi}"
+mkdir -p "$(dirname "$VENV")"
+[ -d "$VENV" ] || uv venv --python 3.11 "$VENV"
+export VIRTUAL_ENV="$VENV"
 export PATH="$VIRTUAL_ENV/bin:$PATH"
 
 say "Python packages"

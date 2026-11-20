@@ -217,6 +217,11 @@ def render_tile(
     )
     m[0, 2] = u - (m[0, 0] * cx + m[0, 1] * cy)
     m[1, 2] = v - (m[1, 0] * cx + m[1, 1] * cy)
+    corners = np.array([[x, y, 1], [x + w, y, 1], [x + w, y + h, 1], [x, y + h, 1]], dtype=np.float64)
+    pts = (m @ corners.T).T
+    # keep the whole face box inside the tile (a face cut by the tile edge would break the ground truth)
+    m[0, 2] += max(0.0, 2 - pts[:, 0].min()) - max(0.0, pts[:, 0].max() - (tw - 2))
+    m[1, 2] += max(0.0, 2 - pts[:, 1].min()) - max(0.0, pts[:, 1].max() - (th - 2))
     tile = cv2.warpAffine(
         np.ascontiguousarray(img),
         m,
@@ -224,7 +229,6 @@ def render_tile(
         flags=cv2.INTER_AREA if s < 1 else cv2.INTER_LINEAR,
         borderMode=cv2.BORDER_REPLICATE,
     )
-    corners = np.array([[x, y, 1], [x + w, y, 1], [x + w, y + h, 1], [x, y + h, 1]], dtype=np.float64)
     quad = [(float(px), float(py)) for px, py in (m @ corners.T).T]
     return tile, quad
 

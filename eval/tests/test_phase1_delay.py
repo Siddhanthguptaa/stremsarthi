@@ -334,3 +334,71 @@ def test_analyse_main_fails_on_each_criterion(tmp_path):
     assert any("stamp unreadable" in n for n in failed(ocr(synth_tap(seconds=60)), unreadable=120))
     slow = synth_tap(seconds=60, fps=24.0)
     assert any("fps" in n for n in failed(ocr(slow)))
+
+
+# ---------------------------------------------------------------- real relay: encoder seq -> engine pts
+
+
+def test_alignment_through_the_relay_encoder_numbering(tmp_path):
+    """The relay encodes from seq 0 while the engine's first covered frame is seq 17: bridge them with egress_write."""
+    from eval.delay import encoder_pts_map
+
+    offset = 17
+    engine_lines, relay_lines, frames = [], [], []
+    for i in range(300):
+        capture = T0 + (i + offset) / FPS
+        arrival = capture + 0.3
+        emitted = arrival + 4.0
+        engine_lines.append(
+            {
+                "stage": "engine_delay",
+                "seq": i + offset,
+                "pts": (i + offset) / FPS,
+                "t_start": arrival,
+                "t_end": emitted,
+            }
+        )
+        relay_lines.append(
+            {
+                "stage": "egress_write",
+                "seq": i,
+                "pts": (i + offset) / FPS,
+                "t_start": emitted,
+                "t_end": emitted + 0.15,
+            }
+        )
+        # tap PTS is the encoder's own count from 0
+        frames.append(
+            TapFrame(i + offset, emitted + 0.2, "live", emitted + 0.2 - capture, i / FPS, "card_static")
+        )
+    p = tmp_path / "engine.jsonl"
+    p.write_text("\n".join(json.dumps(x) for x in engine_lines + relay_lines) + "\n", encoding="utf-8")
+    log = read_engine_timing(p)
+    # without the bridge the PTS mapping is wrong (the old behaviour on a real relay)
+    assert not align_to_engine(frames, engine_frames(log))["valid"]
+    info = align_to_engine(frames, engine_frames(log), enc_map=encoder_pts_map(log))
+    assert info["valid"] and info["matched"] == 300
+    assert info["ingest_s_median"] == pytest.approx(0.3, abs=1e-3)
+    egress = egress_delays(frames, log)
+    assert egress and max(egress) == pytest.approx(4.45, abs=1e-3)  # capture to the egress write
+
+
+def test_an_impossible_stamp_is_counted_as_unreadable_not_as_a_delay():
+    from eval.sender.stamp import Stamp
+    from eval.tap import MAX_PLAUSIBLE_DELAY_S, Tap
+
+    tap = Tap("rtmp://x/shielded", "card_absent:10", ocr=False)
+    t_read = 400.0
+    good = Stamp(counter=5, capture_ms=int((t_read - 4.3) * 1000), beep=False)
+    bad = Stamp(counter=0, capture_ms=0, beep=False)  # decodes with a valid CRC but is 400 s old
+    frame = SimpleNamespace(pts=1, time_base=1 / 30)
+    tap._video_hook(frame, good, t_read)
+    tap._video_hook(frame, bad, t_read + 0.033)
+    assert tap.implausible == 1 and 400.0 > MAX_PLAUSIBLE_DELAY_S
+    d = delay_stats(tap.frames, warmup_s=0.0)
+    assert d["n"] == 1 and d["max_s"] == pytest.approx(4.3, abs=1e-2)
+    res = SimpleNamespace(
+        reader=SimpleNamespace(video_decoded=2, stamp_unreadable=0, slate_frames=0),
+        implausible=tap.implausible,
+    )
+    assert stamp_stats(res)["stamp_unreadable_frac"] == 0.5

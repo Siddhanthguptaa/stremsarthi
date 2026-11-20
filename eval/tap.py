@@ -30,6 +30,7 @@ from .sender.scenes import ScenePlayer, Target
 from .sender.stamp import MS_MODULUS
 
 CARD_CATEGORY = "aadhaar"
+MAX_PLAUSIBLE_DELAY_S = 60.0  # a stamp older than this is a decode error, not a delay
 
 
 @dataclass
@@ -41,6 +42,7 @@ class TapResult:
     ocr_skipped_busy: int = 0
     ocr_done: int = 0
     errors: list[str] = field(default_factory=list)
+    implausible: int = 0  # CRC-valid stamps with an impossible age (counted as unreadable)
 
 
 class Tap:
@@ -68,6 +70,7 @@ class Tap:
         self.ocr_skipped_busy = 0
         self.ocr_done = 0
         self.errors: list[str] = []
+        self.implausible = 0
 
     # ------------------------------------------------------------ hooks
 
@@ -79,6 +82,12 @@ class Tap:
             return "slate" if slate else None
         counter = stamp.counter
         delay = ((t_read * 1000.0) - stamp.capture_ms) % MS_MODULUS / 1000.0
+        if delay > MAX_PLAUSIBLE_DELAY_S:
+            # a CRC-valid but wrong stamp (a mangled corner can decode to counter 0, time 0: a "delay" of the
+            # whole uptime): never let it into the percentiles, count it against the stamp criterion instead
+            self.implausible += 1
+            self.frames.append(TapFrame(None, t_read, "unreadable"))
+            return None
         pts = float(frame.pts * frame.time_base) if frame.pts is not None else None
         scene, targets = self.player.targets(counter)
         tf = TapFrame(counter, t_read, "live", delay, pts, scene)
@@ -164,6 +173,7 @@ class Tap:
             self.ocr_skipped_busy,
             self.ocr_done,
             self.errors,
+            self.implausible,
         )
 
 
@@ -205,11 +215,13 @@ def card_stats(frames: list[TapFrame], warmup_s: float = 1.0) -> dict[str, Any]:
 def stamp_stats(result: TapResult) -> dict[str, Any]:
     r = result.reader
     n = r.video_decoded
+    bad = r.stamp_unreadable + getattr(result, "implausible", 0)
     return {
         "decoded": n,
-        "stamp_unreadable": r.stamp_unreadable,
+        "stamp_unreadable": bad,
+        "implausible_stamps": getattr(result, "implausible", 0),
         "slate_frames": r.slate_frames,
-        "stamp_unreadable_frac": (r.stamp_unreadable / n) if n else None,
+        "stamp_unreadable_frac": (bad / n) if n else None,
     }
 
 

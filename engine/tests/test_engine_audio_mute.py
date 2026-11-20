@@ -55,9 +55,10 @@ def test_exact_sample_indices_zeroed_and_fades_lie_inside_the_span():
     assert np.all(np.diff(fade_in) > 0) and fade_in[0] > 0 and fade_in[-1] == DC
 
 
-def test_rounding_uses_round_half_even_on_pts_times_rate():
-    assert span_to_range(span(1.0000104, 1.5)).start == round(1.0000104 * RATE) == 48001
-    assert span_to_range(span(0.0, 0.0000104)).end == round(0.0000104 * RATE)
+def test_range_is_round_of_pts_times_rate():
+    assert span_to_range(span(1.0000106, 1.5)).start == 48001  # 48000.51 rounds up
+    assert span_to_range(span(1.0000104, 1.5)).start == 48000  # 48000.50 rounds down
+    assert span_to_range(span(0.0, 1.5)).end == 72000
 
 
 def test_bleep_is_a_1khz_sine_at_minus_18_dbfs_phase_continuous_across_slices():
@@ -102,7 +103,7 @@ def test_applying_slice_by_slice_equals_applying_the_whole_buffer():
     book.add(span(0.1234, 0.3777))
     out = np.concatenate([_apply(book, whole, f) for f in range(0, RATE, 1600)])
     assert np.array_equal(out, expected)
-    assert book.emitted_through == RATE - RATE % 1600 + 1600 - (1600 - RATE % 1600) % 1600 or True
+    assert book.emitted_through == 1600 * (-(-RATE // 1600))  # the cursor follows the last slice cut
 
 
 def test_overlapping_and_adjacent_spans_merge_into_one_range_with_one_pair_of_fades():
@@ -195,7 +196,8 @@ def test_mode_override_switches_every_range_to_bleep():
     book.mode_override = "bleep"
     pcm = dc(RATE // 2)
     book.apply(pcm, 0)
-    assert np.abs(pcm[5000:18000].astype(float)).max() <= BLEEP_AMPLITUDE + 1 and pcm[5000:18000].any()
+    interior = pcm[4800 + FADE_SAMPLES : 19200 - FADE_SAMPLES].astype(float)
+    assert interior.any() and np.abs(interior).max() <= BLEEP_AMPLITUDE + 1
 
 
 def test_prune_clear_and_bounds():
