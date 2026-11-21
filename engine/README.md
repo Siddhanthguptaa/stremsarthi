@@ -35,3 +35,6 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /home/siddhanth/strem
 
 Licences: `THIRD_PARTY_LICENSES/irl-shield/LICENSE` (MIT), `THIRD_PARTY_LICENSES/privastream/LICENSE`
 (Apache-2.0), fonts (OFL-1.1) with their texts and SHA-256 in `assets/NOTICE.md`.
+
+Captions (T5.4): `captions.py` burns `CaptionEvent` text (Pillow + raqm, Noto fonts) after the masks; toggle with
+`captions.enabled`. Shaping goldens: `python -m engine.tests.gen_engine_caption_goldens`, then check the PNGs by eye.

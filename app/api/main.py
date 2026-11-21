@@ -7,6 +7,7 @@ import asyncio
 import contextlib
 import secrets
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,14 +23,23 @@ from .config_store import ConfigStore
 from .enrol_service import MAX_ENROL_FRAMES, AllowlistService
 from .errors import install_error_handlers
 from .events import SafetyEventStore
+from .golive import GoLive
+from .keystore import DestinationKeys
+from .orchestrator import Orchestrator
 from .ratelimit import SlidingWindowLimiter
+from .recorder import SessionRecorder
+from .risk import RiskState
 from .routes import alerts as alerts_routes
 from .routes import auth_routes, control, health
 from .routes import chat as chat_routes
 from .routes import config as config_routes
+from .routes import destinations as destinations_routes
 from .routes import enrol as enrol_routes
 from .routes import events as events_routes
 from .routes import mod as mod_routes
+from .routes import pairing as pairing_routes
+from .routes import report as report_routes
+from .routes import risk as risk_routes
 from .routes import session as session_routes
 from .security import SecurityMiddleware
 from .sessions import SessionManager
@@ -66,6 +76,38 @@ def create_app(
         sweep_s=settings.allowlist_sweep_s,
     )
     events = SafetyEventStore()
+    risk = RiskState()
+    sessions = SessionManager(start_timeout_s=settings.session_start_timeout_s)
+    recorder = SessionRecorder(Path(settings.sessions_dir).expanduser() if settings.sessions_dir else None)
+    keys = DestinationKeys()
+    orchestrator = Orchestrator(
+        enabled=settings.session_spawn,
+        engine_cmd=settings.engine_argv(),
+        chat_cmd=settings.chat_argv(),
+        stop_timeout_s=settings.session_stop_timeout_s,
+        chat_env={
+            "BUS_SUB_ENDPOINT": settings.bus_sub_endpoint,
+            "BUS_PUB_ENDPOINT": settings.bus_pub_endpoint,
+        },
+        on_engine_exit=lambda _code: sessions.mark_engine_exit(),
+    )
+
+    def engine_settled() -> bool:
+        status = hub.engine_status()
+        return status is None or status.state in ("starting", "ready", "error")
+
+    golive = GoLive(
+        sessions=sessions,
+        orchestrator=orchestrator,
+        recorder=recorder,
+        keys=keys,
+        ingest_host=settings.ingest_host,
+        ingest_rtmp_port=config.ingest_port_rtmp,
+        ingest_srt_port=config.ingest_port_srt,
+        ttl_s=settings.session_ttl_s,
+        stop_timeout_s=settings.session_stop_timeout_s,
+        engine_settled=engine_settled,
+    )
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -75,10 +117,14 @@ def create_app(
             asyncio.create_task(events.run(events.subscribe(bus)), name="safety-events"),
             asyncio.create_task(allowlist.run(allowlist.subscribe()), name="allowlist-sync"),
             asyncio.create_task(chat_state.run_sweeper(), name="chat-sweeper"),
+            asyncio.create_task(risk.run(risk.subscribe(bus)), name="risk-state"),
+            asyncio.create_task(recorder.run(recorder.subscribe(bus)), name="session-recorder"),
         ]
+        await orchestrator.start_watching()
         try:
             yield
         finally:
+            await golive.shutdown()  # children get SIGTERM and a grace period before the bus closes
             for task in background:
                 task.cancel()
             await asyncio.gather(*background, return_exceptions=True)
@@ -98,7 +144,13 @@ def create_app(
     app.state.bus = bus
     app.state.hub = hub
     app.state.config_store = ConfigStore(config)
-    app.state.sessions = SessionManager(start_timeout_s=settings.session_start_timeout_s)
+    app.state.sessions = sessions
+    app.state.orchestrator = orchestrator
+    app.state.golive = golive
+    app.state.recorder = recorder
+    app.state.risk = risk
+    app.state.keys = keys
+    app.state.pairing_builder = None  # set to inject a fake; otherwise relay.pairing with a local fallback
     app.state.allowlist = allowlist
     app.state.events = events
     app.state.enroller = None  # set to inject a FaceEnroller; otherwise loaded from enrol.impl
@@ -123,6 +175,10 @@ def create_app(
     app.include_router(chat_routes.router)
     app.include_router(mod_routes.router)
     app.include_router(session_routes.router)
+    app.include_router(destinations_routes.router)
+    app.include_router(risk_routes.router)
+    app.include_router(pairing_routes.router)
+    app.include_router(report_routes.router)
     app.include_router(ws_router)
 
     # Innermost first: CORS (exact origins, Authorization only), then the security layer.

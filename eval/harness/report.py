@@ -55,6 +55,7 @@ class Report:
     failing_ids: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     baseline: dict[str, Any] | None = None
+    banner: str = ""  # one line shown under the result line (gate scope)
     #: structured numbers for gates and tools; written to the JSON twin only (the markdown has tables for people)
     data: dict[str, Any] = field(default_factory=dict)
 
@@ -149,6 +150,7 @@ def to_json_obj(r: Report) -> dict[str, Any]:
             "failing_ids": list(r.failing_ids),
             "notes": list(r.notes),
             "baseline": r.baseline,
+            "banner": r.banner,
         }
     )
 
@@ -169,6 +171,8 @@ def _header_value(v: Any) -> str:
 
 def to_markdown(r: Report) -> str:
     lines = [f"# {r.phase} report ({r.date})", "", f"Result: **{'PASS' if r.passed else 'FAIL'}**", ""]
+    if r.banner:
+        lines += [f"**{r.banner}**", ""]
     not_run = sum(1 for c in r.checks if c.not_run)
     if not_run:
         failed = sum(1 for c in r.checks if not c.passed and not c.not_run)

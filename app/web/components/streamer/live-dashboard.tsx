@@ -12,6 +12,8 @@ import {
   shouldHandleHoldKey,
 } from "@/lib/hold-machine"
 import { chatOverlayReducer, initialChatOverlay } from "@/lib/chat-state"
+import { captionReducer, initialCaptions } from "@/lib/captions"
+import { initialRisk, riskReducer, riskView } from "@/lib/risk"
 import { chipFor, engineIsFresh, initialLiveState, liveReducer } from "@/lib/live-state"
 import type { WireTopic } from "@/lib/wire"
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
@@ -19,16 +21,19 @@ import { useLanguage } from "@/components/shell/language-provider"
 import { ConnectionBanner } from "@/components/shell/connection-banner"
 import { AlertFeed } from "@/components/streamer/alert-feed"
 import { ChatOverlay } from "@/components/streamer/chat-overlay"
+import { CaptionsControl } from "@/components/streamer/captions-control"
 import { EngineChip } from "@/components/streamer/engine-chip"
 import { HoldButton } from "@/components/streamer/hold-button"
 import { ModeratorInvite } from "@/components/streamer/moderator-invite"
+import { RiskMeter } from "@/components/streamer/risk-meter"
 import { useRealtime } from "@/components/streamer/use-realtime"
+import { useStreamerApi } from "@/components/streamer/use-streamer-api"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { ToastAction } from "@/components/ui/toast"
 import { toast } from "@/components/ui/use-toast"
 
-const LIVE_TOPICS: readonly WireTopic[] = ["control.hold", "engine.status", "safety.event", "chat.allowed", "chat.verdict"]
+const LIVE_TOPICS: readonly WireTopic[] = ["control.hold", "engine.status", "safety.event", "guard.risk", "guard.meter", "caption.event", "chat.allowed", "chat.verdict"]
 
 /** The /live dashboard: HOLD button, status chip, alert feed, connection state. */
 export function LiveDashboard() {
@@ -50,14 +55,18 @@ function useNow(intervalMs: number): number {
 
 function Dashboard() {
   const { api, status } = useAuth()
+  const streamerApi = useStreamerApi()
   const { t } = useLanguage()
   const { client, state: connection } = useRealtime(LIVE_TOPICS, status === "ready")
   const [hold, dispatchHold] = React.useReducer(holdReducer, initialHoldState)
   const [live, dispatchLive] = React.useReducer(liveReducer, initialLiveState)
   const [chat, dispatchChat] = React.useReducer(chatOverlayReducer, initialChatOverlay)
+  const [risk, dispatchRisk] = React.useReducer(riskReducer, initialRisk)
+  const [captions, dispatchCaptions] = React.useReducer(captionReducer, initialCaptions)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [alertsFailed, setAlertsFailed] = React.useState(false)
   const now = useNow(1000)
+  const riskNow = riskView(risk, now)
 
   // The /live page is dark by default to reduce glare (docs/specs/app-web.md 5.6).
   React.useEffect(() => {
@@ -81,6 +90,15 @@ function Dashboard() {
         }
         case "safety.event":
           dispatchLive({ type: "safety", event: frame.data.d })
+          break
+        case "guard.meter":
+          dispatchRisk({ type: "meter", meter: frame.data.d, at: Date.now() })
+          break
+        case "guard.risk":
+          dispatchRisk({ type: "signal", signal: frame.data.d, at: Date.now() })
+          break
+        case "caption.event":
+          dispatchCaptions({ type: "caption", event: frame.data.d })
           break
         case "chat.allowed":
           dispatchChat({ type: "allowed", message: frame.data.d })
@@ -120,11 +138,16 @@ function Dashboard() {
           dispatchLive({ type: "backfill", alerts: r.alerts })
         })
         .catch(() => setAlertsFailed(true))
+      // The risk meter right now (a missing endpoint only means the meter starts from the live frames).
+      streamerApi
+        .getRisk()
+        .then((snapshot) => dispatchRisk({ type: "snapshot", snapshot, at: Date.now() }))
+        .catch(() => {})
       if (statusNow.engine) dispatchLive({ type: "engine", status: statusNow.engine.d, at: Date.now() - (statusNow.engine_age_s ?? 0) * 1000 })
     } catch (err) {
       if (err instanceof ApiRequestError && err.isNetwork) dispatchLive({ type: "api", down: true })
     }
-  }, [api])
+  }, [api, streamerApi])
 
   const wsOpen = connection === "open"
   React.useEffect(() => {
@@ -226,9 +249,13 @@ function Dashboard() {
 
       <EngineChip kind={chip} engine={engineFresh ? live.engine : null} />
 
+      <RiskMeter view={riskNow} />
+
       <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
 
       <ChatOverlay state={chat} />
+
+      <CaptionsControl api={api} lines={captions.lines} />
 
       <ModeratorInvite />
 

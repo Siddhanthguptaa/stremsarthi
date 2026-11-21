@@ -180,7 +180,14 @@ def _distractor(lang: str, rng: random.Random) -> list[Tok]:
 def _noise_plan(bucket: str, rng: random.Random) -> tuple[str, float | None]:
     if bucket == "hard":
         return rng.choice(
-            [("babble", 10.0), ("babble", 15.0), ("music", 12.0), ("music", 18.0), ("pink", 10.0), ("white", 15.0)]
+            [
+                ("babble", 10.0),
+                ("babble", 15.0),
+                ("music", 12.0),
+                ("music", 18.0),
+                ("pink", 10.0),
+                ("white", 15.0),
+            ]
         )
     r = rng.random()
     if r < 0.55:
@@ -199,7 +206,7 @@ def _face_ranges(duration: float, rng: random.Random) -> list[tuple[float, float
     target = rng.uniform(0.5, 0.9) * duration
     pos = rng.uniform(0.0, 0.1 * duration)
     k = rng.randint(1, 3)
-    for i in range(k):
+    for _ in range(k):
         length = target / k
         a, b = pos, min(duration, pos + length)
         out.append((round(a, 3), round(b, 3)))
@@ -229,7 +236,7 @@ def build_clip(
         n = rng.choice((2, 3, 4, 4, 5))
         kinds = rng.choices(list(KIND_WEIGHTS), weights=list(KIND_WEIGHTS.values()), k=n)
         plan = ["filler"]
-        for k in kinds:
+        for _ in kinds:
             plan += ["pii"]
             if rng.random() < 0.55:
                 plan.append(rng.choice(["filler", "distract", "distract"]))

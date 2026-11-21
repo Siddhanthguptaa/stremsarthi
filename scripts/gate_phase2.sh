@@ -11,9 +11,12 @@ source scripts/gate_lib.sh
 
 usage() {
   cat <<'EOF'
-Usage: scripts/gate_phase2.sh [--n N] [--clips N] [--data DIR] [--seed S] [--regen] [--offline-only] [--cpu-only]
-                              [--require-gpu] [--engine real|ref|ref-broken] [--perf-seconds S] [--quick]
-                              [--gate-levels L] [--gate-sources S] [--out DIR] [--report-dir DIR] [--plan] [--help]
+Usage: scripts/gate_phase2.sh [--n N] [--clips N] [--face-clips N] [--face-clip-seconds S] [--data DIR] [--seed S]
+                              [--regen] [--offline-only] [--cpu-only] [--require-gpu]
+                              [--engine real|ref|ref-broken] [--perf-seconds S] [--quick]
+                              [--gate-levels L] [--gate-sources S] [--latency-per-bucket N]
+                              [--seeded-defect KIND:DETECTOR] [--buckets B...] [--max-per-bucket N]
+                              [--out DIR] [--report-dir DIR] [--plan] [--help]
 
 Gate G2 (PLAN section 5): every video category, with tracking.
 
@@ -35,7 +38,11 @@ Steps:
                when there is no GPU unless --require-gpu (then exit 3).
 
 Options:
-  --n N                images per bucket (default 40; 26 buckets)        --clips N   clips per clip bucket (default 4)
+  --n N                images per bucket (default 40; 27 buckets)        --clips N   clips per clip bucket (default 4)
+  --face-clips N       clips for the face bucket (default 6; quick: --clips)
+  --face-clip-seconds S  length of the face clips (default 10; quick: 5). Allowlisted faces are masked for about
+                       0.5 to 1.4 s while identity votes accrue (spec 5.5), so the gate row scores them from 1.0 s
+                       after the track first appears and the report also shows steady and all-frames numbers.
   --data DIR           dataset directory (default /tmp/ss_phase2_video)   --seed S    generator seed (default 1234)
   --regen              regenerate the dataset even if it matches
   --offline-only       skip the real-time legs (accuracy only; the gate cannot close without them)
@@ -46,9 +53,16 @@ Options:
   --perf-seconds S     length of the perf legs (default 120)
   --quick              8 images per bucket, 45 s perf legs, lower sample minimums; report <date>-phase2-quick.md, no
                        baseline. The full run is the one that closes the gate.
-  --gate-levels L      comma list of clean,light,heavy the recall checks use (default all three; every level is
+  --gate-levels L      comma list of clean,light,heavy the recall checks use (default clean,light: D-48, heavy is a
+                       reported stress level, not gated; --gate-levels clean,light,heavy gates it too; every level is
                        always reported)
   --gate-sources S     img,clip (default both)
+  --latency-per-bucket N  stills per bucket re-run at the PRODUCTION OCR budget (ocr.rec_budget_ms) to judge the
+                       ACCURATE lane (default 5; 0 skips and the check is NOT RUN). The 5000 ms OCR budget lift is
+                       used for the recall pass only.
+  --seeded-defect K:D  acceptance only: break one detector on purpose (blind|crash|absent : detector id) so the gate
+                       must fail; report <date>-phase2-seeded.md, no baseline (see scripts/gate_phase2_acceptance.sh)
+  --buckets "B ..."   only these dataset buckets (subset runs)       --max-per-bucket N  thin the set
   --out DIR            run directory (default eval/runs/phase2-<timestamp>)
   --report-dir DIR     where the report goes (default eval/reports)
   --plan               print the steps that would run and exit 0 without running anything
@@ -62,7 +76,7 @@ EOF
 
 die_usage() { echo "gate_phase2.sh: $1" >&2; echo "try: scripts/gate_phase2.sh --help" >&2; exit 2; }
 
-N=""; CLIPS=""; DATA=""; SEED=1234; REGEN=0; OFFLINE_ONLY=0; CPU_ONLY=0; REQUIRE_GPU=0; ENGINE=real; PERF_S=""
+N=""; CLIPS=""; FACE_CLIPS=""; FACE_SECONDS=""; LAT_N=""; SEEDED=""; MAXPB=""; BUCKETS_ARG=""; DATA=""; SEED=1234; REGEN=0; OFFLINE_ONLY=0; CPU_ONLY=0; REQUIRE_GPU=0; ENGINE=real; PERF_S=""
 QUICK=0; LEVELS=""; SOURCES="img,clip"; OUT=""; REPORT_DIR=""; PLAN=0
 need_arg() { [ "$2" -ge 2 ] || die_usage "$1 needs a value"; }
 while [ $# -gt 0 ]; do
@@ -72,6 +86,18 @@ while [ $# -gt 0 ]; do
     --n=*) N="${1#*=}" ;;
     --clips) need_arg "$1" $#; CLIPS="$2"; shift ;;
     --clips=*) CLIPS="${1#*=}" ;;
+    --face-clips) need_arg "$1" $#; FACE_CLIPS="$2"; shift ;;
+    --face-clips=*) FACE_CLIPS="${1#*=}" ;;
+    --face-clip-seconds) need_arg "$1" $#; FACE_SECONDS="$2"; shift ;;
+    --face-clip-seconds=*) FACE_SECONDS="${1#*=}" ;;
+    --latency-per-bucket) need_arg "$1" $#; LAT_N="$2"; shift ;;
+    --latency-per-bucket=*) LAT_N="${1#*=}" ;;
+    --seeded-defect) need_arg "$1" $#; SEEDED="$2"; shift ;;
+    --seeded-defect=*) SEEDED="${1#*=}" ;;
+    --max-per-bucket) need_arg "$1" $#; MAXPB="$2"; shift ;;
+    --max-per-bucket=*) MAXPB="${1#*=}" ;;
+    --buckets) need_arg "$1" $#; BUCKETS_ARG="$2"; shift ;;
+    --buckets=*) BUCKETS_ARG="${1#*=}" ;;
     --data) need_arg "$1" $#; DATA="$2"; shift ;;
     --data=*) DATA="${1#*=}" ;;
     --seed) need_arg "$1" $#; SEED="$2"; shift ;;
@@ -103,12 +129,18 @@ is_uint() { case "$1" in '' | *[!0-9]*) return 1 ;; *) return 0 ;; esac; }
 is_num() { case "$1" in '' | *[!0-9.]* | *.*.* | .) return 1 ;; *) return 0 ;; esac; }
 
 if [ "$QUICK" = 1 ]; then
-  : "${N:=8}"; : "${CLIPS:=4}"; : "${PERF_S:=45}"; : "${DATA:=/tmp/ss_phase2_video_quick}"
+  : "${N:=8}"; : "${CLIPS:=4}"; : "${PERF_S:=45}"; : "${DATA:=/tmp/ss_phase2_video_quick}"; : "${LAT_N:=3}"
   MIN_N=5; MIN_WIN=10
 else
-  : "${N:=40}"; : "${CLIPS:=4}"; : "${PERF_S:=120}"; : "${DATA:=/tmp/ss_phase2_video}"
+  : "${N:=40}"; : "${CLIPS:=4}"; : "${PERF_S:=120}"; : "${DATA:=/tmp/ss_phase2_video}"; : "${LAT_N:=5}"
+  : "${FACE_CLIPS:=6}"; : "${FACE_SECONDS:=10}"
   MIN_N=20; MIN_WIN=20
 fi
+is_uint "$LAT_N" || die_usage "--latency-per-bucket must be a non-negative integer, got '$LAT_N'"
+[ -z "$FACE_CLIPS" ] || is_uint "$FACE_CLIPS" || die_usage "--face-clips must be a non-negative integer, got '$FACE_CLIPS'"
+[ -z "$FACE_SECONDS" ] || is_num "$FACE_SECONDS" || die_usage "--face-clip-seconds must be a number, got '$FACE_SECONDS'"
+[ -z "$MAXPB" ] || is_uint "$MAXPB" || die_usage "--max-per-bucket must be a non-negative integer, got '$MAXPB'"
+case "$SEEDED" in '' | blind:* | crash:* | absent:*) ;; *) die_usage "--seeded-defect must be blind|crash|absent:DETECTOR, got '$SEEDED'" ;; esac
 is_uint "$N" && [ "$N" -ge 1 ] || die_usage "--n must be a positive integer, got '$N'"
 is_uint "$CLIPS" || die_usage "--clips must be a non-negative integer, got '$CLIPS'"
 is_uint "$SEED" || die_usage "--seed must be a non-negative integer, got '$SEED'"
@@ -128,12 +160,20 @@ PHASE_NAME=phase2; BASELINE_FLAG=""
 if [ "$ENGINE" != real ]; then PHASE_NAME="phase2-$ENGINE"; BASELINE_FLAG="--no-baseline"; fi
 if [ "$QUICK" = 1 ]; then PHASE_NAME="${PHASE_NAME}-quick"; BASELINE_FLAG="--no-baseline"; fi
 if [ "$OFFLINE_ONLY" = 1 ]; then PHASE_NAME="${PHASE_NAME}-offline"; BASELINE_FLAG="--no-baseline"; fi
+if [ -n "$SEEDED" ]; then PHASE_NAME="${PHASE_NAME}-seeded"; BASELINE_FLAG="--no-baseline"; fi
+if [ -n "$BUCKETS_ARG$MAXPB" ]; then PHASE_NAME="${PHASE_NAME}-subset"; BASELINE_FLAG="--no-baseline"; fi
 LOCK="${SS_GPU_LOCK_FILE:-/tmp/streamsarthi-gpu.lock}"  # the override exists for the gate-script tests only
 
-OFFLINE_ARGS=(--min-n "$MIN_N" --min-windows "$MIN_WIN" --gate-sources "$SOURCES")
+OFFLINE_ARGS=(--min-n "$MIN_N" --min-windows "$MIN_WIN" --gate-sources "$SOURCES" --latency-per-bucket "$LAT_N")
 if [ -n "$LEVELS" ]; then OFFLINE_ARGS+=(--gate-levels "$LEVELS"); fi
-GEN=(python -m eval.run gen-video --out "$DATA" --seed "$SEED" --n "$N" --clips "$CLIPS")
-CHECK=(python -m eval.run phase2 --leg dataset-check --data "$DATA" --seed "$SEED" --n "$N" --clips "$CLIPS")
+if [ -n "$SEEDED" ]; then OFFLINE_ARGS+=(--seeded-defect "$SEEDED"); fi
+if [ -n "$MAXPB" ]; then OFFLINE_ARGS+=(--max-per-bucket "$MAXPB"); fi
+if [ -n "$BUCKETS_ARG" ]; then read -r -a _bk <<<"$BUCKETS_ARG"; OFFLINE_ARGS+=(--buckets "${_bk[@]}"); fi
+FACE_GEN=(); FACE_CHECK=()
+if [ -n "$FACE_CLIPS" ]; then FACE_GEN+=(--face-clips "$FACE_CLIPS"); FACE_CHECK+=(--face-clips "$FACE_CLIPS"); fi
+if [ -n "$FACE_SECONDS" ]; then FACE_GEN+=(--face-clip-seconds "$FACE_SECONDS"); FACE_CHECK+=(--face-clip-seconds "$FACE_SECONDS"); fi
+GEN=(python -m eval.run gen-video --out "$DATA" --seed "$SEED" --n "$N" --clips "$CLIPS" "${FACE_GEN[@]}")
+CHECK=(python -m eval.run phase2 --leg dataset-check --data "$DATA" --seed "$SEED" --n "$N" --clips "$CLIPS" "${FACE_CHECK[@]}")
 P2=(python -m eval.run phase2 --data "$DATA" --out "$OUT")
 
 step() {
@@ -174,7 +214,7 @@ else
       gate_finish
     fi
   else
-    gate_record "dataset" 0 "reused $DATA (n=$N, clips=$CLIPS, seed=$SEED)"
+    gate_record "dataset" 0 "reused $DATA (n=$N, clips=$CLIPS, face clips=${FACE_CLIPS:-$CLIPS} x ${FACE_SECONDS:-5} s, seed=$SEED)"
   fi
 fi
 

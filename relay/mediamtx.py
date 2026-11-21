@@ -35,6 +35,7 @@ from relay.security import (
     RelayAddress,
     mediamtx_users,
 )
+from relay.srt import validate_exposure, validate_passphrase
 
 log = logging.getLogger("relay.mediamtx")
 
@@ -81,11 +82,24 @@ def verified_binary(directory: Path | str = TOOL_DIR, expected_sha256: str = BIN
 
 
 def render_config(
-    address: RelayAddress, phone: Credentials, internal: Credentials, *, srt_latency_ms: int = 120
+    address: RelayAddress,
+    phone: Credentials,
+    internal: Credentials,
+    *,
+    srt_latency_ms: int = 120,
+    srt_passphrase: str | None = None,
 ) -> str:
-    """Render the stdin config. Contains credentials, so it is returned, never written to disk."""
+    """Render the stdin config. Contains credentials, so it is returned, never written to disk.
+
+    ``srt_passphrase`` (10..79 characters) makes the ``camera`` path accept only AES-encrypted SRT
+    publishers (``srtPublishPassphrase``); RTMP publishers are not affected.
+    """
     if type(srt_latency_ms) is not int or not 20 <= srt_latency_ms <= 2000:
         raise ValueError("srt_latency_ms must be an int in 20..2000")
+    passphrase_line = ""
+    if srt_passphrase is not None:
+        # JSON string syntax is valid YAML and survives a leading "-" in the value.
+        passphrase_line = f"    srtPublishPassphrase: {json.dumps(validate_passphrase(srt_passphrase))}"
     template = Template(CONFIG_TEMPLATE.read_text(encoding="utf-8"))
     return template.substitute(
         users_json=json.dumps(mediamtx_users(address, phone, internal)),
@@ -95,6 +109,7 @@ def render_config(
         rtmp_port=address.rtmp_port,
         srt_port=address.srt_port,
         srt_latency_ms=srt_latency_ms,
+        camera_passphrase_line=passphrase_line,
     )
 
 
@@ -227,6 +242,7 @@ class MediaMTXSupervisor:
         phone: Credentials | None = None,
         internal: Credentials | None = None,
         srt_latency_ms: int = 120,
+        srt_passphrase: str | None = None,
         binary: Path | str | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
         backoff: tuple[float, ...] = BACKOFF_SECONDS,
@@ -239,6 +255,7 @@ class MediaMTXSupervisor:
         self.phone = phone or Credentials.generate()
         self.internal = internal or Credentials.generate()
         self.srt_latency_ms = srt_latency_ms
+        self.srt_passphrase = srt_passphrase
         self.binary = Path(binary) if binary is not None else verified_binary()
         self.classifier = LogClassifier(on_event)
         self._backoff = tuple(backoff)
@@ -255,8 +272,15 @@ class MediaMTXSupervisor:
         self._lock = threading.RLock()
         self._started_at = 0.0
         self._attempt = 0
-        # Validate the config renders before anything is spawned.
-        render_config(self.address, self.phone, self.internal, srt_latency_ms=srt_latency_ms)
+        # Refuse an unprotected phone-reachable bind, then validate the config renders, before spawning.
+        validate_exposure(self.address, self.phone, srt_passphrase)
+        render_config(
+            self.address,
+            self.phone,
+            self.internal,
+            srt_latency_ms=srt_latency_ms,
+            srt_passphrase=srt_passphrase,
+        )
 
     # --- URLs for in-process users (memory only; never log them) ---
     def reader_url(self) -> str:
@@ -268,7 +292,13 @@ class MediaMTXSupervisor:
         if protocol == "rtmp":
             return self.address.rtmp(PATH_CAMERA, self.phone)
         if protocol == "srt":
-            return self.address.srt("publish", PATH_CAMERA, self.phone, latency_ms=self.srt_latency_ms)
+            return self.address.srt(
+                "publish",
+                PATH_CAMERA,
+                self.phone,
+                latency_ms=self.srt_latency_ms,
+                passphrase=self.srt_passphrase,
+            )
         raise ValueError("protocol must be 'rtmp' or 'srt'")
 
     def tap_url(self) -> str:
@@ -322,7 +352,11 @@ class MediaMTXSupervisor:
         # Never inherit ambient MTX_* overrides: they can carry credentials and rewrite our config.
         env = {k: v for k, v in os.environ.items() if not k.startswith("MTX_")}
         config = render_config(
-            self.address, self.phone, self.internal, srt_latency_ms=self.srt_latency_ms
+            self.address,
+            self.phone,
+            self.internal,
+            srt_latency_ms=self.srt_latency_ms,
+            srt_passphrase=self.srt_passphrase,
         ).encode("utf-8")
         proc = self._popen(
             [str(self.binary), "/dev/stdin"],

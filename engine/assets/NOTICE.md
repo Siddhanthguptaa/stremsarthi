@@ -1,14 +1,18 @@
-# Fonts used by the engine (slates now, captions in T5.4)
+# Fonts used by the engine (slates and captions)
 
-Both fonts are licensed under the SIL Open Font License 1.1. The licence text sits next to each font and must stay with it.
+All fonts are licensed under the SIL Open Font License 1.1. The licence text sits next to each font and must stay with it.
 
 | File | Font | Licence text | Source | SHA-256 |
 |---|---|---|---|---|
 | `AtkinsonHyperlegibleNext-wght.ttf` | Atkinson Hyperlegible Next (variable, weight axis), Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors | `OFL-AtkinsonHyperlegibleNext.txt` | copied from `reference/irl-shield/shield/presentation/assets/` (IRL Shield, MIT; the font itself is OFL-1.1) | `5a455d1cfa099b601ab70751bb9673e8fe1854dc4500c80e1a220d0d75e31745` |
 | `NotoSansDevanagari-VF.ttf` | Noto Sans Devanagari (variable: weight 100-900, width 62-100), Copyright 2022 The Noto Project Authors | `OFL-NotoSansDevanagari.txt` | `https://github.com/google/fonts/raw/main/ofl/notosansdevanagari/NotoSansDevanagari[wdth,wght].ttf`, fetched 2026-11-20 (official Google Fonts repository, upstream `notofonts/devanagari`), renamed on copy | `14ec4af41f27482216d1c2229f417ff9b1425e1babb014e57d1d40d03229853e` |
+| `NotoSansKannada-VF.ttf` | Noto Sans Kannada (variable: weight 100-900, width 62-100), Copyright 2022 The Noto Project Authors | `OFL-NotoSansKannada.txt` | `https://github.com/google/fonts/raw/main/ofl/notosanskannada/NotoSansKannada[wdth,wght].ttf`, fetched 2026-11-21 (official Google Fonts repository, upstream `notofonts/kannada`), renamed on copy, SHA-256 verified after download, never executed | `cca4f3b3a8cb12fb261f1b43baf5d2f7f59d90fe123d41f0065ed3a183997ec9` |
+| `NotoSansTamil-VF.ttf` | Noto Sans Tamil (variable: weight 100-900, width 62-100), Copyright 2022 The Noto Project Authors | `OFL-NotoSansTamil.txt` | `https://github.com/google/fonts/raw/main/ofl/notosanstamil/NotoSansTamil[wdth,wght].ttf`, fetched 2026-11-21 (official Google Fonts repository, upstream `notofonts/tamil`), renamed on copy, SHA-256 verified after download, never executed | `aa3a9b321f4b0bb2c40203ffbde9af89713227866e0e13f76e5b9eeea727cf88` |
+| `NotoSansTelugu-VF.ttf` | Noto Sans Telugu (variable: weight 100-900, width 62-100), Copyright 2022 The Noto Project Authors | `OFL-NotoSansTelugu.txt` | `https://github.com/google/fonts/raw/main/ofl/notosanstelugu/NotoSansTelugu[wdth,wght].ttf`, fetched 2026-11-21 (official Google Fonts repository, upstream `notofonts/telugu`), renamed on copy, SHA-256 verified after download, never executed | `e618af7bf999df192ed4f388eba2e563f2b5015034e9cbb317b5bd793bd7334d` |
+| `NotoSansBengali-VF.ttf` | Noto Sans Bengali (variable: weight 100-900, width 62-100), Copyright 2022 The Noto Project Authors | `OFL-NotoSansBengali.txt` | `https://github.com/google/fonts/raw/main/ofl/notosansbengali/NotoSansBengali[wdth,wght].ttf`, fetched 2026-11-21 (official Google Fonts repository, upstream `notofonts/bengali`), renamed on copy, SHA-256 verified after download, never executed | `dcd42978094e584a849c84a51450eeac40c8826057d566ea6d4b9627a403a05a` |
 
-The OFL texts: `OFL-AtkinsonHyperlegibleNext.txt` has SHA-256 `a1d2975ff736f64e5d9eb34579abb93a0e02b5ceb59c8a2c2fa7db53badfa1fd`, `OFL-NotoSansDevanagari.txt` has `a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331`.
+The OFL texts: `OFL-AtkinsonHyperlegibleNext.txt` has SHA-256 `a1d2975ff736f64e5d9eb34579abb93a0e02b5ceb59c8a2c2fa7db53badfa1fd`, `OFL-NotoSansDevanagari.txt` has `a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331`. The other OFL texts (copied from the same upstream directories as `OFL.txt`): Kannada `9d49a4e56df9b36403b139f48bf07fd87cc5e716cb3203c54b04b674adb16238`, Tamil `f8ff8ce7d0a81bf8d5e121c635ef027250c531f2fd37d5988b8dd6e45f19d7f1`, Telugu `481c72a8f1b4f645a7e6b10326be41b2da2c15cb470ff48a07fab773eed00102`, Bengali `754f0e221aa7d5a915489f3bf1f20fe53ddc35ab2834a4d91656d78f9622de70`.
 
 The fonts are loaded with Pillow and libraqm (`PIL.features.check("raqm")` is true with the Pillow wheel in `.venv`), so Devanagari conjuncts are shaped. They are not modified. `engine/tests/test_engine_slate.py` checks the hashes above against the files.
 
-Kannada, Tamil, Telugu and Bengali Noto fonts arrive with the caption renderer (T5.4).
+`engine/captions.py` (T5.4) draws captions with these fonts and checks the Kannada, Tamil, Telugu and Bengali hashes in `engine/tests/test_engine_captions_shaping.py`.

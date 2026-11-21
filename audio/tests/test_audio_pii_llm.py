@@ -10,7 +10,7 @@ import os
 import httpx
 import pytest
 
-from audio.pii.detector import SpokenPiiDetector
+from audio.pii.detector import SpokenPiiDetector, fallback_mutes
 from audio.pii.llm import (
     SYSTEM_PROMPT_V1,
     GroqChatBackend,
@@ -18,6 +18,7 @@ from audio.pii.llm import (
     PiiLlm,
     parse_response,
 )
+from audio.pii.merge import Cand
 from audio.pii.rules import SpokenRules
 from contracts.enums import Category
 from contracts.speech import TranscriptWindow, Word
@@ -105,12 +106,22 @@ def test_429_falls_back_and_bucket_limits_calls():
         asyncio.run(llm.classify(["a"], False))
 
 
-def test_fallback_outside_watch_window_and_under_six_digits_passes():
-    # ambiguous but not 6+ digits and no cue: an unknown-handle UPI id with a failing LLM passes
+def test_fallback_rule_for_ambiguous_candidates():
+    # 5.7: 6+ digits, a watch window or a provisional shape guess is muted; anything else passes
+    def cand(**kw):
+        base = dict(
+            category=Category.SPOKEN_OTHER_PII, t0=0.0, t1=1.0, confidence=0.5, reason="r", approx=False,
+            widx0=0, widx1=1, tok0=0, tok1=1, n_digits=4, cue_active=False, ambiguous=True,
+        )  # fmt: skip
+        return Cand(**{**base, **kw})
+
+    assert not fallback_mutes(cand())
+    assert fallback_mutes(cand(n_digits=6))
+    assert fallback_mutes(cand(cue_active=True))
+    assert fallback_mutes(cand(provisional=True))
+    # an unknown handle spoken after the explicit marker with a name is muted without any LLM
     spans, _ = detect(Stub(TimeoutError()), "rahul at the rate of foobar")
-    assert spans == []
-    spans, _ = detect(Stub(TimeoutError()), "mera upi id hai rahul at the rate of foobar")
-    assert len(spans) == 1  # watch window: mute
+    assert len(spans) == 1
 
 
 def test_no_llm_configured_uses_the_fallback_without_network():

@@ -16,14 +16,14 @@
 चूतिये	abuse	2	hi	word
 चुतिये	abuse	2	hi	word
 चूतिए	abuse	2	hi	word
-चूत	abuse	3	hi	word
-चुत	abuse	3	hi	word
+चूत	abuse	3	hi	word	mention
+चुत	abuse	3	hi	word	mention
 गांडू	abuse	2	hi	word
 गान्डू	abuse	2	hi	word
 गांड	abuse	2	hi	word
 गाण्ड	abuse	2	hi	word
-लंड	abuse	3	hi	word
-लण्ड	abuse	3	hi	word
+लंड	abuse	3	hi	word	mention
+लण्ड	abuse	3	hi	word	mention
 लौड़ा	abuse	3	hi	word
 लौडा	abuse	3	hi	word
 लौड़े	abuse	3	hi	word
@@ -39,10 +39,10 @@
 हरामजादे	abuse	2	hi	word
 हरामजादी	abuse	2	hi	word
 हरामज़ादा	abuse	2	hi	word
-कुत्ता	abuse	2	hi	word
-कुत्ते	abuse	2	hi	word
-कुत्तिया	abuse	2	hi	word
-कुतिया	abuse	2	hi	word
+कुत्ता	abuse	2	hi	word	frame
+कुत्ते	abuse	2	hi	word	frame
+कुत्तिया	abuse	2	hi	word	frame
+कुतिया	abuse	2	hi	word	frame
 कुत्ते की औलाद	abuse	2	hi	word
 बकचोद	abuse	2	hi	word
 बकचोदी	abuse	1	hi	word
@@ -57,14 +57,40 @@
 चक्का	abuse	2	hi	word
 नपुंसक	abuse	2	hi	word
 वेश्या	abuse	2	hi	word
-कमीना	abuse	1	hi	word
-कमीने	abuse	1	hi	word
-कमीनी	abuse	1	hi	word
-साला	abuse	1	hi	word
-साले	abuse	1	hi	word
+कमीना	abuse	1	hi	word	frame
+कमीने	abuse	1	hi	word	frame
+कमीनी	abuse	1	hi	word	frame
+साला	abuse	1	hi	word	frame
+साले	abuse	1	hi	word	frame
 तेरी माँ की	abuse	2	hi	word
 तेरी मां की	abuse	2	hi	word
 तेरी बहन की	abuse	2	hi	word
 उल्लू का पट्ठा	abuse	1	hi	word
-बीसी	abuse	1	hi	word
-एमसी	abuse	1	hi	word
+बीसी	abuse	1	hi	word	mention
+एमसी	abuse	1	hi	word	mention
+
+# Added: more Hindi abuse; frame = only when aimed at someone.
+बकलोल	abuse	2	hi	word
+बकलंड	abuse	2	hi	word
+बकलोली	abuse	1	hi	word
+गधे की औलाद	abuse	2	hi	word
+गधा	abuse	1	hi	word	frame
+गधे	abuse	1	hi	word	frame
+निकम्मा	abuse	1	hi	word
+निकम्मे	abuse	1	hi	word
+निकम्मी	abuse	1	hi	word
+नालायक	abuse	2	hi	word
+बेवकूफ	abuse	1	hi	word	frame
+चक्के	abuse	2	hi	word
+छक्का	abuse	2	hi	word
+छक्के	abuse	2	hi	word
+हरामखोर	abuse	2	hi	word
+मादरजात	abuse	2	hi	word
+ठरकी	abuse	2	hi	word
+छपरी	abuse	1	hi	word	frame
+घटिया	abuse	1	hi	word	frame
+कमीनो	abuse	1	hi	word	frame
+गंदू	abuse	2	hi	word
+गांडू	abuse	2	hi	word
+भोसड़ीवाले	abuse	3	hi	word
+चूतिए	abuse	2	hi	word

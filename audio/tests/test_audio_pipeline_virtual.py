@@ -9,7 +9,7 @@ import asyncio
 
 import pytest
 
-from audio.orchestrator.pipeline import AudioPipeline
+from audio.orchestrator.pipeline import FAILSAFE_PAD_S, AudioPipeline
 from audio.orchestrator.race import SttRace
 from audio.pii.detector import SpokenPiiDetector
 from audio.pii.rules import SpokenRules
@@ -22,7 +22,7 @@ from contracts.detection import MaskRequest, MuteSpan
 from contracts.enums import Category, MaskKind, Topic
 from contracts.events import StageTiming
 from contracts.fakes import InProcessBus
-from contracts.speech import Transcript
+from contracts.speech import Transcript, Word
 
 D = 4.0
 PHONE = "nau aath saat chhe paanch char teen do ek shunya"
@@ -133,7 +133,7 @@ def test_slow_stt_triggers_failsafe_over_the_whole_voiced_segment_and_nothing_el
     )
     cov = [(s.pts_start, s.pts_end) for s in spans]
     assert intervals_cover(cov, 0.0, end) == pytest.approx(end, abs=1e-6)  # all speech muted
-    assert intervals_cover(cov, end + 0.3, end + 1.0) == 0.0  # trailing silence passes
+    assert intervals_cover(cov, end + FAILSAFE_PAD_S + 0.1, end + 1.0) == 0.0  # trailing silence passes
     for s in spans:  # soft deadline of the segment that holds the span start: arrival + D - 0.3
         assert s.completed_at <= t0 + s.pts_end - 0.1 + D - 0.3 + 1e-6
     assert pipe.stats["failsafe"] == pipe.stats["voiced"]
@@ -244,3 +244,54 @@ def test_split_number_across_segments_is_muted_as_one_continuous_region():
     cov = [(s.pts_start, s.pts_end) for s in spans]
     for w in digit_words:
         assert intervals_cover(cov, w.t0, w.t1) == pytest.approx(w.t1 - w.t0, abs=1e-6)
+
+
+class EmptySTT:
+    """A provider that answers successfully with nothing (a 200 with an empty body, a filtered hallucination)."""
+
+    name = "empty"
+
+    def __init__(self, provider: str = "sarvam", latency: float = 0.4, text: str = "") -> None:
+        self.provider, self.latency, self.text, self.calls = provider, latency, text, 0
+
+    async def transcribe(self, pcm16k, pts_start, lang_hint):
+        self.calls += 1
+        await asyncio.sleep(self.latency)
+        return Transcript(
+            pts_start, pts_start + len(pcm16k) / 16_000, self.text, (), "hi", self.provider, self.latency
+        )
+
+
+def test_empty_transcript_for_voiced_speech_is_muted_as_unverified_not_passed():
+    tl = Timeline().say("yeh ek lambi baat hai jo chalti rahegi", pause_after=1.0)
+
+    async def main(loop):
+        pipe, bus = build(loop, {"sarvam": EmptySTT(), "local": EmptySTT("local")})
+        t0 = await run_scenario(loop, pipe, tl)
+        return t0, pipe, bus, tl.words[-1].t1
+
+    t0, pipe, bus, end = run_virtual(main)
+    spans = spans_of(bus)
+    assert spans and all(s.granularity == "failsafe" and s.category is Category.SPOKEN_UNVERIFIED for s in spans)
+    assert intervals_cover([(s.pts_start, s.pts_end) for s in spans], 0.0, end) == pytest.approx(end, abs=1e-6)
+    assert pipe.stats["thin_transcript"] == pipe.stats["voiced"] > 0
+    for s in spans:  # decided as soon as the empty answer arrives: well inside the delay window
+        assert s.completed_at <= t0 + s.pts_end - 0.1 + D - 0.3 + 1e-6
+
+
+def test_transcript_far_too_short_for_the_speech_is_not_trusted():
+    from audio.orchestrator.pipeline import too_thin
+    from audio.segmenter import Segment
+
+    def seg(speech_ms: float) -> Segment:
+        return Segment(1, 0.0, 1.5, None, 0.0, True, speech_ms, False, "cap")
+
+    def tr(*texts: str) -> Transcript:
+        ws = tuple(Word(t, 0.1 * i, 0.1 * i + 0.08, False, 1) for i, t in enumerate(texts))
+        return Transcript(0.0, 1.5, " ".join(texts), ws, "hi", "sarvam", 0.4)
+
+    assert too_thin(seg(900.0), tr())  # nothing for 0.9 s of speech
+    assert too_thin(seg(900.0), tr("...", " "))  # punctuation only
+    assert not too_thin(seg(900.0), tr("haan"))
+    assert too_thin(seg(2400.0), tr("haan"))  # one word for 2.4 s of speech
+    assert not too_thin(seg(2400.0), tr("haan", "bhai"))

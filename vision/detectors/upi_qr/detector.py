@@ -11,6 +11,19 @@ rectified re-decode for codes zxing could not read. Then, by what each QR turned
 - decoded **non-payment** code (a website, Wi-Fi sign-in): passes, unless ``categories.upi_qr.sensitivity`` is at
   least 0.8, which masks every QR (``qr_any``, 0.8).
 
+Benign memory. A code that decoded as a non-payment on one run and fails to decode on the next (compression
+noise, glare) is the same code: an undecodable candidate that is nearly the same box (IoU >= ``BENIGN_MATCH_IOU``,
+area change <= ``BENIGN_AREA_CHANGE``) as a non-payment code decoded within the last ``BENIGN_TTL_S`` is not masked,
+for at most ``BENIGN_MAX_PASSES`` runs in a row. Only the geometry and the kind of the sighting (non-payment or
+payment) are remembered, never the payload, and only a decoded code ever creates or refreshes a sighting: an
+undecodable run never does.
+The most recent sighting at a place decides: a payment decoded there after (or instead of) the non-payment code
+keeps an undecodable candidate masked, and so does a candidate whose box moved or resized beyond the limits (a
+different code, e.g. a payment QR put over the website one). A code that never decodes, or that decodes as a
+payment, is masked exactly as before; so is an undecodable code anywhere else.
+Without this a single undecodable run on a readable website QR masked it for the 2 s hold of the category; the
+short TTL and the strict match keep a payment QR that replaces the website code from slipping through unmasked.
+
 The quad is the decoder's symbol position grown by 16 % of each edge (quiet zone plus about a module of margin),
 following tilt and perspective. The planner then pads by ``padding_px`` and styles it SOLID. The payload is read,
 classified into a reason code and dropped inside ``scan``; ``Detection.extra`` carries codes only.
@@ -37,7 +50,7 @@ from contracts import (
     Resources,
 )
 
-from .scan import Found, expand_quad, scan
+from .scan import Found, _bbox, bbox_iou, expand_quad, scan
 
 log = logging.getLogger("vision.upi_qr")
 
@@ -50,6 +63,19 @@ EXPAND_MIN_PX = 6.0
 REASON_UNDECODABLE = "qr_undecodable"
 REASON_ANY = "qr_any"
 SOFT_BUDGET_S = 0.018  # optional scan stages stop here (FAST lane budget is 25 ms)
+BENIGN_TTL_S = 0.35  # an undecodable candidate on a code that decoded as a non-payment this recently passes
+BENIGN_IOU = 0.5  # "same place": the newest sighting overlapping this much decides (payment there: always masked)
+BENIGN_MATCH_IOU = 0.7  # to be trusted as the same website code the box must be nearly the same ...
+BENIGN_AREA_CHANGE = 0.2  # ... and about the same size (relative area change)
+BENIGN_MAX_PASSES = 1  # undecodable runs let through per decoded sighting; the next one is masked
+
+
+def _area_change(a: np.ndarray, b: np.ndarray) -> float:
+    """Relative change of the bounding-box area of ``a`` against ``b``."""
+    ax1, ay1, ax2, ay2 = _bbox(a)
+    bx1, by1, bx2, by2 = _bbox(b)
+    area_b = max((bx2 - bx1) * (by2 - by1), 1e-6)
+    return abs((ax2 - ax1) * (ay2 - ay1) - area_b) / area_b
 
 
 class UpiQrDetector:
@@ -64,11 +90,15 @@ class UpiQrDetector:
         self._res: Resources | None = None
         self._aruco: cv2.QRCodeDetectorAruco | None = None
         self.last_ms: float = 0.0  # scan time of the latest frame (telemetry/tests, no content)
+        # geometry and kind of decoded codes only, no payload is kept
+        # [quad 4x2, PTS, is_payment, undecodable passes used] of decoded codes
+        self._seen: list[list] = []
 
     # ------------------------------------------------------------------ plugin interface
     def configure(self, cfg: DetectorConfig, res: Resources) -> None:
         self._cfg, self._res = cfg, res
         self._aruco = cv2.QRCodeDetectorAruco()
+        self._seen = []
 
     def warmup(self) -> None:
         if self._aruco is None:
@@ -78,6 +108,7 @@ class UpiQrDetector:
     def close(self) -> None:
         self._aruco = None
         self._res = None
+        self._seen = []
 
     # ------------------------------------------------------------------ detection
     def detect(self, frame: Frame, ctx: DetectContext) -> list[Detection]:
@@ -95,12 +126,41 @@ class UpiQrDetector:
         )
         self.last_ms = (time.perf_counter() - t0) * 1000.0
         mask_all = conf.sensitivity >= ALL_QR_SENSITIVITY
+        found = self._apply_benign_memory(found, frame.pts)
         out: list[Detection] = []
         for f in found:
             det = self._detection(frame, f, mask_all=mask_all)
             if det is not None:
                 out.append(det)
         return out
+
+    def _apply_benign_memory(self, found: list[Found], pts: float) -> list[Found]:
+        """Drop undecodable candidates that are the same box as the newest overlapping sighting (within
+        ``BENIGN_TTL_S``) when that was a non-payment code; then remember the decoded codes of this run."""
+        if self._seen and pts < self._seen[-1][1] - 1.0:  # the source clock restarted
+            self._seen = []
+        self._seen = [e for e in self._seen if 0.0 <= pts - e[1] <= BENIGN_TTL_S]
+
+        def same_code_as_non_payment(f: Found) -> bool:
+            for entry in reversed(self._seen):  # newest first; the first sighting at this place decides
+                quad, _t, payment, passes = entry
+                if bbox_iou(f.quad, quad) < BENIGN_IOU:
+                    continue
+                if payment or passes >= BENIGN_MAX_PASSES:
+                    return False
+                if bbox_iou(f.quad, quad) < BENIGN_MATCH_IOU or _area_change(f.quad, quad) > BENIGN_AREA_CHANGE:
+                    return False  # moved or resized: not the code we saw
+                entry[3] = passes + 1
+                return True
+            return False
+
+        kept = [f for f in found if f.decoded or not same_code_as_non_payment(f)]
+        for f in found:
+            if f.decoded:
+                self._seen.append([f.quad, pts, f.reason is not None, 0])
+        if len(self._seen) > 16:
+            self._seen = self._seen[-16:]
+        return kept
 
     def _detection(self, frame: Frame, f: Found, *, mask_all: bool) -> Detection | None:
         assert self._res is not None

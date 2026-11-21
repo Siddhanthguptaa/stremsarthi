@@ -9,7 +9,8 @@ already ASCII in the result. Then:
    needs a cue word in the same or a nearby box, or a short box at sensitivity >= 0.5), UPI ID (``name@bank``,
    not an e-mail) and e-mail. The detection quad is the text box (the planner pads it).
 2. ``SIGNBOARD``: detection-only mask-all-text. Every box at least ``signboard.min_text_height_px`` tall
-   with a detector confidence of at least 0.5 (no recognition, no script assumption, so Kannada and Bengali
+   with a detector confidence of at least 0.5, shaped like a text line (a big near-square region is a photo or
+   UI tile, not text: ``_text_like``) (no recognition, no script assumption, so Kannada and Bengali
    boards are covered although they have no recogniser) unless an enabled PII category already masks it.
 3. ``RISKY_TEXT``: only with ``guard.risky_text_blocklist`` set and the category enabled; matched in
    process on normalised text. Never logged.
@@ -62,7 +63,15 @@ CATEGORIES = frozenset(
 STRUCTURED = (Category.PHONE_NUMBER, Category.PIN_CODE, Category.UPI_ID, Category.EMAIL)
 SHORT_BOX_CHARS = 40  # a bare PIN is accepted only in a box this short (spec 5.9)
 DET_FLOOR = 0.5  # signboard: detector confidence floor for unrecognised boxes
+WEAK_FLOOR = 0.3  # signboard: floor for the faint boxes of the sensitive read (``OcrService.weak_boxes``)
 SIGN_MAX_AREA = 0.4  # a box larger than this share of the frame is not a text line
+# Near-square regions are photos and UI tiles, not text lines (measured on the Gate 2 stills: 448 boxes on real
+# SPECIMEN signboards have an aspect of 1.33 or more; the near-square ones sat on photos and faces). A large
+# near-square box would blank an allowlisted face, so it is not masked as a signboard.
+SQUARE_ASPECT = 1.25  # long side / short side below this ...
+SQUARE_MIN_AREA = 10_000  # ... and at least this many px^2 (about 100x100): not a text line
+BIG_ASPECT, BIG_MIN_AREA = 2.0, 150_000  # a very large block that is not a long line either (>= 16 % of 720p)
+WEAK_MIN_ASPECT = 1.3  # a faint (weak) box must at least look like a line
 CONF_RISKY = 0.7
 CONF_UNSURE = 0.55
 UNREADABLE_BELOW = 0.6  # a reading under this confidence is treated as no reading (digits are not trusted)
@@ -141,6 +150,17 @@ class TextDetector:
         conf = self._cfg.categories.get(category)
         return bool(conf is not None and conf.enabled and conf.mask_when_unsure)
 
+    @staticmethod
+    def _text_like(long_side: float, short_side: float, *, weak: bool = False) -> bool:
+        """Geometry test for mask-all-text: a text line is wider than tall; a big square-ish region is a picture."""
+        aspect = long_side / max(short_side, 1e-6)
+        area = long_side * short_side
+        if aspect < SQUARE_ASPECT and area > SQUARE_MIN_AREA:
+            return False
+        if aspect < BIG_ASPECT and area > BIG_MIN_AREA:
+            return False
+        return not (weak and aspect < WEAK_MIN_ASPECT)
+
     def _allow_bare_pin(self) -> bool:
         assert self._cfg is not None
         conf = self._cfg.categories.get(Category.PIN_CODE)
@@ -157,7 +177,7 @@ class TextDetector:
             return []
         ocr = read_ocr(self._res, frame)  # raises when OCR is unavailable: the lane run fails (PROTECT)
         n = len(ocr.boxes)
-        if n == 0:
+        if n == 0 and Category.SIGNBOARD not in want:
             return []
         boxes = [as_array(q) for q in ocr.boxes]
         texts = [normalise_text(t).strip() for t in ocr.texts]
@@ -166,13 +186,13 @@ class TextDetector:
         out: dict[tuple[Category, tuple[int, ...]], tuple[float, np.ndarray, str, str]] = {}
 
         def add(category: Category, idx: tuple[int, ...], pts: np.ndarray, conf: float, reason: str) -> None:
-            script = ocr.scripts[idx[0]]
+            script = ocr.scripts[idx[0]] if idx[0] < n else "unknown"
             old = out.get((category, idx))
             if old is None or conf > old[0]:
                 out[(category, idx)] = (conf, pts, reason, script)
 
         structured = {c for c in want if c in STRUCTURED or c is Category.RISKY_TEXT}
-        if structured:
+        if structured and n:
             self._scan_boxes(boxes, texts, confs, sizes, structured, add)
         pii_boxes = {i for (cat, idx) in out if cat in STRUCTURED for i in idx}
 
@@ -185,6 +205,8 @@ class TextDetector:
                     continue
                 if long_side * short_side > SIGN_MAX_AREA * area:
                     continue
+                if not self._text_like(long_side, short_side):
+                    continue
                 if not texts[i] and confs[i] < DET_FLOOR:
                     continue
                 if i in pii_boxes:
@@ -192,6 +214,8 @@ class TextDetector:
                 conf = 0.8 if texts[i] else 0.55 + 0.35 * min(1.0, confs[i])
                 add(Category.SIGNBOARD, (i,), boxes[i], conf, "mask_all_text")
                 sign_idx.add(i)
+
+            self._weak_signboards(frame, add)
 
         unsure_cat = next((c for c in (Category.PHONE_NUMBER, Category.PIN_CODE) if self._unsure(c)), None)
         if unsure_cat is not None:
@@ -201,11 +225,29 @@ class TextDetector:
 
         detections = []
         for (category, idx), (conf, pts, reason, script) in out.items():
-            ocr_conf = float(np.mean([confs[i] for i in idx]))
-            if category in STRUCTURED and texts[idx[0]]:
+            ocr_conf = float(np.mean([confs[i] for i in idx if i < n] or [0.5]))
+            if category in STRUCTURED and idx[0] < n and texts[idx[0]]:
                 conf *= 0.85 + 0.15 * ocr_conf
             detections.append(self._detection(frame, category, pts, conf, reason, script, len(idx)))
         return detections
+
+    def _weak_signboards(self, frame: Frame, add) -> None:  # noqa: ANN001
+        """Mask-all-text also covers faint or blurred text the normal read dropped (geometry only)."""
+        weak_fn = getattr(getattr(self._res, "ocr", None), "weak_boxes", None)
+        if weak_fn is None:
+            return
+        wb, ws = weak_fn(frame)
+        area = float(frame.image.shape[0] * frame.image.shape[1])
+        base = 100000  # indices of weak boxes never collide with the OCR boxes'
+        for j in range(len(wb)):
+            long_side, short_side = box_size(wb[j])
+            if short_side < self._min_height or long_side < 0.8 * short_side or ws[j] < WEAK_FLOOR:
+                continue
+            if long_side * short_side > SIGN_MAX_AREA * area:
+                continue
+            if not self._text_like(long_side, short_side, weak=True):
+                continue
+            add(Category.SIGNBOARD, (base + j,), wb[j], 0.55 + 0.35 * float(ws[j]), "mask_all_text_weak")
 
     # ------------------------------------------------------------------ structured scans
     def _scan_boxes(self, boxes, texts, confs, sizes, want, add) -> None:  # noqa: ANN001

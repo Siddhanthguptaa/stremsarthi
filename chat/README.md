@@ -26,7 +26,7 @@ overlay / `ModQueue` / `ActionDispatcher.apply` / `SafetyEvent`. Late `on_update
 - `ModQueue`: RAM only, 500 items, 1,800 s TTL, resolved items evicted first. `ModAction`: approve, delete,
   timeout, dismiss; the platform result goes back as `platform_result` on a follow-up verdict.
 - `ConfigChange` `chat.*` keys apply live. `main.build(config, bus)` and `main.make_youtube_actions` (sets
-  `allow_timeout` from config). Live OAuth + ZeroMQ process wiring (`python -m chat.main`) is not built yet.
+  `allow_timeout` from config). Live process: `python -m chat.main [--login] [--remember]` (`live.py` ChatService, `zmq_bus.py` ZmqBus; endpoints `BUS_SUB_ENDPOINT`/`BUS_PUB_ENDPOINT`; exit 0 ok, 1 config, 2 no connectors, 3 bus, 4 all connectors failed).
 
 ## Behaviour notes
 - Dispatcher: TIMEOUT off/failed -> DELETE -> HOLD_FOR_MOD (`<reason>:dg_<code>`), never to ALLOW.

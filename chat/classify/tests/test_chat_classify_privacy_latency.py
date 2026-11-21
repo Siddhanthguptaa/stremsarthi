@@ -126,7 +126,13 @@ async def test_llm_path_p95_with_fake_client() -> None:
     borderline = [
         _msg(t, i)
         for i, t in enumerate(
-            ["bc what a play", "saale ne headshot maar diya", "bit.ly/specimen", "idiot mode on lol"] * 10
+            [
+                "bc kya bakwaas stream hai",
+                "saale tu nikal yahan se",
+                "bit.ly/specimen",
+                "tu idiot hai bilkul bekaar",
+            ]
+            * 10
         )
     ]
 

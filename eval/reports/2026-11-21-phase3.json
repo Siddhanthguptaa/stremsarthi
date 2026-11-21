@@ -1,0 +1,599 @@
+{
+  "baseline": null,
+  "checks": [
+    {
+      "name": "data: problems found",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "mute coverage, PII words (duration-weighted)",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 0.9,
+      "unit": "",
+      "value": 0.955646
+    },
+    {
+      "name": "mute coverage, spoken digit words",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 0.95,
+      "unit": "",
+      "value": 0.986152
+    },
+    {
+      "name": "over-mute of non-PII speech",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 0.15,
+      "unit": "",
+      "value": 0.126964
+    },
+    {
+      "name": "audio pipeline latency p95",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 3.3,
+      "unit": "s",
+      "value": 2.4862
+    },
+    {
+      "name": "mouth blur on muted frames with an allowlisted face",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 0.95,
+      "unit": "",
+      "value": 0.981963
+    },
+    {
+      "name": "API down: PII words muted (fail-safe)",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "API down: all voiced speech muted",
+      "note": "plan: 100 %; 1 % slack for VAD onset slivers",
+      "op": ">=",
+      "passed": true,
+      "target": 0.99,
+      "unit": "",
+      "value": 0.999899
+    },
+    {
+      "name": "API down, local recogniser: PII words muted",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 0.7,
+      "unit": "",
+      "value": 0.901524
+    }
+  ],
+  "date": "2026-11-21",
+  "failing_ids": [],
+  "header": {
+    "commands": [
+      "(check)",
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg data",
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg main --stride 1",
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg api_down --stride 1",
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg local_only --stride 1"
+    ],
+    "dataset": {
+      "clips": 150,
+      "clips_by_bucket": {
+        "control": 12,
+        "core": 100,
+        "hard": 38
+      },
+      "clips_by_lang": {
+        "bn": 18,
+        "en": 18,
+        "hi_deva": 30,
+        "hi_latn": 36,
+        "kn": 16,
+        "ta": 16,
+        "te": 16
+      },
+      "clips_with_face": 72,
+      "digit_words_in_pii": 4322,
+      "duration_s": 5235.36,
+      "pii_spans": 503,
+      "pii_spans_by_kind": {
+        "aadhaar": 65,
+        "address": 96,
+        "otp": 119,
+        "phone": 134,
+        "upi": 89
+      },
+      "pii_words": 5949,
+      "spans_by_cue": {
+        "lexicon": 325,
+        "none": 53,
+        "paraphrase": 125
+      }
+    },
+    "git_rev": "8a1e6e353205",
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
+    },
+    "profile": "dev",
+    "seed": 1234,
+    "stt": "oracle recogniser (see notes)",
+    "tts_engine": "flite",
+    "vad": [
+      "silero"
+    ]
+  },
+  "notes": [
+    "THE RECOGNISER IS AN ORACLE (eval/phase3.py OracleStt): it answers from the ground-truth words with seeded drop/mishear/jitter errors. The offline TTS (English flite only) cannot be recognised by a real STT, so these numbers test the audio pipeline (VAD segmentation, timing, PII rules, merging, fail-safe) and the engine's mute application, not recognition accuracy. A native-TTS or recorded-audio run with a real STT is still open.",
+    "Mute coverage is read from OUTPUT audio: spans are applied by engine.audio_mute.MuteBook to the 48 kHz clip as the delay buffer would (delay 4.0 s); a span ready after its samples left is late and leaks.",
+    "The PII LLM (Groq) is absent in every leg (no key, offline): ambiguous spans use the rules' own fallback.",
+    "Mouth blur is checked at the audio->engine hand-off (request windows plus engine.mouth.resolve_mouth_quads, perfect vision on every 3rd frame), not on composited pixels.",
+    "SS_FORCE_API_DOWN is not read by the product code today; the api_down leg injects provider failures itself."
+  ],
+  "passed": true,
+  "phase": "phase3",
+  "tables": [
+    {
+      "columns": [
+        "group",
+        "PII words",
+        "word recall",
+        "duration coverage",
+        "95% CI (words)"
+      ],
+      "rows": [
+        [
+          "bn",
+          772,
+          0.96114,
+          0.946404,
+          "0.945-0.973"
+        ],
+        [
+          "en",
+          735,
+          0.970068,
+          0.963336,
+          "0.955-0.980"
+        ],
+        [
+          "hi_deva",
+          1250,
+          0.9688,
+          0.954107,
+          "0.958-0.977"
+        ],
+        [
+          "hi_latn",
+          1374,
+          0.969432,
+          0.959894,
+          "0.959-0.977"
+        ],
+        [
+          "kn",
+          468,
+          0.970085,
+          0.958968,
+          "0.950-0.982"
+        ],
+        [
+          "ta",
+          599,
+          0.96995,
+          0.962919,
+          "0.953-0.981"
+        ],
+        [
+          "te",
+          751,
+          0.961385,
+          0.945141,
+          "0.945-0.973"
+        ]
+      ],
+      "title": "Mute coverage by language"
+    },
+    {
+      "columns": [
+        "group",
+        "PII words",
+        "word recall",
+        "duration coverage",
+        "95% CI (words)"
+      ],
+      "rows": [
+        [
+          "aadhaar",
+          778,
+          0.975578,
+          0.974788,
+          "0.962-0.984"
+        ],
+        [
+          "address",
+          1941,
+          0.987635,
+          0.985387,
+          "0.982-0.992"
+        ],
+        [
+          "otp",
+          652,
+          0.976994,
+          0.980148,
+          "0.962-0.986"
+        ],
+        [
+          "phone",
+          1339,
+          0.990291,
+          0.989044,
+          "0.984-0.994"
+        ],
+        [
+          "upi",
+          1239,
+          0.900726,
+          0.848435,
+          "0.883-0.916"
+        ]
+      ],
+      "title": "Mute coverage by PII kind"
+    },
+    {
+      "columns": [
+        "group",
+        "PII words",
+        "word recall",
+        "duration coverage",
+        "95% CI (words)"
+      ],
+      "rows": [
+        [
+          "lexicon",
+          3927,
+          0.965368,
+          0.95509,
+          "0.959-0.971"
+        ],
+        [
+          "none",
+          602,
+          0.983389,
+          0.977427,
+          "0.970-0.991"
+        ],
+        [
+          "paraphrase",
+          1420,
+          0.966197,
+          0.948325,
+          "0.956-0.974"
+        ]
+      ],
+      "title": "Mute coverage by cue wording"
+    },
+    {
+      "columns": [
+        "group",
+        "PII words",
+        "word recall",
+        "duration coverage",
+        "95% CI (words)"
+      ],
+      "rows": [
+        [
+          "core",
+          4286,
+          0.964069,
+          0.952228,
+          "0.958-0.969"
+        ],
+        [
+          "hard",
+          1663,
+          0.975947,
+          0.965016,
+          "0.967-0.982"
+        ]
+      ],
+      "title": "Mute coverage by clip bucket"
+    },
+    {
+      "columns": [
+        "group",
+        "PII words",
+        "word recall",
+        "duration coverage",
+        "95% CI (words)"
+      ],
+      "rows": [
+        [
+          "babble",
+          1370,
+          0.963504,
+          0.956428,
+          "0.952-0.972"
+        ],
+        [
+          "music",
+          834,
+          0.97482,
+          0.962482,
+          "0.962-0.984"
+        ],
+        [
+          "none",
+          2413,
+          0.962288,
+          0.947458,
+          "0.954-0.969"
+        ],
+        [
+          "pink",
+          1030,
+          0.975728,
+          0.963904,
+          "0.964-0.984"
+        ],
+        [
+          "white",
+          302,
+          0.976821,
+          0.970458,
+          "0.953-0.989"
+        ]
+      ],
+      "title": "Mute coverage by background noise"
+    },
+    {
+      "columns": [
+        "stage",
+        "n",
+        "p50 s",
+        "p95 s",
+        "max s"
+      ],
+      "rows": [
+        [
+          "audio pipeline (segment start to span ready)",
+          2932,
+          2.1965,
+          2.4862,
+          2.9001
+        ],
+        [
+          "stage stt",
+          5068,
+          0.7107,
+          0.988,
+          1.3962
+        ]
+      ],
+      "title": "Latency (virtual time, modelled STT latency)"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "clips / audio seconds",
+          "150 / 5235.4"
+        ],
+        [
+          "digit sequences fully muted",
+          "283 / 318"
+        ],
+        [
+          "hard-negative number phrases muted",
+          0.186336
+        ],
+        [
+          "late or partly late spans",
+          49
+        ],
+        [
+          "leaked seconds inside the pipeline",
+          43.696
+        ],
+        [
+          "pipeline compute seconds per audio second (VAD+PII, CPU)",
+          0.0139
+        ],
+        [
+          "pipeline stats",
+          "{\"chunk_failsafe\": 0, \"dropped_chunks\": 0, \"failsafe\": 0, \"late_spans\": 50, \"segments\": 5145, \"spans\": 2945, \"stt_failed\": 0, \"verdicts\": 5068, \"voiced\": 5068}"
+        ]
+      ],
+      "title": "Other numbers (main leg)"
+    },
+    {
+      "columns": [
+        "clip",
+        "missed PII s"
+      ],
+      "rows": [
+        [
+          "a028",
+          3.33
+        ],
+        [
+          "a055",
+          3.31
+        ],
+        [
+          "a124",
+          2.97
+        ],
+        [
+          "a143",
+          2.79
+        ],
+        [
+          "a072",
+          2.65
+        ],
+        [
+          "a131",
+          2.48
+        ],
+        [
+          "a039",
+          2.35
+        ],
+        [
+          "a108",
+          2.27
+        ],
+        [
+          "a116",
+          2.27
+        ],
+        [
+          "a128",
+          2.2
+        ],
+        [
+          "a134",
+          2.17
+        ],
+        [
+          "a017",
+          2.17
+        ],
+        [
+          "a117",
+          2.14
+        ],
+        [
+          "a004",
+          2.06
+        ],
+        [
+          "a148",
+          2.02
+        ]
+      ],
+      "title": "Clips with the most missed PII seconds (ids only)"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "PII words muted (duration)",
+          1.0
+        ],
+        [
+          "all voiced speech muted (duration)",
+          0.999899
+        ],
+        [
+          "over-mute",
+          0.999744
+        ],
+        [
+          "audio latency p95 s",
+          2.9531
+        ],
+        [
+          "fail-safe segments",
+          5068
+        ]
+      ],
+      "title": "Leg api_down (150 clips)"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "PII words muted (duration)",
+          0.901524
+        ],
+        [
+          "all voiced speech muted (duration)",
+          0.585269
+        ],
+        [
+          "over-mute",
+          0.10527
+        ],
+        [
+          "audio latency p95 s",
+          2.8808
+        ],
+        [
+          "fail-safe segments",
+          0
+        ]
+      ],
+      "title": "Leg local_only (150 clips)"
+    },
+    {
+      "columns": [
+        "step",
+        "raw exit",
+        "gate exit",
+        "seconds"
+      ],
+      "rows": [
+        [
+          "generate audio set",
+          0,
+          0,
+          0.0
+        ],
+        [
+          "data check",
+          0,
+          0,
+          3.7
+        ],
+        [
+          "main (APIs up)",
+          0,
+          0,
+          126.3
+        ],
+        [
+          "API down: fail-safe",
+          0,
+          0,
+          119.1
+        ],
+        [
+          "API down: local recogniser",
+          0,
+          0,
+          127.3
+        ]
+      ],
+      "title": "Gate steps"
+    }
+  ]
+}

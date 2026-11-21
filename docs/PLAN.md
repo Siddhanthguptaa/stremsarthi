@@ -263,39 +263,101 @@ Python 3.11, `dataclasses(frozen=True, slots=True)` for hot-path types and pydan
 # contracts/enums.py
 class Category(StrEnum):
     # video
-    FACE="face"; AADHAAR="aadhaar"; PAN="pan"; UPI_QR="upi_qr"; PLATE="plate"
-    SIGNBOARD="signboard"; PIN_CODE="pin_code"; PHONE_NUMBER="phone_number"
-    UPI_ID="upi_id"; EMAIL="email"; OTP_SCREEN="otp_screen"
-    GAME_ID="game_id"; ROOM_CREDENTIAL="room_credential"; RISKY_TEXT="risky_text"
+    FACE = "face"
+    AADHAAR = "aadhaar"
+    PAN = "pan"
+    UPI_QR = "upi_qr"
+    PLATE = "plate"
+    SIGNBOARD = "signboard"
+    PIN_CODE = "pin_code"
+    PHONE_NUMBER = "phone_number"
+    UPI_ID = "upi_id"
+    EMAIL = "email"
+    OTP_SCREEN = "otp_screen"
+    GAME_ID = "game_id"
+    ROOM_CREDENTIAL = "room_credential"
+    RISKY_TEXT = "risky_text"
     # audio
-    SPOKEN_PHONE="spoken_phone"; SPOKEN_UPI="spoken_upi"; SPOKEN_ADDRESS="spoken_address"
-    SPOKEN_OTHER_PII="spoken_other_pii"; SPOKEN_UNVERIFIED="spoken_unverified"  # failsafe
+    SPOKEN_PHONE = "spoken_phone"
+    SPOKEN_UPI = "spoken_upi"
+    SPOKEN_ADDRESS = "spoken_address"
+    SPOKEN_OTHER_PII = "spoken_other_pii"
+    SPOKEN_UNVERIFIED = "spoken_unverified"  # failsafe
     # chat
-    CHAT_ABUSE="chat_abuse"; CHAT_DOXXING="chat_doxxing"; CHAT_SCAM_LINK="chat_scam_link"
-    CHAT_FAKE_UPI="chat_fake_upi"
+    CHAT_ABUSE = "chat_abuse"
+    CHAT_DOXXING = "chat_doxxing"
+    CHAT_SCAM_LINK = "chat_scam_link"
+    CHAT_FAKE_UPI = "chat_fake_upi"
     # guard
-    MUSIC="music"; COPYRIGHT_MATCH="copyright_match"; PROFANITY="profanity"
+    MUSIC = "music"
+    COPYRIGHT_MATCH = "copyright_match"
+    PROFANITY = "profanity"
     # system
-    HOLD="hold"; FAILSAFE="failsafe"
+    HOLD = "hold"
+    FAILSAFE = "failsafe"
 
-class Modality(StrEnum): VIDEO="video"; AUDIO="audio"; CHAT="chat"; GUARD="guard"; SYSTEM="system"
-class MaskStyle(StrEnum): BLUR="blur"; PIXELATE="pixelate"; SOLID="solid"
-class MaskKind(StrEnum): REGION="region"; FULL_FRAME="full_frame"; MOUTH_OF_SPEAKER="mouth_of_speaker"
-class Lane(StrEnum): FAST="fast"; ACCURATE="accurate"; SLOW="slow"
-class Device(StrEnum): CPU="cpu"; GPU_OPTIONAL="gpu_optional"; GPU_ONLY="gpu_only"
-class ChatAction(StrEnum): ALLOW="allow"; HIDE_FROM_STREAMER="hide"; HOLD_FOR_MOD="hold_for_mod"; DELETE="delete"; TIMEOUT="timeout"
-class HoldSource(StrEnum): HOTKEY="hotkey"; API="api"; CHAT="chat"; APP="app"; AUTO_TRANSPORT="auto_transport"; AUTO_EGRESS="auto_egress"
+
+class Modality(StrEnum):
+    VIDEO = "video"
+    AUDIO = "audio"
+    CHAT = "chat"
+    GUARD = "guard"
+    SYSTEM = "system"
+
+
+class MaskStyle(StrEnum):
+    BLUR = "blur"
+    PIXELATE = "pixelate"
+    SOLID = "solid"
+
+
+class MaskKind(StrEnum):
+    REGION = "region"
+    FULL_FRAME = "full_frame"
+    MOUTH_OF_SPEAKER = "mouth_of_speaker"
+
+
+class Lane(StrEnum):
+    FAST = "fast"
+    ACCURATE = "accurate"
+    SLOW = "slow"
+
+
+class Device(StrEnum):
+    CPU = "cpu"
+    GPU_OPTIONAL = "gpu_optional"
+    GPU_ONLY = "gpu_only"
+
+
+class ChatAction(StrEnum):
+    ALLOW = "allow"
+    HIDE_FROM_STREAMER = "hide"
+    HOLD_FOR_MOD = "hold_for_mod"
+    DELETE = "delete"
+    TIMEOUT = "timeout"
+
+
+class HoldSource(StrEnum):
+    HOTKEY = "hotkey"
+    API = "api"
+    CHAT = "chat"
+    APP = "app"
+    AUTO_TRANSPORT = "auto_transport"
+    AUTO_EGRESS = "auto_egress"
 ```
 
 ```python
 # contracts/geometry.py
 Point = tuple[float, float]
+
+
 @dataclass(frozen=True, slots=True)
-class Quad:                       # 4 corners, clockwise, canonical pixels
+class Quad:  # 4 corners, clockwise, canonical pixels
     pts: tuple[Point, Point, Point, Point]
+
     @staticmethod
-    def from_xyxy(x1,y1,x2,y2) -> "Quad": ...
-    def bbox(self) -> tuple[int,int,int,int]: ...
+    def from_xyxy(x1, y1, x2, y2) -> "Quad": ...
+    def bbox(self) -> tuple[int, int, int, int]: ...
     def padded(self, px: float) -> "Quad": ...
     def iou(self, other: "Quad") -> float: ...
 ```
@@ -304,17 +366,18 @@ class Quad:                       # 4 corners, clockwise, canonical pixels
 # contracts/media.py
 @dataclass(frozen=True, slots=True)
 class Frame:
-    seq: int                      # monotonic per session
-    pts: float                    # source time, rebased to 0
-    arrival: float                # time.monotonic() at decode
-    image: np.ndarray             # (720,1280,3) uint8 BGR, read-only; never retained past a call
+    seq: int  # monotonic per session
+    pts: float  # source time, rebased to 0
+    arrival: float  # time.monotonic() at decode
+    image: np.ndarray  # (720,1280,3) uint8 BGR, read-only; never retained past a call
+
 
 @dataclass(frozen=True, slots=True)
 class AudioChunk:
     seq: int
     pts_start: float
-    sample_rate: int              # 16000 for analysis taps
-    pcm: np.ndarray               # int16 mono, 20 ms multiples
+    sample_rate: int  # 16000 for analysis taps
+    pcm: np.ndarray  # int16 mono, 20 ms multiples
     arrival: float
 ```
 
@@ -322,120 +385,191 @@ class AudioChunk:
 # contracts/detection.py
 @dataclass(frozen=True, slots=True)
 class Detection:
-    detector: str                          # plugin id
+    detector: str  # plugin id
     category: Category
     quad: Quad
-    confidence: float                      # 0..1
+    confidence: float  # 0..1
     frame_seq: int
     pts: float
-    completed_at: float                    # monotonic when inference finished
+    completed_at: float  # monotonic when inference finished
     track_id: int | None = None
-    allow: bool = False                    # allowlisted face: must NOT be masked
-    aux_quads: Mapping[str, Quad] = {}     # e.g. {"mouth": Quad} from YuNet landmarks
-    extra: Mapping[str, float|int|bool|str] = {}   # codes and scores only: never raw text or images
+    allow: bool = False  # allowlisted face: must NOT be masked
+    aux_quads: Mapping[str, Quad] = {}  # e.g. {"mouth": Quad} from YuNet landmarks
+    extra: Mapping[str, float | int | bool | str] = {}  # codes and scores only: never raw text or images
+
 
 @dataclass(frozen=True, slots=True)
 class MaskRequest:
     request_id: str
-    source: str                            # detector id, "audio", "hold"
+    source: str  # detector id, "audio", "hold"
     category: Category
     kind: MaskKind
-    quads: tuple[Quad, ...]                # REGION only; anchored at frame_pts
-    frame_pts: float                       # PTS the quads were computed on (motion projects from here)
-    pts_start: float; pts_end: float       # frames in this range get the mask
+    quads: tuple[Quad, ...]  # REGION only; anchored at frame_pts
+    frame_pts: float  # PTS the quads were computed on (motion projects from here)
+    pts_start: float
+    pts_end: float  # frames in this range get the mask
     style: MaskStyle
     confidence: float
-    reason: str                            # machine code, e.g. "verhoeff_ok"
+    reason: str  # machine code, e.g. "verhoeff_ok"
     completed_at: float
     track_id: int | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class MuteSpan:
     span_id: str
-    pts_start: float; pts_end: float       # already padded
+    pts_start: float
+    pts_end: float  # already padded
     category: Category
-    granularity: Literal["word","segment","failsafe"]
+    granularity: Literal["word", "segment", "failsafe"]
     confidence: float
-    reason: str                            # code, no transcript text
+    reason: str  # code, no transcript text
     completed_at: float
-    mode: Literal["silence","bleep"] = "silence"
+    mode: Literal["silence", "bleep"] = "silence"
 ```
 
 ```python
 # contracts/chat.py
 @dataclass(frozen=True, slots=True)
 class ChatMessage:
-    platform: Literal["youtube","twitch"]
-    message_id: str; channel_id: str
-    author_id: str; author_display: str
-    text: str                              # transient: never logged if flagged
-    received_at: float                     # wall time
-    is_broadcaster: bool; is_moderator: bool
+    platform: Literal["youtube", "twitch"]
+    message_id: str
+    channel_id: str
+    author_id: str
+    author_display: str
+    text: str  # transient: never logged if flagged
+    received_at: float  # wall time
+    is_broadcaster: bool
+    is_moderator: bool
+
 
 @dataclass(frozen=True, slots=True)
 class ChatVerdict:
-    platform: str; message_id: str
+    platform: str
+    message_id: str
     action: ChatAction
     categories: tuple[Category, ...]
     confidence: float
-    reason: str                            # code
-    stage: Literal["rules","llm","model"]
+    reason: str  # code
+    stage: Literal["rules", "llm", "model"]
     latency_ms: float
     timeout_seconds: int | None = None
-    platform_result: Literal["pending","done","unsupported","failed"] = "pending"
+    platform_result: Literal["pending", "done", "unsupported", "failed"] = "pending"
 ```
 
 ```python
 # contracts/events.py
 @dataclass(frozen=True, slots=True)
-class SafetyEvent:                          # the only thing the safety report is built from
-    event_id: str; session_id: str
-    wall_ts: str                            # UTC ISO-8601
+class SafetyEvent:  # the only thing the safety report is built from
+    event_id: str
+    session_id: str
+    wall_ts: str  # UTC ISO-8601
     pts: float | None
     modality: Modality
     category: Category
-    action: Literal["masked","muted","hidden","held","deleted","timed_out","warned","failsafe"]
+    action: Literal["masked", "muted", "hidden", "held", "deleted", "timed_out", "warned", "failsafe"]
     confidence: float
-    bbox: Quad | None                       # pixels, video only
+    bbox: Quad | None  # pixels, video only
     duration_ms: int | None
-    source: str; detail_code: str           # never text, images or raw PII
+    source: str
+    detail_code: str  # never text, images or raw PII
+
 
 @dataclass(frozen=True, slots=True)
 class RiskSignal:
-    wall_ts: str; pts: float | None
-    source: Literal["music","fingerprint","profanity","risky_text","slur"]
+    wall_ts: str
+    pts: float | None
+    source: Literal["music", "fingerprint", "profanity", "risky_text", "slur"]
     category: Category
-    score: float                            # 0..1
-    ttl_s: float                            # signal decays after this
-    label: str                              # code, e.g. "fp:demo_03"
+    score: float  # 0..1
+    ttl_s: float  # signal decays after this
+    label: str  # code, e.g. "fp:demo_03"
+
 
 @dataclass(frozen=True, slots=True)
-class HoldCommand:  source: HoldSource; active: bool; actor: str   # actor is a hash, not a name
+class HoldCommand:
+    source: HoldSource
+    active: bool
+    actor: str  # actor is a hash, not a name
+
 
 @dataclass(frozen=True, slots=True)
-class CaptionEvent: pts_start: float; pts_end: float; lang: str; text: str; is_final: bool
+class CaptionEvent:
+    pts_start: float
+    pts_end: float
+    lang: str
+    text: str
+    is_final: bool
+
 
 @dataclass(frozen=True, slots=True)
-class StageTiming:  stage: str; seq: int; pts: float | None; t_start: float; t_end: float  # eval reads these
+class StageTiming:
+    stage: str
+    seq: int
+    pts: float | None
+    t_start: float
+    t_end: float  # eval reads these
 ```
 
 `Config` (pydantic v2 + pydantic-settings; secrets are `SecretStr` and never in `repr`/logs):
 
 ```python
-class CategoryConfig(BaseModel):  enabled: bool=True; style: MaskStyle=BLUR; sensitivity: float=0.5; mask_when_unsure: bool=True; padding_px: int=12
-class DetectConfig(BaseModel):    stride: int=3; fast_hz: float=10; accurate_hz: float=4; accurate_width: int=960
-class GpuConfig(BaseModel):       enabled: bool=False; mem_limit_mb: int=3500; ort_provider: Literal["cpu","cuda"]="cpu"
-class AudioConfig(BaseModel):     segment_max_s: float=1.5; overlap_s: float=0.4; pad_s: float=0.2; stt_order: list[str]; llm_timeout_s: float=0.7; failsafe_mute_voiced: bool=True; languages: list[str]
-class HoldConfig(BaseModel):      retro_seconds: float=3.0; slate_text_hi: str; slate_text_en: str
-class Destination(BaseModel):     kind: Literal["youtube","twitch","mediamtx_tap"]; url_host: str; enabled: bool
+class CategoryConfig(BaseModel):
+    enabled: bool = True
+    style: MaskStyle = BLUR
+    sensitivity: float = 0.5
+    mask_when_unsure: bool = True
+    padding_px: int = 12
+
+
+class DetectConfig(BaseModel):
+    stride: int = 3
+    fast_hz: float = 10
+    accurate_hz: float = 4
+    accurate_width: int = 960
+
+
+class GpuConfig(BaseModel):
+    enabled: bool = False
+    mem_limit_mb: int = 3500
+    ort_provider: Literal["cpu", "cuda"] = "cpu"
+
+
+class AudioConfig(BaseModel):
+    segment_max_s: float = 1.5
+    overlap_s: float = 0.4
+    pad_s: float = 0.2
+    stt_order: list[str]
+    llm_timeout_s: float = 0.7
+    failsafe_mute_voiced: bool = True
+    languages: list[str]
+
+
+class HoldConfig(BaseModel):
+    retro_seconds: float = 3.0
+    slate_text_hi: str
+    slate_text_en: str
+
+
+class Destination(BaseModel):
+    kind: Literal["youtube", "twitch", "mediamtx_tap"]
+    url_host: str
+    enabled: bool
+
+
 class Config(BaseSettings):
-    profile: Literal["dev","demo"]="dev"
+    profile: Literal["dev", "demo"] = "dev"
     delay_seconds: float = Field(4.0, ge=3.0, le=5.0)
-    fps: int=30; canvas: tuple[int,int]=(1280,720)
-    detect: DetectConfig; gpu: GpuConfig
+    fps: int = 30
+    canvas: tuple[int, int] = (1280, 720)
+    detect: DetectConfig
+    gpu: GpuConfig
     categories: dict[Category, CategoryConfig]
-    audio: AudioConfig; hold: HoldConfig
-    chat: ChatConfig; guard: GuardConfig; captions: CaptionsConfig
+    audio: AudioConfig
+    hold: HoldConfig
+    chat: ChatConfig
+    guard: GuardConfig
+    captions: CaptionsConfig
     destinations: list[Destination]
     # secrets from .env: YOUTUBE_STREAM_KEY, TWITCH_STREAM_KEY, GROQ_API_KEY, SARVAM_API_KEY,
     # YOUTUBE_OAUTH_CLIENT_ID/SECRET, TWITCH_CLIENT_ID/SECRET

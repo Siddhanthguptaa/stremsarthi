@@ -1,0 +1,94 @@
+# Identity-based abuse (caste, religion, region, nationality, gender, sexuality, disability). Hand-curated. kind: identity
+# Policy (chat/classify/README.md): a group NAME is never flagged. Flagged are (1) slurs aimed at people and (2) sweeping
+# put-downs of a group (group + dehumanising or demeaning predicate, exclusion calls, sexist demeaning), as a hit on the
+# targeted person's identity. Severity 3 = slur or dehumanising (deleted), 2 = demeaning (held for a moderator).
+# Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)<TAB>ctx(frame|mention|game|empty)
+katua	identity	3	hi	word
+katue	identity	3	hi	word
+katwa	identity	3	hi	word
+katuwe	identity	3	hi	word
+landya	identity	3	hi	word
+landiya	identity	3	hi	word
+pajeet	identity	3	en	word
+pajeets	identity	3	en	word
+paki	identity	3	en	word	frame
+pakis	identity	3	en	word	frame
+chinky	identity	3	en	word
+chinki	identity	3	hi	word	frame
+chinkies	identity	3	en	word
+tranny	identity	3	en	word
+dyke	identity	3	en	word
+fag	identity	3	en	word
+spastic	identity	3	en	word
+mongoloid	identity	3	en	word
+mulla	identity	2	hi	word	frame
+mulle	identity	2	hi	word	frame
+jihadi	identity	2	hi	word	frame
+jihadis	identity	2	hi	word	frame
+kafir	identity	2	hi	word	frame
+kaafir	identity	2	hi	word	frame
+chamar	identity	2	hi	word	frame
+chamaar	identity	2	hi	word	frame
+bhangi	identity	2	hi	word	frame
+chuhra	identity	2	hi	word	frame
+dhed	identity	2	hi	word	frame
+madrasi	identity	1	hi	word	frame
+homo	identity	2	en	word	frame
+lesbo	identity	2	en	word	frame
+shemale	identity	2	en	word
+langda	identity	2	hi	word	frame
+langra	identity	2	hi	word	frame
+cripple	identity	2	en	word	frame
+neech jaat	identity	3	hi	word
+neech jati	identity	3	hi	word
+neech jaati	identity	3	hi	word
+nichi jaat	identity	3	hi	word
+नीच जात	identity	3	hi	word
+नीच जाति	identity	3	hi	word
+कटुआ	identity	3	hi	word
+कटवा	identity	3	hi	word
+लंडया	identity	3	hi	word
+चमार	identity	2	hi	word	frame
+भंगी	identity	2	hi	word	frame
+मुल्ला	identity	2	hi	word	frame
+मुल्ले	identity	2	hi	word	frame
+जिहादी	identity	2	hi	word	frame
+काफिर	identity	2	hi	word	frame
+
+# Structures. GROUP = a community or identity word. A sweeping predicate about the group is the hit.
+# (Generated pattern families: sweeping dehumanising predicate = severity 3, demeaning predicate = 2, exclusion calls = 2.)
+\b(?:(?:sab|saare|sabhi|sare|all|these|those|ye|yeh|inn|every|har|typical|woh|wo)\s+)?(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b(?:\s+log|\s+people|\s+wale)?\s+(?:(?:are|r|hain|hote|hi|ho|sab|saare|all|always|hamesha|to|toh|bhi)\s+){1,3}(?:(?!(?:not|no|nahi|nhi|nai|never|mat|na|isn|aren)\b)\w+\s+){0,1}?(?:terrorists?|aatankwadi|atankwadi|aatankvadi|animals?|pigs?|suar|janwar|jaanwar|vermin|cockroach(?:es)?|parasites?|savages?|subhuman|rapists?|scum|filth|filthy|jungli|gaddar|gaddaar|traitors?|kutte|dogs?)\b	identity	3	hi	regex
+\b(?:sab|saare|sabhi|sare|all|these|those|ye|yeh|inn|every|har|typical|woh|wo)\s+(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b(?:\s+log|\s+people)?\s+(?:(?!(?:not|no|nahi|nhi|nai|never|mat|na|isn|aren)\b)\w+\s+){0,3}?(?:terrorists?|aatankwadi|atankwadi|aatankvadi|animals?|pigs?|suar|janwar|jaanwar|vermin|cockroach(?:es)?|parasites?|savages?|subhuman|rapists?|scum|filth|filthy|jungli|gaddar|gaddaar|traitors?|kutte|dogs?)\b	identity	3	hi	regex
+\b(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b\s+(?:log|people)\s+(?:(?!(?:not|no|nahi|nhi|nai|never|mat|na|isn|aren)\b)\w+\s+){0,4}?[,.]?\s*(?:terrorists?|aatankwadi|atankwadi|aatankvadi|animals?|pigs?|suar|janwar|jaanwar|vermin|cockroach(?:es)?|parasites?|savages?|subhuman|rapists?|scum|filth|filthy|jungli|gaddar|gaddaar|traitors?|kutte|dogs?)\b	identity	3	hi	regex
+\b(?:terrorists?|aatankwadi|atankwadi|aatankvadi|animals?|pigs?|suar|janwar|jaanwar|vermin|cockroach(?:es)?|parasites?|savages?|subhuman|rapists?|scum|filth|filthy|jungli|gaddar|gaddaar|traitors?|kutte|dogs?|dirty|gande|ganda|neech|ghatiya)\s+(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b	identity	3	hi	regex
+\b(?:(?:sab|saare|sabhi|sare|all|these|those|ye|yeh|inn|every|har|typical|woh|wo)\s+)?(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b(?:\s+log|\s+people|\s+wale)?\s+(?:(?:are|r|hain|hote|hi|ho|sab|saare|all|always|hamesha|to|toh|bhi)\s+){1,3}(?:(?!(?:not|no|nahi|nhi|nai|never|mat|na|isn|aren)\b)\w+\s+){0,1}?(?:gande|ganda|gandi|ghatiya|neech|nich|jahil|gawar|gawaar|bewakoof|chor|chorr|dhokebaaz|dhokhebaaz|beghairat|besharam|badtameez|dirty|stupid|dumb|uneducated|illiterate|backward|criminals?|thieves|cheats?|liars?|cowards?|dark|ugly|smelly|stinky|stink|useless|worthless|inferior|bekar|bekaar|nalayak|kamine|harami|haramkhor|bhikari|beggars?|lazy|greedy|miserly|dhongi|dhongis|pakhandi|idiots?|morons?|fools?|losers?|bhookhe|bhukhe|kaale|kaala|kale|kala|kaali|violent|primitive|fraud|frauds)\b	identity	2	hi	regex
+\b(?:sab|saare|sabhi|sare|all|these|those|ye|yeh|inn|every|har|typical|woh|wo)\s+(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b(?:\s+log|\s+people)?\s+(?:(?!(?:not|no|nahi|nhi|nai|never|mat|na|isn|aren)\b)\w+\s+){0,3}?(?:gande|ganda|gandi|ghatiya|neech|nich|jahil|gawar|gawaar|bewakoof|chor|chorr|dhokebaaz|dhokhebaaz|beghairat|besharam|badtameez|dirty|stupid|dumb|uneducated|illiterate|backward|criminals?|thieves|cheats?|liars?|cowards?|dark|ugly|smelly|stinky|stink|useless|worthless|inferior|bekar|bekaar|nalayak|kamine|harami|haramkhor|bhikari|beggars?|lazy|greedy|miserly|dhongi|dhongis|pakhandi|idiots?|morons?|fools?|losers?|bhookhe|bhukhe|kaale|kaala|kale|kala|kaali|violent|primitive|fraud|frauds)\b	identity	2	hi	regex
+\b(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b\s+(?:log|people)\s+(?:(?!(?:not|no|nahi|nhi|nai|never|mat|na|isn|aren)\b)\w+\s+){0,4}?[,.]?\s*(?:gande|ganda|gandi|ghatiya|neech|nich|jahil|gawar|gawaar|bewakoof|chor|chorr|dhokebaaz|dhokhebaaz|beghairat|besharam|badtameez|dirty|stupid|dumb|uneducated|illiterate|backward|criminals?|thieves|cheats?|liars?|cowards?|dark|ugly|smelly|stinky|stink|useless|worthless|inferior|bekar|bekaar|nalayak|kamine|harami|haramkhor|bhikari|beggars?|lazy|greedy|miserly|dhongi|dhongis|pakhandi|idiots?|morons?|fools?|losers?|bhookhe|bhukhe|kaale|kaala|kale|kala|kaali|violent|primitive|fraud|frauds)\b	identity	2	hi	regex
+\b(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b\s+(?:log\s+)?(?:hote\s+hain|hote\s+h|hi\s+hote|ki\s+aukat|ki\s+jaat)\s+(?:(?!(?:not|no|nahi|nhi|nai|never|mat|na|isn|aren)\b)\w+\s+){0,2}?(?:gande|ganda|gandi|ghatiya|neech|nich|jahil|gawar|gawaar|bewakoof|chor|chorr|dhokebaaz|dhokhebaaz|beghairat|besharam|badtameez|dirty|stupid|dumb|uneducated|illiterate|backward|criminals?|thieves|cheats?|liars?|cowards?|dark|ugly|smelly|stinky|stink|useless|worthless|inferior|bekar|bekaar|nalayak|kamine|harami|haramkhor|bhikari|beggars?|lazy|greedy|miserly|dhongi|dhongis|pakhandi|idiots?|morons?|fools?|losers?|bhookhe|bhukhe|kaale|kaala|kale|kala|kaali|violent|primitive|fraud|frauds|terrorists?|aatankwadi|atankwadi|aatankvadi|animals?|pigs?|suar|janwar|jaanwar|vermin|cockroach(?:es)?|parasites?|savages?|subhuman|rapists?|scum|filth|filthy|jungli|gaddar|gaddaar|traitors?|kutte|dogs?|aise\s+hi)\b	identity	2	hi	regex
+\b(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b\s+(?:hone|hona)\s+(?:ka|ki)\s+(?:matlab|mtlb)\s+(?:hi\s+)?(?:hai\s+)?(?:terrorists?|aatankwadi|atankwadi|aatankvadi|animals?|pigs?|suar|janwar|jaanwar|vermin|cockroach(?:es)?|parasites?|savages?|subhuman|rapists?|scum|filth|filthy|jungli|gaddar|gaddaar|traitors?|kutte|dogs?|gande|ganda|gandi|ghatiya|neech|nich|jahil|gawar|gawaar|bewakoof|chor|chorr|dhokebaaz|dhokhebaaz|beghairat|besharam|badtameez|dirty|stupid|dumb|uneducated|illiterate|backward|criminals?|thieves|cheats?|liars?|cowards?|dark|ugly|smelly|stinky|stink|useless|worthless|inferior|bekar|bekaar|nalayak|kamine|harami|haramkhor|bhikari|beggars?|lazy|greedy|miserly|dhongi|dhongis|pakhandi|idiots?|morons?|fools?|losers?|bhookhe|bhukhe|kaale|kaala|kale|kala|kaali|violent|primitive|fraud|frauds)\b	identity	2	hi	regex
+\bnich\w*\s+(?:jaat|jati|jaati|jaatiyon|caste)\b	identity	3	hi	regex
+\b(?:bangladeshis?|rohingyas?|bangladeshi\s+log)\b.{0,25}\b(?:ghuspaith\w*|ghuspeth\w*|infiltrators?|deport\w*|bhagao|nikalo)	identity	2	hi	regex
+\b(?:tu|tum)\s+(?:kitna\s+|bahut\s+)?(?:kaala|kala|kaali|kaalu)\s+(?:hai|ho)\b	identity	2	hi	regex
+\b(?:islam\s+wale|islamists?|bangladeshis?|rohingyas?|muslims?|musalman\w*|mussalman\w*|musalmano|mullon|mullo|mulla|mulle|hindus?|hinduon|sikhs?|sardars?|christians?|isai|dalits?|dalito|brahmins?|brahmano|bamun|pandit|pandits|pujari|maulvi|baniya|baniyon|jats?|yadavs?|rajputs?|thakurs?|madrasis?|biharis?|biharion|bengalis?|gujjus?|marwaris?|punjabis?|pahadis?|nepalis?|chinese|pakistanis?|africans?|blacks?|jews?|arabs?|tribals?|adivasis?|gays?|lesbians?|trans(?:gender)?s?|hijras?|hijron|hijre|south\s+indians?|north\s+indians?|northeast\w*)\b(?:\s+log|\s+people)?\s+(?:should|must|need\s+to|ko\s+to|ko)?\s*(?:be\s+)?(?:banned|deported|killed|removed|thrown\s+out|exiled|expelled|hanged|shot|nikalo|nikal\s+do|bhagao|bhaga\s+do|maaro|maro|kaato|bahar\s+karo|desh\s+se\s+(?:nikalo|bhagao))(?:\s+(?:from|out\s+of)\s+(?:india|here|desh|country))?\b	identity	3	hi	regex
+\bgo\s+back\s+to\s+(?:pakistan|china|bangladesh|africa|afghanistan|your\s+(?:own\s+)?country|where\s+you\s+came\s+from)\b	identity	2	en	regex
+\b(?:pakistan|china|bangladesh|afghanistan)\s+(?:chale\s+jao|chale\s+jaao|chalo|bhag\s+jao|bhaag\s+jao|jao|jaao)\b	identity	2	hi	regex
+\b(?:desh|india|bharat)\s+(?:se\s+)?(?:nikal\s+jao|nikalo|bahar\s+nikal|chhod\s+do|bhaag\s+jao)\b.{0,20}\b(?:tum|tu|tumhe|tujhe|log|katue|mulle)\b	identity	2	hi	regex
+# caste taunts
+\b(?:teri|tumhari|aapki|uski|iski)\s+(?:jaat|jati|jaati|caste)\b	identity	2	hi	regex
+\b(?:jaat|jati|jaati|caste)\s+(?:kya\s+hai|batao|bata\s+do|pata\s+hai)\b	identity	2	hi	regex
+\b(?:dalit|sc|st|obc|chamar|bhangi)\s+(?:hoke|hokar|ho\s+ke|hoker)\s+(?:bhi\s+)?\w+	identity	2	hi	regex
+\b(?:neech|nich|chhoti|choti)\s+(?:jaat|jati|jaati|caste)\s+(?:ke|ki|wale|wali|ka)?\b	identity	3	hi	regex
+# sexist put-downs
+\b(?:ladkiyan|ladkiyon|ladkiya|girls|women|aurat(?:en|on)?|ladki|females?|woman|girl)\s+(?:[\w,]+\s+){0,6}?(?:kitchen|rasoi|bartan|roti|chulha|chulhe|chulha\s+chauka|ghar\s+(?:me\s+|mein\s+|pe\s+|par\s+)?baith\w*|ghar\s+sambhal\w*|nahi\s+khel\s+sakti\w*|nhi\s+khel\s+sakti\w*|nahi\s+aati|nahi\s+aata|nhi\s+aati|bani\s+hi\s+nahi|dimag\s+nahi|gaming\s+ke\s+liye\s+nahi|noob\s+hoti\s+hain|bekaar\s+(?:hoti|khelti)\w*)	identity	2	hi	regex
+\b(?:tu|tum)\s+ladki\s+(?:hai|ho)\s+isliye\b|\bladki\s+(?:hai|ho)\s+isliye\b|\bghar\s+baitho\b|\bchulha\s+chauka\b	identity	2	hi	regex
+\b(?:women|girls|females)\s+(?:belong|should\s+(?:stay|be|go)|need\s+to\s+(?:stay|go))\s+(?:in|back|to|at)\s+(?:the\s+)?(?:kitchen|home|house)\b	identity	2	en	regex
+\bgo\s+back\s+to\s+(?:the\s+)?kitchen\b	identity	2	en	regex
+\b(?:women|girls|females|woman|girl)\s+(?:can'?t|cannot|dont|don'?t|shouldn'?t|do\s+not)\s+(?:game|play|stream|drive|understand|think)\b	identity	2	en	regex
+# sexuality put-downs
+\b(?:gay|homo|lgbt\w*|lesbian|trans(?:gender)?|hijra)s?\s+(?:log\s+|people\s+)?(?:[\w,]+\s+){0,5}?(?:nature\s+ke\s+khilaf|disgusting|sick|disease|mental\s+illness|abnormal|unnatural|sinners?|should\s+(?:die|be\s+(?:killed|hanged|banned)))\b	identity	2	en	regex
+\b(?:tu|tum|tera|teri)\s+(?:gay|homo|chakka|hijra|hijda)\s+hai\b|\b(?:tu\s+to|tu)\s+chh?akka\s+(?:hai|hi)\b	identity	2	hi	regex
+\b(?:gay|homo)\s+hai\s+(?:tu|tum)\b|\btu\s+(?:to\s+)?(?:bilkul\s+)?gay\s+hai\b	identity	2	hi	regex
+
+negro	identity	3	en	word
+kaalu	identity	2	hi	word	frame
+jungli	identity	1	hi	word	frame

@@ -127,14 +127,14 @@ def test_plain_at_and_bank_names_do_not_trigger():
     assert run(win("sbi ki branch mein jana hai")) == []
 
 
-def test_unknown_handle_needs_an_explicit_marker_and_is_ambiguous():
-    assert run(win("rahul at foobar")) == []
+def test_unknown_handle_needs_an_explicit_marker_or_a_cue():
+    assert run(win("rahul at foobar")) == []  # a bare "at" is not enough
     cands = SpokenRules().analyse(win("rahul at the rate of foobar"))[1]
     assert len(cands) == 1 and cands[0].category is Category.SPOKEN_UPI
-    assert cands[0].ambiguous and cands[0].confidence == 0.6
-    # no LLM and no watch window: the 5.7 fallback lets it pass; inside a watch window it is muted
-    assert run(win("rahul at the rate of foobar")) == []
-    assert one("mera upi id hai rahul at the rate of foobar").category is Category.SPOKEN_UPI
+    assert not cands[0].ambiguous and cands[0].confidence == 0.75  # explicit marker plus a name
+    assert one("rahul at the rate of foobar").category is Category.SPOKEN_UPI
+    cued = SpokenRules().analyse(win("mera upi id hai rahul at foobar"))[1]
+    assert len(cued) == 1 and cued[0].confidence == pytest.approx(0.75)  # weak marker, cue: 0.6 + 0.15
 
 
 def test_address_cue_covers_up_to_twelve_tokens():

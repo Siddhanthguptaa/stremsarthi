@@ -265,6 +265,22 @@ def test_signboard_size_and_confidence_filters() -> None:
     assert len(out) == 1 and out[0].quad.bbox()[1] == 100
 
 
+def test_signboard_does_not_mask_a_picture_sized_square_box_but_keeps_text_lines_and_small_squares() -> None:
+    """A big near-square region is a photo or a UI tile (it would blank a face); text lines and a single big
+    glyph-sized box (small area) are still masked."""
+    boxes = [
+        ("", (100, 100, 300, 300)),  # 200x200: picture-sized square, not a text line
+        ("", (400, 100, 900, 260)),  # 500x160, aspect 3.1: a text line
+        ("", (100, 400, 160, 460)),  # 60x60: a single character, area under the square floor
+        ("", (500, 400, 1000, 780 - 40)),  # 500x340, aspect 1.47, area 170k: a very large block
+    ]
+    out = _run(_detector(_cfg(), _ocr(boxes, conf=0.9)))
+    got = sorted(tuple(int(v) for v in d.quad.bbox()) for d in _only(out, Category.SIGNBOARD))
+    assert (100, 100, 300, 300) not in got and (500, 400, 1000, 740) not in got
+    assert any(abs(b[0] - 400) <= 1 and abs(b[2] - 900) <= 1 for b in got)
+    assert any(abs(b[0] - 100) <= 1 and abs(b[3] - 460) <= 1 for b in got)
+
+
 def test_signboard_min_height_comes_from_the_config() -> None:
     boxes = [("", (100, 100, 400, 120))]  # 20 px tall
     result = OcrResult(tuple(_quad(r) for _, r in boxes), ("",), (0.9,), ("unknown",))
@@ -399,3 +415,34 @@ def test_text_is_discovered_and_a_phone_number_reaches_the_planner_as_a_mask_req
     assert req.category is Category.PHONE_NUMBER and req.kind is MaskKind.REGION and req.source == "text"
     x1, y1, x2, y2 = req.quads[0].bbox()
     assert x1 < 100 and y1 < 100 and x2 > 420 and y2 > 128  # the box plus the planner's padding
+
+
+# --------------------------------------------------------------------------- faint text (signboard)
+class _WeakOcr:
+    """A provider with the optional ``weak_boxes`` hook of the real OCR service: no normal boxes at all."""
+
+    def __init__(self, rects: list[tuple[int, int, int, int]], scores: list[float]) -> None:
+        self._boxes = np.array(
+            [[[x1, y1], [x2, y1], [x2, y2], [x1, y2]] for x1, y1, x2, y2 in rects], np.float32
+        ).reshape(-1, 4, 2)
+        self._scores = np.array(scores, np.float32)
+
+    def __call__(self, frame: Frame) -> OcrResult:
+        return OcrResult((), (), (), ())
+
+    def weak_boxes(self, frame: Frame) -> tuple[np.ndarray, np.ndarray]:
+        return self._boxes, self._scores
+
+
+def test_faint_text_regions_are_masked_as_signboard_even_when_the_normal_read_found_nothing() -> None:
+    ocr = _WeakOcr([(100, 100, 420, 140), (100, 200, 420, 206), (100, 300, 420, 340)], [0.45, 0.9, 0.2])
+    out = _run(_detector(_cfg(), ocr))
+    assert len(out) == 1, "a 6 px tall box and a 0.2 score are not text lines to mask"
+    d = out[0]
+    assert d.category is Category.SIGNBOARD and d.extra["reason"] == "mask_all_text_weak"
+    assert d.quad.bbox() == pytest.approx((100, 100, 420, 140))
+
+
+def test_faint_text_is_ignored_when_signboard_is_off() -> None:
+    ocr = _WeakOcr([(100, 100, 420, 140)], [0.45])
+    assert _run(_detector(_cfg(signboard={"enabled": False}), ocr)) == []

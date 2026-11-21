@@ -37,14 +37,19 @@ from vision.ocr.layout import as_array, group_lines, to_quad, union_quad
 from vision.ocr.normalize import digit_ratio, repair_digit_field
 from vision.patterns import digit_run_hits, find_masked_aadhaar_hint, find_pan
 from vision.patterns.verhoeff import is_valid
+from vision.shapes import degraded
 
 from .quad import CardQuad, find_card_like, find_card_quad, quad_overlap
+from .unsure import find_card_shapes
 
 log = logging.getLogger("vision.cards")
 
 CONF_AADHAAR_VALID = 0.88
 CONF_UNSURE = 0.55
 CONF_CARD_LIKE = 0.5
+CONF_SHAPE = 0.5  # the texture-only fallback (``unsure.py``): same weight as card_like
+# the shape fallback is OFF by default until T7.5 measurements say otherwise: see docs/STATUS.md
+SHAPE_FALLBACK_DEFAULT = False
 CARD_BONUS = 0.06  # a real card outline was found around the number
 _PAN_ISH = re.compile(r"^[A-Z]{4,6}[0-9]{3,5}[A-Z]?$")
 
@@ -85,10 +90,16 @@ class CardsDetector:
     def __init__(self) -> None:
         self._res: Resources | None = None
         self._cfg: DetectorConfig | None = None
+        self._shape_fallback = SHAPE_FALLBACK_DEFAULT
 
     # ------------------------------------------------------------------ plugin interface
     def configure(self, cfg: DetectorConfig, res: Resources) -> None:
         self._cfg, self._res = cfg, res
+        self._shape_fallback = bool(cfg.params.get("shape_fallback", SHAPE_FALLBACK_DEFAULT))
+
+    def set_shape_fallback(self, on: bool) -> None:
+        """Switch the card-shape fallback (only ever active with ``mask_when_unsure`` on for Aadhaar)."""
+        self._shape_fallback = bool(on)
 
     def warmup(self) -> None:
         warm = getattr(self._res, "warm_ocr", None)
@@ -132,7 +143,7 @@ class CardsDetector:
         for hit in hits:
             if hit.category is Category.AADHAAR and not want_aadhaar:
                 continue
-            card = find_card_quad(image, hit.box, boxes)
+            card = find_card_quad(image, hit.box, boxes, whole_frame=not hit.needs_card)
             if hit.needs_card and card.method != "contour":
                 continue
             detections.append((self._detection(frame, hit, card), card.pts))
@@ -146,6 +157,15 @@ class CardsDetector:
                     continue
                 hit = _Hit(Category.AADHAAR, pts, CONF_CARD_LIKE, "card_like", 0.0)
                 detections.append((self._detection(frame, hit, CardQuad(pts, "card_like", 0.0)), pts))
+        if unsure and self._shape_fallback and not masked_hint and not late and degraded(image):
+            covered = [pts for _, pts in detections]
+            for pts, bands in find_card_shapes(image, boxes, texts, confs):
+                if any(quad_overlap(pts, c) > 0.3 for c in covered):
+                    continue
+                hit = _Hit(Category.AADHAAR, pts, CONF_SHAPE, "card_shape_texture", 0.0)
+                det = self._detection(frame, hit, CardQuad(pts, "card_like", 0.0))
+                det.extra["bands"] = bands
+                detections.append((det, pts))
         return _dedupe(detections)
 
     # ------------------------------------------------------------------ hit finders

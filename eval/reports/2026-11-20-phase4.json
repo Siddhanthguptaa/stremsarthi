@@ -1,0 +1,1185 @@
+{
+  "baseline": null,
+  "checks": [
+    {
+      "name": "data: problems found",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "abuse recall",
+      "note": "",
+      "op": ">=",
+      "passed": false,
+      "target": 0.85,
+      "unit": "",
+      "value": 0.751923
+    },
+    {
+      "name": "abuse precision",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 0.9,
+      "unit": "",
+      "value": 0.93765
+    },
+    {
+      "name": "scam link recall (scam or fake-UPI category)",
+      "note": "",
+      "op": ">=",
+      "passed": false,
+      "target": 0.95,
+      "unit": "",
+      "value": 0.508333
+    },
+    {
+      "name": "fake UPI recall",
+      "note": "",
+      "op": ">=",
+      "passed": false,
+      "target": 0.98,
+      "unit": "",
+      "value": 0.88
+    },
+    {
+      "name": "doxxing recall",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 0.85,
+      "unit": "",
+      "value": 0.978261
+    },
+    {
+      "name": "clean false-positive rate",
+      "note": "",
+      "op": "<=",
+      "passed": false,
+      "target": 0.03,
+      "unit": "",
+      "value": 0.040115
+    },
+    {
+      "name": "classify latency p95",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 300.0,
+      "unit": "ms",
+      "value": 0.177
+    },
+    {
+      "name": "staff messages hidden",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "unclassified messages",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "flagged text shown on the streamer overlay",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "log records containing flagged text or private data",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "YouTube: broadcast found and every message delivered once",
+      "note": "250/250",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: pagination used (more than one list call)",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: duplicates seen by the pipeline",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "YouTube: messages received by the pipeline",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 250.0,
+      "unit": "",
+      "value": 250.0
+    },
+    {
+      "name": "YouTube: planned 3 h poll interval",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 6.85,
+      "unit": "s",
+      "value": 6.75
+    },
+    {
+      "name": "YouTube: planned 3 h poll interval (lower)",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 6.65,
+      "unit": "s",
+      "value": 6.75
+    },
+    {
+      "name": "YouTube: worst poll spacing deviation from 6.75 s",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 0.1,
+      "unit": "s",
+      "value": 0.008448
+    },
+    {
+      "name": "YouTube: every DELETE verdict reached the platform, nothing else was deleted",
+      "note": "verdict deletes 84, platform deletes 84",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: timeouts off (default): TIMEOUT verdicts became deletes, no ban was sent",
+      "note": "19 downgraded",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: the round trip is not vacuous",
+      "note": "84 deletes",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: governor units equal the server's units",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 1776.0,
+      "unit": "",
+      "value": 1776.0
+    },
+    {
+      "name": "YouTube: delete round trip",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: deleting an unknown message reports 'gone'",
+      "note": "ActionResult(status='failed', reason='gone')",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: timeout round trip (temporary ban, 600 s)",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: ban units charged (200 each)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 200.0,
+      "unit": "",
+      "value": 200.0
+    },
+    {
+      "name": "YouTube: missing permission stops actions after one try",
+      "note": "permissions, actions_stopped",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: 503s retried with backoff, no message lost or duplicated",
+      "note": "257/257",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: expired token refreshed once, polling continued",
+      "note": "+1 token calls",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: quotaExceeded pauses reads until the Pacific-midnight reset, then polling resumes",
+      "note": "resumed after 56179 s, reset in 56178 s",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "YouTube: log records containing flagged text",
+      "note": "7139 records scanned",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "Twitch: device-code login and token validation",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: connected, subscribed and ready",
+      "note": "phase ready",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: first batch delivered once each",
+      "note": "53/53",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: abrupt socket drop, reconnect and resubscribe",
+      "note": "sessions 2",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: twitch_disconnected then twitch_reconnected reported",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: HOLD commands asserted by a connection drop",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "Twitch: session_reconnect handover without an outage",
+      "note": "connections +1",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: messages received by the pipeline (each once)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 160.0,
+      "unit": "",
+      "value": 160.0
+    },
+    {
+      "name": "Twitch: duplicate notifications that got past the connector",
+      "note": "213 notifications sent for 160 messages",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "Twitch: every DELETE verdict, and every banned message, reached Helix as a delete; nothing else was deleted",
+      "note": "verdict deletes 40, bans 12, platform deletes 52",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: every TIMEOUT verdict became a ban with a duration",
+      "note": "12 bans",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: the round trip is not vacuous",
+      "note": "52 deletes, 12 bans",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: !hold from a viewer",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "Twitch: !hold from a moderator accepted once (redelivery ignored)",
+      "note": "[True]",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: !unhold from a moderator refused",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: !unhold from the broadcaster accepted",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: !hold from the broadcaster accepted",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: command text reaching the overlay",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "Twitch: delete refused (missing scope) downgrades to a moderator hold, never ALLOW",
+      "note": "final action hold_for_mod, reason scam_giveaway:dg_delete_failed_hold",
+      "op": ">=",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "Twitch: log records containing flagged text",
+      "note": "414 records scanned",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    }
+  ],
+  "date": "2026-11-20",
+  "failing_ids": [],
+  "header": {
+    "commands": [
+      "python -m eval.data_gen.chat --out eval/data/generated/chat",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261120-235144 --leg data",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261120-235144 --leg classify",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261120-235144 --leg classify_llm",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261120-235144 --leg youtube",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261120-235144 --leg twitch"
+    ],
+    "dataset": {
+      "by_kind": {
+        "abuse/abbrev": 30,
+        "abuse/english": 40,
+        "abuse/obfuscated": 55,
+        "abuse/profane_praise": 15,
+        "abuse/sexual": 20,
+        "abuse/slur_deva": 90,
+        "abuse/slur_latn": 150,
+        "abuse/slur_regional": 90,
+        "abuse/threat": 30,
+        "clean/ambiguous_mild": 24,
+        "clean/hard_neg_abuse": 150,
+        "clean/hard_neg_dox": 90,
+        "clean/hard_neg_scam": 98,
+        "clean/plain": 360,
+        "clean/staff_mod": 11,
+        "clean/staff_self": 29,
+        "doxxing/aadhaar": 18,
+        "doxxing/address": 60,
+        "doxxing/intent": 25,
+        "doxxing/pan": 12,
+        "doxxing/phone": 75,
+        "doxxing/phone_embedded": 15,
+        "doxxing/phone_spoken": 15,
+        "doxxing/streamer_private": 40,
+        "doxxing_staff/staff_dox": 20,
+        "fake_upi/app_deeplink": 25,
+        "fake_upi/collect": 20,
+        "fake_upi/deeplink": 40,
+        "fake_upi/obfuscated": 25,
+        "fake_upi/pay_to_id": 65,
+        "fake_upi/phone_upi": 25,
+        "scam/crypto": 20,
+        "scam/giveaway": 50,
+        "scam/hack_tool": 20,
+        "scam/invite": 30,
+        "scam/kyc_bank": 25,
+        "scam/loan": 15,
+        "scam/lottery": 20,
+        "scam/phishing": 15,
+        "scam/qr_lure": 15,
+        "scam/shortener": 30,
+        "scam/support_call": 15
+      },
+      "by_label": {
+        "abuse": 520,
+        "clean": 762,
+        "doxxing": 260,
+        "doxxing_staff": 20,
+        "fake_upi": 200,
+        "scam": 255
+      },
+      "by_lang": {
+        "bn": 34,
+        "deva": 195,
+        "en": 154,
+        "hinglish": 1549,
+        "kn": 30,
+        "ta": 22,
+        "te": 33
+      },
+      "hard_negatives": 362,
+      "messages": 2017,
+      "not_gating": 89,
+      "obfuscated": 125,
+      "staff": 60
+    },
+    "dataset_sha256": "d525cbb95d0afec7aaccb0db44715385aad04555a97691d95b261ec262f76b17",
+    "git_rev": "8a1e6e353205",
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
+    },
+    "llm": "none (rules and local fallback only)",
+    "profile": "dev",
+    "seed": 1234
+  },
+  "notes": [
+    "The classify leg runs with NO LLM (offline, no key): borderline messages are held for a moderator (HOLD_FOR_MOD, counted as flagged), never allowed. The classify_llm leg (informational) uses a stand-in Groq that answers from the truth labels with 5 % errors, so it only shows the cascade's behaviour with an LLM.",
+    "The set is written independently of chat/classify (own vocabulary, spellings, code-mixing, obfuscation and hard negatives). Messages marked not-gating (honestly ambiguous: mild banter, payment lures with no id) are reported by kind but left out of the gating rates.",
+    "Scam recall counts a hit when the verdict carries a scam-link or fake-UPI category; fake-UPI recall needs the fake-UPI category; precision of a group = flagged in that group that truly belong to its label family.",
+    "Connector legs use eval/mock_platforms (own YouTube and Twitch mocks, not chat/testing) with the real connector code and a ManualClock (virtual time), over loopback HTTP and WebSocket.",
+    "Log scan: root logger at DEBUG for the whole leg; every record is searched for flagged message texts, staff texts, the streamer's private terms and phone. Counts only; nothing is printed.",
+    "The RTMPS sink of spec 5.7 is not part of this gate (egress is covered by relay/ tests and gate 1)."
+  ],
+  "passed": false,
+  "phase": "phase4",
+  "tables": [
+    {
+      "columns": [
+        "category",
+        "n",
+        "recall % (FP % for clean)",
+        "95% CI %",
+        "predicted",
+        "precision %"
+      ],
+      "rows": [
+        [
+          "abuse",
+          520,
+          75.19,
+          "71.3-78.7",
+          417,
+          93.76
+        ],
+        [
+          "scam",
+          240,
+          50.83,
+          "44.5-57.1",
+          303,
+          99.34
+        ],
+        [
+          "fake_upi",
+          200,
+          88.0,
+          "82.8-91.8",
+          176,
+          100.0
+        ],
+        [
+          "doxxing",
+          230,
+          97.83,
+          "95.0-99.1",
+          250,
+          90.0
+        ],
+        [
+          "clean (false positives)",
+          698,
+          4.01,
+          "2.8-5.7",
+          "",
+          ""
+        ]
+      ],
+      "title": "Per-category results (gating messages, % and 95% Wilson CI)"
+    },
+    {
+      "columns": [
+        "label/kind",
+        "n",
+        "rate %"
+      ],
+      "rows": [
+        [
+          "abuse/abbrev",
+          30,
+          63.33
+        ],
+        [
+          "abuse/english",
+          40,
+          70.0
+        ],
+        [
+          "abuse/obfuscated",
+          55,
+          76.36
+        ],
+        [
+          "abuse/profane_praise",
+          15,
+          100.0
+        ],
+        [
+          "abuse/sexual",
+          20,
+          55.0
+        ],
+        [
+          "abuse/slur_deva",
+          90,
+          82.22
+        ],
+        [
+          "abuse/slur_latn",
+          150,
+          82.0
+        ],
+        [
+          "abuse/slur_regional",
+          90,
+          72.22
+        ],
+        [
+          "abuse/threat",
+          30,
+          46.67
+        ],
+        [
+          "clean/hard_neg_abuse",
+          150,
+          86.67
+        ],
+        [
+          "clean/hard_neg_dox",
+          90,
+          100.0
+        ],
+        [
+          "clean/hard_neg_scam",
+          98,
+          91.84
+        ],
+        [
+          "clean/plain",
+          360,
+          100.0
+        ],
+        [
+          "doxxing/address",
+          60,
+          100.0
+        ],
+        [
+          "doxxing/intent",
+          25,
+          80.0
+        ],
+        [
+          "doxxing/phone",
+          75,
+          100.0
+        ],
+        [
+          "doxxing/phone_embedded",
+          15,
+          100.0
+        ],
+        [
+          "doxxing/phone_spoken",
+          15,
+          100.0
+        ],
+        [
+          "doxxing/streamer_private",
+          40,
+          100.0
+        ],
+        [
+          "fake_upi/app_deeplink",
+          25,
+          100.0
+        ],
+        [
+          "fake_upi/collect",
+          20,
+          100.0
+        ],
+        [
+          "fake_upi/deeplink",
+          40,
+          100.0
+        ],
+        [
+          "fake_upi/obfuscated",
+          25,
+          4.0
+        ],
+        [
+          "fake_upi/pay_to_id",
+          65,
+          100.0
+        ],
+        [
+          "fake_upi/phone_upi",
+          25,
+          100.0
+        ],
+        [
+          "scam/crypto",
+          20,
+          55.0
+        ],
+        [
+          "scam/giveaway",
+          50,
+          72.0
+        ],
+        [
+          "scam/hack_tool",
+          20,
+          45.0
+        ],
+        [
+          "scam/invite",
+          30,
+          40.0
+        ],
+        [
+          "scam/kyc_bank",
+          25,
+          40.0
+        ],
+        [
+          "scam/loan",
+          15,
+          33.33
+        ],
+        [
+          "scam/lottery",
+          20,
+          80.0
+        ],
+        [
+          "scam/phishing",
+          15,
+          53.33
+        ],
+        [
+          "scam/shortener",
+          30,
+          33.33
+        ],
+        [
+          "scam/support_call",
+          15,
+          33.33
+        ]
+      ],
+      "title": "Rate by kind (recall for flagged kinds, pass rate for clean kinds)"
+    },
+    {
+      "columns": [
+        "label/lang",
+        "n",
+        "recall %"
+      ],
+      "rows": [
+        [
+          "abuse/bn",
+          26,
+          88.46
+        ],
+        [
+          "abuse/deva",
+          99,
+          80.81
+        ],
+        [
+          "abuse/en",
+          46,
+          60.87
+        ],
+        [
+          "abuse/hinglish",
+          285,
+          76.49
+        ],
+        [
+          "abuse/kn",
+          22,
+          54.55
+        ],
+        [
+          "abuse/ta",
+          17,
+          82.35
+        ],
+        [
+          "abuse/te",
+          25,
+          64.0
+        ],
+        [
+          "doxxing/deva",
+          16,
+          100.0
+        ],
+        [
+          "doxxing/en",
+          11,
+          100.0
+        ],
+        [
+          "doxxing/hinglish",
+          203,
+          97.54
+        ],
+        [
+          "fake_upi/deva",
+          30,
+          83.33
+        ],
+        [
+          "fake_upi/hinglish",
+          170,
+          88.82
+        ],
+        [
+          "scam/deva",
+          14,
+          50.0
+        ],
+        [
+          "scam/hinglish",
+          226,
+          50.88
+        ]
+      ],
+      "title": "Recall by language"
+    },
+    {
+      "columns": [
+        "group",
+        "n",
+        "recall %"
+      ],
+      "rows": [
+        [
+          "obfuscated",
+          125,
+          49.6
+        ],
+        [
+          "plain",
+          1065,
+          80.0
+        ]
+      ],
+      "title": "Obfuscated vs plain"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "batch",
+          40
+        ],
+        [
+          "classifier_max",
+          1.963
+        ],
+        [
+          "classifier_p50",
+          0.077
+        ],
+        [
+          "classifier_p95",
+          0.177
+        ],
+        [
+          "end_to_end_p50",
+          4.847
+        ],
+        [
+          "end_to_end_p95",
+          6.908
+        ]
+      ],
+      "title": "Latency (ms)"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "actions",
+          "{\"allow\": 1049, \"delete\": 551, \"hide\": 24, \"hold_for_mod\": 297, \"timeout\": 96}"
+        ],
+        [
+          "platform delete / timeout calls",
+          "{\"deleted\": 647, \"timed_out\": 96}"
+        ],
+        [
+          "ambiguous mild banter flagged (not gating)",
+          "21 / 24"
+        ],
+        [
+          "moderator-posted private data flagged but kept visible",
+          "20 / 20"
+        ],
+        [
+          "log records scanned",
+          3312
+        ]
+      ],
+      "title": "Other numbers"
+    },
+    {
+      "columns": [
+        "list",
+        "ids"
+      ],
+      "rows": [
+        [
+          "abuse missed",
+          "c0014 c0024 c0030 c0031 c0047 c0050 c0060 c0068 c0125 c0130 c0136 c0144 c0147 c0163 c0203 c0208 c0212 c0221 c0232 c0247 c0251 c0264 c0272 c0284 c0307"
+        ],
+        [
+          "scam missed",
+          "c0021 c0053 c0116 c0124 c0132 c0146 c0158 c0184 c0192 c0228 c0244 c0267 c0366 c0371 c0375 c0449 c0450 c0463 c0472 c0477 c0485 c0495 c0522 c0535 c0590"
+        ],
+        [
+          "fake_upi missed",
+          "c0000 c0019 c0261 c0329 c0367 c0399 c0553 c0567 c0582 c0811 c0830 c0833 c1188 c1205 c1219 c1283 c1337 c1363 c1507 c1592 c1739 c1761 c1808 c1912"
+        ],
+        [
+          "doxxing missed",
+          "c0432 c0733 c0769 c0875 c1377"
+        ],
+        [
+          "clean flagged",
+          "c0016 c0065 c0096 c0114 c0467 c0492 c0579 c0591 c0782 c0820 c0853 c0893 c0948 c0997 c1003 c1057 c1060 c1089 c1262 c1270 c1292 c1359 c1406 c1456 c1457"
+        ]
+      ],
+      "title": "Missed or wrongly flagged message ids (first 25 each; ids only)"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "abuse recall %",
+          74.81
+        ],
+        [
+          "scam recall %",
+          50.42
+        ],
+        [
+          "fake_upi recall %",
+          88.0
+        ],
+        [
+          "doxxing recall %",
+          97.83
+        ],
+        [
+          "abuse precision %",
+          94.65
+        ],
+        [
+          "clean false positives %",
+          3.44
+        ]
+      ],
+      "title": "classify_llm (informational, stand-in Groq with 5 % errors)"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "action_units_spent_by_the_sample",
+          1680
+        ],
+        [
+          "bans",
+          1
+        ],
+        [
+          "calls_by_kind",
+          "{\"ban\": 1, \"delete\": 87, \"list\": 6498, \"lookup\": 1}"
+        ],
+        [
+          "clean_messages_deleted",
+          0
+        ],
+        [
+          "daily_quota",
+          10000
+        ],
+        [
+          "governor_used",
+          130
+        ],
+        [
+          "messages_sent",
+          250
+        ],
+        [
+          "note",
+          "with allow_timeout=true the 6 severe-abuse bans of this sample alone cost 1,200 of the 2,000 action units"
+        ],
+        [
+          "platform_deletes",
+          85
+        ],
+        [
+          "units_by_kind",
+          "{\"ban\": 200, \"delete\": 1740, \"list\": 32490, \"lookup\": 1}"
+        ],
+        [
+          "units_used",
+          130
+        ],
+        [
+          "verdict_deletes",
+          84
+        ]
+      ],
+      "title": "youtube numbers"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "bans",
+          12
+        ],
+        [
+          "clean_messages_deleted",
+          1
+        ],
+        [
+          "connections",
+          3
+        ],
+        [
+          "helix_calls",
+          "{\"DELETE /helix/moderation/chat 204\": 52, \"DELETE /helix/moderation/chat 401\": 1, \"POST /helix/eventsub/subscriptions 202\": 2, \"POST /helix/moderation/bans 200\": 12}"
+        ],
+        [
+          "messages_sent",
+          160
+        ],
+        [
+          "notifications_sent",
+          213
+        ],
+        [
+          "platform_deletes",
+          52
+        ],
+        [
+          "subscriptions",
+          2
+        ],
+        [
+          "verdict_deletes",
+          40
+        ]
+      ],
+      "title": "twitch numbers"
+    },
+    {
+      "columns": [
+        "step",
+        "raw exit",
+        "gate exit",
+        "seconds"
+      ],
+      "rows": [
+        [
+          "generate chat set",
+          0,
+          0,
+          0.7
+        ],
+        [
+          "data check",
+          0,
+          0,
+          0.7
+        ],
+        [
+          "classify (no LLM)",
+          1,
+          1,
+          3.3
+        ],
+        [
+          "classify (stand-in Groq, informational)",
+          0,
+          0,
+          13.0
+        ],
+        [
+          "YouTube mock",
+          0,
+          0,
+          5.2
+        ],
+        [
+          "Twitch mock",
+          0,
+          0,
+          3.8
+        ]
+      ],
+      "title": "Gate steps"
+    }
+  ]
+}

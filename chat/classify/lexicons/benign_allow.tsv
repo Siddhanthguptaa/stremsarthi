@@ -31,3 +31,44 @@ chutti	benign	0	hi	word
 chhutti	benign	0	hi	word
 chhuti	benign	0	hi	word
 lundquist	benign	0	en	word
+
+# Added: a film title.
+kaminey	benign	0	hi	word
+kaminey se	benign	0	hi	word
+randy	benign	0	en	word
+randy orton	benign	0	en	word
+bbc	benign	0	en	word
+bbc news	benign	0	en	word
+# Common English words that a phonetic spelling fold would otherwise read as abuse (cutie ~ chutia, sheet ~ shit).
+cutie	benign	0	en	word
+cuties	benign	0	en	word
+cutiepie	benign	0	en	word
+cootie	benign	0	en	word
+coot	benign	0	en	word
+sheet	benign	0	en	word
+sheets	benign	0	en	word
+gouda	benign	0	en	word
+sunny	benign	0	en	word
+count	benign	0	en	word
+counts	benign	0	en	word
+salle	benign	0	en	word
+niger	benign	0	en	word
+beach	benign	0	en	word
+tatty	benign	0	en	word
+cake	benign	0	en	word
+rand	benign	0	en	word
+randy	benign	0	en	word
+# "teri maa ka/ki ..." followed by a harmless noun
+teri maa ka aashirwad	benign	0	hi	word
+teri maa ka ashirwad	benign	0	hi	word
+teri maa ka aashirvad	benign	0	hi	word
+teri maa ki dua	benign	0	hi	word
+teri maa ki duaein	benign	0	hi	word
+teri maa ka khayal	benign	0	hi	word
+teri maa ki tabiyat	benign	0	hi	word
+teri maa ka naam	benign	0	hi	word
+teri maa ko pranam	benign	0	hi	word
+teri maa ko namaste	benign	0	hi	word
+teri maa ko mera salaam	benign	0	hi	word
+teri maa ka pyaar	benign	0	hi	word
+teri maa ki yaad	benign	0	hi	word

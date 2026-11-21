@@ -12,8 +12,37 @@ from ..common import specimen
 from .record import Msg, pick
 
 TLDS = ["xyz", "top", "click", "icu", "site", "live", "online", "cc", "vip", "club", "monster", "buzz"]
-BRANDS = ["freefire", "bgmi", "paytm", "phonepe", "gpay", "sbi", "hdfc", "icici", "jio", "amazon", "flipkart", "dream11", "youtube", "instagram"]
-LURES = ["diamond", "uc", "reward", "bonus", "claim", "gift", "winner", "cashback", "offer", "verify", "kyc", "loan", "lucky"]
+BRANDS = [
+    "freefire",
+    "bgmi",
+    "paytm",
+    "phonepe",
+    "gpay",
+    "sbi",
+    "hdfc",
+    "icici",
+    "jio",
+    "amazon",
+    "flipkart",
+    "dream11",
+    "youtube",
+    "instagram",
+]
+LURES = [
+    "diamond",
+    "uc",
+    "reward",
+    "bonus",
+    "claim",
+    "gift",
+    "winner",
+    "cashback",
+    "offer",
+    "verify",
+    "kyc",
+    "loan",
+    "lucky",
+]
 SHORTENERS = ["bit.ly", "tinyurl.com", "cutt.ly", "rb.gy", "shorturl.at", "is.gd", "t.ly"]
 HEX = "0123456789abcdef"
 
@@ -67,37 +96,82 @@ def disguise(url: str, rng: random.Random) -> tuple[str, str]:
 
 SCAM_CARRIERS = {
     "giveaway": [
-        "FREE FIRE 10000 DIAMONDS FREE claim here {u}", "bhai ye link se free diamond mil rahe hain {u}", "BGMI UC free hack working {u}",
-        "streamer ne giveaway rakha hai jaldi claim karo {u}", "congratulations aap winner ho iPhone 15 claim karo {u}", "free redeem code milega {u} jaldi karo",
-        "aaj ka giveaway 50000 rs click karo {u}", "सबको फ्री डायमंड मिल रहे हैं यहाँ क्लिक करो {u}", "elite pass free hai {u} sirf aaj ke liye", "100% working free uc generator {u}",
+        "FREE FIRE 10000 DIAMONDS FREE claim here {u}",
+        "bhai ye link se free diamond mil rahe hain {u}",
+        "BGMI UC free hack working {u}",
+        "streamer ne giveaway rakha hai jaldi claim karo {u}",
+        "congratulations aap winner ho iPhone 15 claim karo {u}",
+        "free redeem code milega {u} jaldi karo",
+        "aaj ka giveaway 50000 rs click karo {u}",
+        "सबको फ्री डायमंड मिल रहे हैं यहाँ क्लिक करो {u}",
+        "elite pass free hai {u} sirf aaj ke liye",
+        "100% working free uc generator {u}",
     ],
     "shortener": [
-        "ye dekho {u}", "must watch {u}", "bhai jaldi dekh {u} 😱", "open karo sab {u}", "sirf aaj {u}", "exclusive leaked video {u}", "{u} claim your prize", "link in bio {u}",
+        "ye dekho {u}",
+        "must watch {u}",
+        "bhai jaldi dekh {u} 😱",
+        "open karo sab {u}",
+        "sirf aaj {u}",
+        "exclusive leaked video {u}",
+        "{u} claim your prize",
+        "link in bio {u}",
     ],
     "invite": [
-        "join my telegram group daily 5000 profit guaranteed {u}", "work from home 800 rs per hour join whatsapp group {u}", "paisa double hota hai yahan join karo {u}",
-        "WhatsApp group join karo free tips milenge {u}", "dream11 grand league winning team telegram pe milti hai {u}", "भाई यहाँ जुड़ो रोज़ कमाई पक्की {u}", "trading signals free join fast {u}",
+        "join my telegram group daily 5000 profit guaranteed {u}",
+        "work from home 800 rs per hour join whatsapp group {u}",
+        "paisa double hota hai yahan join karo {u}",
+        "WhatsApp group join karo free tips milenge {u}",
+        "dream11 grand league winning team telegram pe milti hai {u}",
+        "भाई यहाँ जुड़ो रोज़ कमाई पक्की {u}",
+        "trading signals free join fast {u}",
     ],
     "kyc_bank": [
-        "SBI account blocked tonight update KYC now {u}", "HDFC alert your account will be suspended complete KYC {u}", "aapka bank account band ho jayega kyc update karo {u}",
-        "Paytm KYC expire ho gayi hai abhi update karo {u}", "आपका खाता बंद हो जाएगा केवाईसी अपडेट करो {u}", "ICICI card block ho gaya verify here {u}",
+        "SBI account blocked tonight update KYC now {u}",
+        "HDFC alert your account will be suspended complete KYC {u}",
+        "aapka bank account band ho jayega kyc update karo {u}",
+        "Paytm KYC expire ho gayi hai abhi update karo {u}",
+        "आपका खाता बंद हो जाएगा केवाईसी अपडेट करो {u}",
+        "ICICI card block ho gaya verify here {u}",
     ],
     "lottery": [
-        "KBC lottery winner aapka number select hua hai {u}", "you have won 25 lakh lottery contact now {u}", "Jio lucky draw 5 lakh winner claim {u}", "aapne car jeeti hai claim karne ke liye {u}",
+        "KBC lottery winner aapka number select hua hai {u}",
+        "you have won 25 lakh lottery contact now {u}",
+        "Jio lucky draw 5 lakh winner claim {u}",
+        "aapne car jeeti hai claim karne ke liye {u}",
         "आप लॉटरी जीत गए हैं यहाँ क्लिक करें {u}",
     ],
-    "loan": ["instant loan 50000 no documents apply {u}", "turant loan bina document {u}", "personal loan 5 minute me approve {u} limited offer", "loan chahiye? bas ye link {u}"],
+    "loan": [
+        "instant loan 50000 no documents apply {u}",
+        "turant loan bina document {u}",
+        "personal loan 5 minute me approve {u} limited offer",
+        "loan chahiye? bas ye link {u}",
+    ],
     "crypto": [
-        "bitcoin double in 24 hours {u}", "invest 1000 get 5000 crypto {u}", "USDT earning platform join {u}", "free airdrop token claim {u}", "ye coin 100x jayega abhi lo {u}",
+        "bitcoin double in 24 hours {u}",
+        "invest 1000 get 5000 crypto {u}",
+        "USDT earning platform join {u}",
+        "free airdrop token claim {u}",
+        "ye coin 100x jayega abhi lo {u}",
     ],
     "support_call": [
-        "your channel will be banned verify at {u}", "youtube support: appeal your strike here {u}", "account unban chahiye? yahan contact karo {u}", "monetisation verification pending {u}",
+        "your channel will be banned verify at {u}",
+        "youtube support: appeal your strike here {u}",
+        "account unban chahiye? yahan contact karo {u}",
+        "monetisation verification pending {u}",
     ],
     "phishing": [
-        "login here to verify your channel and keep monetisation {u}", "instagram verified badge free apply {u}", "gmail login required to see the clip {u}", "sign in to claim the streamer reward {u}",
+        "login here to verify your channel and keep monetisation {u}",
+        "instagram verified badge free apply {u}",
+        "gmail login required to see the clip {u}",
+        "sign in to claim the streamer reward {u}",
     ],
     "hack_tool": [
-        "free fire aimbot download {u}", "bgmi wallhack 100% safe {u}", "unlimited diamond hack apk {u}", "headshot hack no ban {u}", "mod apk unlock all skins {u}",
+        "free fire aimbot download {u}",
+        "bgmi wallhack 100% safe {u}",
+        "unlimited diamond hack apk {u}",
+        "headshot hack no ban {u}",
+        "mod apk unlock all skins {u}",
     ],
 }
 SCAM_COUNTS = {
@@ -138,15 +212,26 @@ def scams(rng: random.Random, counts: dict[str, int] | None = None) -> list[Msg]
 
 # --- fake UPI ---------------------------------------------------------------------------------------------------------
 LURE_TEXT = [
-    "pay {amt} get 1000 diamonds", "send {amt} to claim your prize", "donate {amt} for the streamer's surgery", "{amt} bhejo aur free uc lo",
-    "{amt} ki fees do coaching join karo", "verification ke liye {amt} bhejo", "refund ke liye {amt} bhejo", "{amt} bhejo giveaway entry pakki",
-    "wrong transfer ho gaya {amt} wapas karo", "stream support: {amt} bhejo shoutout milega", "भाई {amt} भेजो इनाम पक्का", "{amt} भेजो तुरंत कोड मिलेगा",
+    "pay {amt} get 1000 diamonds",
+    "send {amt} to claim your prize",
+    "donate {amt} for the streamer's surgery",
+    "{amt} bhejo aur free uc lo",
+    "{amt} ki fees do coaching join karo",
+    "verification ke liye {amt} bhejo",
+    "refund ke liye {amt} bhejo",
+    "{amt} bhejo giveaway entry pakki",
+    "wrong transfer ho gaya {amt} wapas karo",
+    "stream support: {amt} bhejo shoutout milega",
+    "भाई {amt} भेजो इनाम पक्का",
+    "{amt} भेजो तुरंत कोड मिलेगा",
 ]
 AMOUNTS = ["Rs 10", "₹49", "99 rs", "₹199", "500 rupaye", "₹1", "Rs 25", "1000rs", "₹5"]
 
 
 def _upi_id(rng: random.Random, phone_style: bool = False) -> str:
-    handle = pick(rng, [h for h in specimen.UPI_HANDLES])
+    handle = pick(
+        rng, [h for h in specimen.UPI_HANDLES if h != specimen.UPI_FAKE_HANDLE]
+    )  # real handles only
     if phone_style:
         return f"{specimen.phone_number(rng)}@{handle}"
     return specimen.upi_id(rng, handle)
@@ -162,11 +247,22 @@ def _fake_upi(rng: random.Random, kind: str) -> Msg:
         text = pick(rng, ["{l} {k}", "{k}", "{k} {l}", "click karo {k}"]).format(l=lure, k=link)
     elif kind == "app_deeplink":
         uid = _upi_id(rng)
-        scheme = pick(rng, ["phonepe://pay?pa=", "paytmmp://pay?pa=", "tez://upi/pay?pa=", "gpay://upi/pay?pa=", "upi://collect?pa="])
+        scheme = pick(
+            rng,
+            [
+                "phonepe://pay?pa=",
+                "paytmmp://pay?pa=",
+                "tez://upi/pay?pa=",
+                "gpay://upi/pay?pa=",
+                "upi://collect?pa=",
+            ],
+        )
         text = f"{lure} {scheme}{uid}&am={rng.randint(1, 500)}"
     elif kind == "pay_to_id":
         uid = _upi_id(rng)
-        text = pick(rng, ["{l} on {u}", "{l} UPI: {u}", "{u} pe {l}", "{l} -> {u}", "upi id {u} {l}"]).format(l=lure, u=uid)
+        text = pick(rng, ["{l} on {u}", "{l} UPI: {u}", "{u} pe {l}", "{l} -> {u}", "upi id {u} {l}"]).format(
+            l=lure, u=uid
+        )
     elif kind == "phone_upi":
         uid = _upi_id(rng, phone_style=True)
         text = pick(rng, ["{l} {u}", "gpay number {u} {l}", "{l} on {u}"]).format(l=lure, u=uid)
@@ -190,16 +286,18 @@ def _fake_upi(rng: random.Random, kind: str) -> Msg:
             4: f"{local}＠{handle}",
         }[form]
         text = f"{lure} {shown}"
-    else:  # qr_lure
-        text = pick(rng, [
-            "QR scan karke {a} bhejo prize pakka", "scan the QR on screen and pay {a} to unlock", "screen pe jo QR hai usse {a} bhejo shoutout ke liye",
-            "scan karke {a} dalo bhai", "QR code scan karo aur {a} pay karo reward lo",
-        ]).format(a=amt)  # fmt: skip
     lang = "deva" if any("ऀ" <= c <= "ॿ" for c in text) else "hinglish"
     return Msg(text, "fake_upi", kind, lang, tags=tags)
 
 
-UPI_COUNTS = {"deeplink": 40, "app_deeplink": 25, "pay_to_id": 50, "phone_upi": 25, "collect": 20, "obfuscated": 25, "qr_lure": 15}
+UPI_COUNTS = {
+    "deeplink": 40,
+    "app_deeplink": 25,
+    "pay_to_id": 65,
+    "phone_upi": 25,
+    "collect": 20,
+    "obfuscated": 25,
+}
 
 
 def fake_upi(rng: random.Random, counts: dict[str, int] | None = None) -> list[Msg]:
@@ -209,15 +307,49 @@ def fake_upi(rng: random.Random, counts: dict[str, int] | None = None) -> list[M
     return out
 
 
+QR_LURES = [
+    "QR scan karke {a} bhejo prize pakka", "scan the QR on screen and pay {a} to unlock", "screen pe jo QR hai usse {a} bhejo shoutout ke liye",
+    "scan karke {a} dalo bhai", "QR code scan karo aur {a} pay karo reward lo", "is QR ko scan karo {a} bhejo diamonds milenge",
+]  # fmt: skip
+
+
+def qr_lures(rng: random.Random, n: int) -> list[Msg]:
+    """Payment lures with no id or link at all: only context (or an LLM) can flag them, so they are reported by
+    kind and left out of the gating rates (``gate=False``)."""
+    return _uniq(
+        n,
+        lambda: Msg(
+            pick(rng, QR_LURES).format(a=pick(rng, AMOUNTS)), "scam", "qr_lure", "hinglish", gate=False
+        ),
+    )
+
+
 # --- hard negatives ---------------------------------------------------------------------------------------------------
 LEGIT_URLS = [
-    "https://www.youtube.com/watch?v=AbCdEfGhIjK", "https://youtu.be/AbCdEfGhIjK", "https://www.twitch.tv/specimenstreamer", "https://www.instagram.com/specimen_streamer",
-    "https://en.wikipedia.org/wiki/Battle_royale_game", "https://maps.google.com/?q=Pune", "https://github.com/specimen/overlay", "https://www.reddit.com/r/Android",
-    "https://store.steampowered.com/app/570", "https://www.bbc.com/news", "https://twitter.com/specimen_streamer", "https://discord.com/channels/specimen",
+    "https://www.youtube.com/watch?v=AbCdEfGhIjK",
+    "https://youtu.be/AbCdEfGhIjK",
+    "https://www.twitch.tv/specimenstreamer",
+    "https://www.instagram.com/specimen_streamer",
+    "https://en.wikipedia.org/wiki/Battle_royale_game",
+    "https://maps.google.com/?q=Pune",
+    "https://github.com/specimen/overlay",
+    "https://www.reddit.com/r/Android",
+    "https://store.steampowered.com/app/570",
+    "https://www.bbc.com/news",
+    "https://twitter.com/specimen_streamer",
+    "https://discord.com/channels/specimen",
 ]
 LEGIT_CARRIERS = [
-    "bhai ye clip dekho {u}", "yahan se patch notes padho {u}", "streamer ka instagram {u}", "wiki pe likha hai {u}", "map ka link {u}", "yt pe full video {u}",
-    "sab ye dekho {u} mast hai", "new trailer {u}", "yaar ye tutorial {u}", "check this {u}",
+    "bhai ye clip dekho {u}",
+    "yahan se patch notes padho {u}",
+    "streamer ka instagram {u}",
+    "wiki pe likha hai {u}",
+    "map ka link {u}",
+    "yt pe full video {u}",
+    "sab ye dekho {u} mast hai",
+    "new trailer {u}",
+    "yaar ye tutorial {u}",
+    "check this {u}",
 ]
 BENIGN_PAY = [
     "bhai maine UPI se pay kar diya", "gpay pe cashback mila aaj", "paytm kar diya bhai", "phonepe down hai kya", "UPI se kitna limit hota hai ek din ka",
@@ -248,4 +380,4 @@ def hard_negatives(rng: random.Random, n: int) -> list[Msg]:
     return out
 
 
-__all__ = ["fake_upi", "hard_negatives", "scams"]
+__all__ = ["fake_upi", "hard_negatives", "qr_lures", "scams"]

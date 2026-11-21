@@ -72,6 +72,8 @@ CLIP_BUCKETS = (
     "text_phone",
     "faces_enrolled",
 )
+#: clip buckets that carry faces: the allowlisted-face metric needs longer (and more) clips than the others
+FACE_CLIP_BUCKETS = ("faces_enrolled",)
 _CLEAN_ATTR_DROP = ("quad", "visible", "in_frame_fraction", "min_side_px", "occlusion_fraction")
 
 

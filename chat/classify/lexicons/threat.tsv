@@ -1,16 +1,16 @@
 # Threats of violence (Hinglish, Devanagari, English). Hand-curated. category: threat
 # Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)
-maar dunga	threat	3	hi	word
-maar dalunga	threat	3	hi	word
-maar daalunga	threat	3	hi	word
-maar dunga tujhe	threat	3	hi	word
+maar dunga	threat	3	hi	word	game
+maar dalunga	threat	3	hi	word	game
+maar daalunga	threat	3	hi	word	game
+maar dunga tujhe	threat	3	hi	word	game
 jaan se maar	threat	3	hi	word
 jaan se mar	threat	3	hi	word
 jaan se marwa	threat	3	hi	word
-kaat dunga	threat	3	hi	word
-kaat dalunga	threat	3	hi	word
-goli maar	threat	3	hi	word
-goli mar dunga	threat	3	hi	word
+kaat dunga	threat	3	hi	word	game
+kaat dalunga	threat	3	hi	word	game
+goli maar	threat	3	hi	word	game
+goli mar dunga	threat	3	hi	word	game
 tujhe utha lunga	threat	3	hi	word
 utha lenge tujhe	threat	3	hi	word
 marwa dunga	threat	3	hi	word
@@ -18,20 +18,101 @@ tera ghar jala	threat	3	hi	word
 ghar jala denge	threat	3	hi	word
 family ko maar	threat	3	hi	word
 acid phek	threat	3	hi	word
-dekh lunga tujhe	threat	2	hi	word
-tujhe dekh lunga	threat	2	hi	word
+dekh lunga tujhe	threat	2	hi	word	game
+tujhe dekh lunga	threat	2	hi	word	game
 ghar aake maarunga	threat	3	hi	word
 ghar aa ke maarunga	threat	3	hi	word
-kill you	threat	3	en	word
+kill you	threat	3	en	word	game
 kill yourself	threat	3	en	word
 i will find you	threat	2	en	word
 i will hurt you	threat	3	en	word
-i will beat you	threat	2	en	word
-मार दूंगा	threat	3	hi	word
-मार डालूंगा	threat	3	hi	word
+i will beat you	threat	2	en	word	game
+मार दूंगा	threat	3	hi	word	game
+मार डालूंगा	threat	3	hi	word	game
 जान से मार	threat	3	hi	word
-काट दूंगा	threat	3	hi	word
+काट दूंगा	threat	3	hi	word	game
 गोली मार	threat	3	hi	word
 उठा लूंगा	threat	3	hi	word
-घर जला दूंगा	threat	3	hi	word
-देख लूंगा	threat	2	hi	word
+देख लूंगा	threat	2	hi	word	game
+
+# Added: regex threats (matched on the lowercase lexicon view; Devanagari uses the anusvara form).
+\bi\s*(?:know|will\s+find|ll\s+find|can\s+find|ll\s+track|will\s+track|will\s+hunt)(?:\s+out)?\s+where\s+(?:you|u)\s+(?:live|stay)\b	threat	3	hi	regex
+\bswat(?:ting|ted)\b|\bswat\s+(?:team|bhej|bula|call|kar)|\bswat\s+bhej	threat	3	hi	regex
+\bhack\s+kar\s+(?:du+nga|dunga|dungi|denge|dalunga)\b	threat	2	hi	regex
+\bhack\s+kar\s+dunga\b	threat	2	hi	regex
+\bbajaa?(?:unga|ata\s+hu|ta\s+hu|yenge|\s+dunga|ayenge)\b	threat	2	hi	regex
+\bnahi\s+chh?o+d(?:unga|ungi|enge)\b	threat	2	hi	regex
+\bnhi\s+chh?o+d(?:unga|ungi|enge)\b	threat	2	hi	regex
+\b(?:tera|tere|teri)\s+(?:ghar|address|location)\s+(?:pata|mil|dhund|nikal)	threat	2	hi	regex
+\bghar\s+(?:ka\s+)?pata\s+(?:hai|chal)\s+(?:mujhe|hume)\b	threat	2	hi	regex
+\bdox+(?:ing|ed)?\s+(?:you|tujhe|tera)\b	threat	2	hi	regex
+हैक\s+कर\s+(?:दूंगा|दूंगी|देंगे|दूंगे)	threat	2	hi	regex
+नहीं\s+छोड(?:ूंगा|ूंगी|ेंगे|ूंगे)	threat	2	hi	regex
+\bwhere\s+you\s+live\b.{0,20}\b(?:know|find)\b	threat	3	hi	regex
+\b(?:sar|sir|haath|haat|taang|pair|haddi|jabda|gardan)\s+(?:tod|kaat)\s+(?:dunga|denge|dungi|dalunga|dalenge)\b	threat	2	en	regex
+\bi\s*(?:will|ll|am\s+going\s+to|m\s+going\s+to)\s+(?:end|murder)\s+(?:you|u)\b	threat	3	en	regex
+\bma+r(?:unga|ungi|enge)\b	threat	2	hi	regex
+मार(?:ूं|ुं)गा	threat	2	hi	regex
+मार(?:ूं|ुं)गी	threat	2	hi	regex
+
+# Round 2: threat STRUCTURES (violence verb + first-person future, body part + break, outcome nouns, intimidation) in
+# Hinglish, English, Devanagari and the four regional languages. Matched on the lowercase lexicon view.
+# game = only a threat when the message has no game wording (or has a real-life cue); see rules.py.
+\b(?:maar|mar|kaat|kat|jala|kuchal|utha|nipta|nipat|khatam|chir|phaad|phad|bhun)\s*(?:ke\s+)?(?:du+nga|du+ngi|dun+ga|duga|dalu+nga|dalu+ngi|dalenge|denge|lu+nga|lu+ngi|lenge|dalna|dena)\b	threat	3	hi	regex	game
+\b(?:tod|phod|fod|pel|thok|dhun|barbaad)\s*(?:ke\s+)?(?:du+nga|du+ngi|dun+ga|duga|dalu+nga|dalu+ngi|dalenge|denge|lu+nga|lu+ngi|lenge|dena)\b	threat	2	hi	regex	game
+\b(?:haath|hath|pair|taang|muh|munh|mu+nh|jabda|gardan|sar|sir|dant|daant|ungli|haddi|pasli|haddi\s+pasli)\s+(?:tod|phod|kaat|fod|ek)\s*(?:ke\s+)?(?:kar\s+)?(?:du+nga|dun+ga|denge|dungi|dalunga|dalenge|du+ngi)\b	threat	3	hi	regex
+\bhaddi\s+pasli\b	threat	2	hi	regex
+\b(?:encounter|accident|janaza|jaanaza|tukde\s+tukde|tukde|cheer\s+phaad)\b.{0,15}\b(?:kar|karwa|kara|bana|nikal)\s*(?:ke\s+)?(?:du+nga|dun+ga|denge|dungi|dalunga|dalenge|dena)\b	threat	3	hi	regex
+\b(?:kaam\s+tamam|game\s+over|hisaab|hisab|bura\s+haal|badla)\b.{0,15}\b(?:kar|karwa|bana|le|chuka)\s*(?:ke\s+)?(?:du+nga|dun+ga|denge|dungi|lunga|lenge|dalunga|dena)\b	threat	2	hi	regex	game
+\b(?:zinda|jinda|jeeta|jita)\s+(?:nahi|nhi|na)\s+(?:chhod|chod|bachega|bachne|jane|jaane|rehne|chhodunga)\w*	threat	3	hi	regex
+\b(?:tujhe|tumhe|tuje|tere\s+ko|tumko|tujhko|tera|teri|tere)\b.{0,25}\bchh?o+d(?:unga|ungi|enge|du+nga)\s+(?:nahi|nhi|nai)\b	threat	2	hi	regex
+\b(?:jaan|jan)\s+(?:se\s+)?(?:le\s+lunga|le\s+lenge|le\s+lungi|le\s+loonga|loonga|lunga)\b	threat	3	hi	regex
+\b(?:tu|tum)\s+(?:mar|maar)\s+(?:ja+|jao|jaa)\b|\bmar\s+(?:ja+|jao)\s+(?:tu|tum|saale|kutte)\b|\bja\s+ke\s+mar\s+ja\w*|\b(?:tu|tum)\s+(?:marega|maregi|mar\s+jayega|mar\s+jaayega|mar\s+jaega)\b	threat	3	hi	regex
+\b(?:tu|tum|tujhe|tumhe)\s+(?:dekh\s+lena|dekh\s+lunga|dekh\s+lenge)\b|\b(?:bas\s+)?dekh\s+lena\s+(?:tu|tujhe|tum|tumhe)\b|\btu\s+bas\s+dekh\b	threat	2	hi	regex	game
+\b(?:bahar|ghar\s+ke\s+bahar|niche|neeche)\s+(?:mil|aa|nikal)\b.{0,20}\b(?:fir|phir|tab|dekh|batata|batata\s+hu|dikhata)\b	threat	2	hi	regex
+\bsabak\s+sikha\s+(?:dunga|dungi|denge|du+nga)\b|\bsabaq\s+sikha\w*	threat	2	hi	regex	game
+\b(?:tujhe|tumhe|tere\s+ko)\b.{0,15}\b(?:utha|uthwa|gayab|gaayab)\s+(?:lunga|lenge|dunga|denge|karwa)\w*	threat	3	hi	regex
+\b(?:mere|meri)\s+(?:bande|log|aadmi|gang)\s+(?:tujhe|tumhe|tere\s+ko)\b.{0,15}\b(?:utha|maar|dhoond|dhund|nipta|dekh)\w*	threat	3	hi	regex
+\b(?:tera|tere|teri|tumhara|tumhare)\s+(?:bhi\s+)?(?:parivar|family|bachche|bacche|maa|behen|bhai|ghar)\b.{0,25}\b(?:nahi\s+chhod|nahi\s+bachega|nahi\s+bachenge|maar|khatam|jala|barbaad)\w*	threat	3	hi	regex
+\b(?:teri|tumhari)\s+(?:family|maa|behen|bachchi|beti)\s+(?:ko\s+)?(?:bhi\s+)?(?:nahi\s+chhod|maar|utha|dekh)\w*	threat	3	hi	regex
+सबक\s+सिखा	threat	2	hi	regex
+जिंदा\s+नहीं\s+छोड	threat	3	hi	regex
+जान\s+ले\s+(?:लूंगा|लूंगी|लेंगे|लूंगे)	threat	3	hi	regex
+(?:हाथ|पैर|टांग|पांव|गर्दन|मुंह|हड्डी|पसली)\s+(?:तोड|काट|फोड)\s+(?:दूंगा|दूंगी|देंगे|डालूंगा)	threat	3	hi	regex
+(?:तोड|उड़ा|उडा|ठोक|पीट|खत्म\s+कर|जला|काट|कुचल)\s+(?:दूंगा|दूंगी|देंगे|डालूंगा|डालूंगी|डालेंगे)	threat	3	hi	regex
+तेरा\s+(?:एनकाउंटर|एक्सीडेंट|काम\s+तमाम)	threat	3	hi	regex
+(?:तू|तुम)\s+मर\s+जा\S*	threat	3	hi	regex
+नहीं\s+बचेगा|नहीं\s+बचेगी|नहीं\s+बचोगे	threat	2	hi	regex
+\bi\s*(?:will|ll|'ll|am\s+gonna|m\s+gonna|am\s+going\s+to|m\s+going\s+to|gonna|wanna)\s+(?:stab|shoot|burn|murder|strangle|choke|cut|rape|hunt|hurt)\s+(?:you|u|ur|your)\b	threat	3	en	regex
+\bi\s*(?:will|ll|'ll|am\s+gonna|m\s+gonna|am\s+going\s+to|m\s+going\s+to|gonna|wanna)\s+(?:kill|destroy|beat|smash|wreck|punch|slap|knock|break|end|get|fuck\s+up|bash)\s+(?:you|u|ur|your)\b	threat	3	en	regex	game
+\b(?:break|snap|twist|cut|slit|rip)\s+(?:your|ur)\s+(?:neck|legs?|arms?|face|jaw|throat|skull|bones?|fingers?)\b	threat	3	en	regex
+\bwatch\s+(?:your|ur)\s+back\b|\b(?:we|i|they)(?:'re|\s+are|\s+r|\s+am|'m)?\s+(?:coming|comin)\s+for\s+(?:you|u)\b|\b(?:you|u)\s+(?:will|ll|'ll|gonna)\s+(?:regret|pay|suffer|bleed)\b|\bsleep\s+with\s+one\s+eye\s+open\b|\bsee\s+you\s+(?:outside|irl|in\s+person)\b|\b(?:next|when)\s+(?:time\s+)?i\s+see\s+(?:you|u)\b	threat	2	en	regex	game
+\b(?:you|u)(?:'re|\s+are|\s+r|\s+re)?\s+(?:dead|done|finished|gone)\s*(?:man|bro|bruh|meat|kid|tonight|tomorrow)?\b	threat	2	en	regex	game
+\b(?:jump|hang)\s+(?:off|yourself)\b|\bjump\s+off\s+(?:a|the)\s+(?:bridge|cliff|building|roof)\b|\bslit\s+your\s+(?:wrists?|throat)\b|\b(?:end|off|unalive)\s+(?:yourself|urself)\b|\bkill\s+urself\b	threat	3	en	regex
+\b(?:somebody|someone)\s+(?:should|needs\s+to|ought\s+to)\s+(?:kill|shoot|stab|hurt|beat|rape|burn)\s+(?:you|u|him|her|this\s+\w+|that\s+\w+)\b	threat	3	en	regex
+\bi\s+(?:know|have|found)\s+(?:your\s+)?(?:address|where\s+you\s+(?:live|stay|sleep|work))\b	threat	3	en	regex
+\bchamp(?:estha|estanu|esthanu|esta|uta|utha|etta|esthaa)\b|\bchastav\w*|\bnarik(?:esta|estha|estanu)\b	threat	3	te	regex
+\b(?:ninnu|nee|ni)\b.{0,20}\b(?:champ|dengu|dengutha|narik)\w*	threat	3	te	regex
+\bkoll(?:thini|thene|utene|uttene|uve|tini)\b|\bhodi(?:thini|thene|eethini)\b|\bsaa?y(?:i|e)sthini\b|\bsaaysthini\b	threat	3	kn	regex
+\bkolla\s+poren\b|\bkolluven\b|\bkolren\b|\bkonnuduven\b|\badichu\s+(?:kolluven|kolren|ketchuruven|kolla)\b|\badichuruven\b|\bvett(?:uven|uren)\b|\bvetti\s+poduven\b|\bthookiduven\b	threat	3	ta	regex
+\bmere\s+(?:felbo|phelbo|dibo)\b|\bkhun\s+korbo\b|\bkheye\s+felbo\b|\bpitiye\s+(?:dibo|lash)\b|\bthengabo\b	threat	3	bn	regex
+చంప[ేె]?స్త\S*|చంపు[తత]\S*|నరికేస్త\S*	threat	3	te	regex
+ಕೊಲ್ಲುತ್ತೇನೆ|ಕೊಲ್ತೀನಿ|ಕೊಲ್ತಿನಿ|ಹೊಡಿತೀನಿ|ಹೊಡೀತೀನಿ|ಹೊಡೆಯುತ್ತೇನೆ|ಸಾಯಿಸ್ತೀನಿ|ಕೊಲ್ಲುವೆ	threat	3	kn	regex
+கொல்லுவேன்|கொன்னுடுவேன்|கொல்லப்போறேன்|கொல்லப்\s+போறேன்|கொல்வேன்|அடிச்சுடுவேன்|வெட்டுவேன்|வெட்டிடுவேன்	threat	3	ta	regex
+মেরে\s+ফেলব\S*|খুন\s+করব|মেরে\s+দেব	threat	3	bn	regex
+
+\bfind\s+(?:you|u)\s+and\s+(?:hurt|kill|beat|stab|rape|burn|shoot)\w*	threat	3	en	regex
+
+# Round 2c: more threat structures.
+\b(?:haal|halat|bura\s+haal|anjaam)\s+(?:kar|karunga|kar\s+dunga|kar\s+denge|dikhaunga)\b|\byaad\s+rakhega\s+(?:zindagi|life|umar)\b	threat	3	hi	regex
+\b(?:teri|tumhari|tera)\s+khair\s+(?:nahi|nhi|nai)\b	threat	2	hi	regex	game
+\bdekh\s+(?:hi\s+)?(?:lunga|lenge|lungi)\b	threat	2	hi	regex	game
+\baa\s+(?:raha|rahi|rahe)\s+(?:hu|hun|hoon|hain)\b.{0,25}\b(?:tere|tumhare|teri)\s+(?:ghar|address|area|ilake|gali|mohalle)\b	threat	3	hi	regex
+\bek\s+kar\s+(?:du+nga|dunga|denge|dungi)\b	threat	2	hi	regex	game
+\bwhat'?s\s+coming\s+to\s+(?:you|u)\b	threat	2	en	regex	game
+\bhope\s+(?:ur|your|u)\s+(?:family|mom|mother|dad|father|parents|kids?|wife|sister|brother)\s+(?:gets?|die|dies|dead|burn|burns|suffer|suffers|get)\b|\bhope\s+(?:you|u)\s+(?:die|burn|rot|suffer|get\s+(?:hit|run\s+over|killed|hurt|raped))\b|\bi\s+hope\s+(?:you|u)\s+get\s+(?:run\s+over|hit)\b	threat	3	en	regex
+\bi'?ll\s+(?:find|get)\s+where\s+(?:you|u)\s+(?:live|stay)\b.{0,25}\b(?:burn|kill|hurt|beat|destroy)\b|\bburn\s+(?:it|your\s+house|ur\s+house)\s+down\b	threat	3	en	regex
+\bmake\s+sure\s+(?:you|u)\s+get\s+hurt\b|\bmake\s+(?:you|u)\s+(?:pay|suffer|regret|bleed)\b	threat	3	en	regex	game
+செத்து\s*போ|செத்துடு	threat	3	ta	regex
+விடமாட்டேன்	threat	2	ta	regex
+\buth(?:a|aa)\s+(?:ke|kar)\s+le\s+(?:ja|jaa|jayenge|jaayenge|jaunga|chalenge)\w*	threat	3	hi	regex	game

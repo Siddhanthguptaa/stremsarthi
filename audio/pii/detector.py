@@ -24,9 +24,10 @@ Timing = Callable[[str, float, float], None]
 
 
 def fallback_mutes(c: Cand) -> bool:
-    """5.7: with no usable LLM answer an ambiguous span is PII if it is a number run of 6+ digits or lies
-    inside a watch window; otherwise it passes."""
-    return c.n_digits >= 6 or c.cue_active
+    """5.7: with no usable LLM answer an ambiguous span is PII if it is a number run of 6+ digits, lies
+    inside a watch window, or is a provisional guess (3+ digits spoken one by one, a spelt-out id); otherwise
+    it passes."""
+    return c.n_digits >= 6 or c.cue_active or c.provisional
 
 
 class SpokenPiiDetector:

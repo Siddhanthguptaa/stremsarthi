@@ -20,7 +20,9 @@ DEFAULT_OUT = "eval/data/generated/audio"
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m eval.data_gen.audio", description=__doc__)
-    p.add_argument("--out", default=DEFAULT_OUT, help="output directory (relative paths resolve from the repo root)")
+    p.add_argument(
+        "--out", default=DEFAULT_OUT, help="output directory (relative paths resolve from the repo root)"
+    )
     p.add_argument("--seed", type=int, default=DEFAULT_SEED)
     p.add_argument("--n", type=int, default=DEFAULT_N, help="clips (default %(default)s)")
     p.add_argument("--engine", choices=("auto", "flite", "tone"), default="auto")
@@ -35,7 +37,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ENV ERROR: {exc}", file=sys.stderr)
         return 2
     bad = scan_obj(m)
-    print(json.dumps({"out": str(out), "engine": m["engine"], "totals": m["totals"], "seconds": round(time.time() - t0, 1), "manifest_sha256": manifest_hash(m)}, indent=1))
+    print(
+        json.dumps(
+            {
+                "out": str(out),
+                "engine": m["engine"],
+                "totals": m["totals"],
+                "seconds": round(time.time() - t0, 1),
+                "manifest_sha256": manifest_hash(m),
+            },
+            indent=1,
+        )
+    )
     if bad:
         print(f"FORBIDDEN PATTERNS in output: {len(bad)}", file=sys.stderr)
         return 1

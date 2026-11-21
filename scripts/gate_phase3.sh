@@ -12,7 +12,7 @@ source scripts/gate_lib.sh
 usage() {
   cat <<'EOF'
 Usage: scripts/gate_phase3.sh [--data DIR] [--out DIR] [--report-dir DIR] [--api-stride N] [--quick]
-                              [--defect NAME] [--allow-tone] [--plan] [--help]
+                              [--reference [--defect NAME]] [--allow-tone] [--plan] [--help]
 
 Gate G3 (PLAN section 5): spoken PII (phone, OTP, UPI id, address, Aadhaar-like) in Hinglish, Hindi, English,
 Kannada, Tamil, Telugu and Bengali. 150 TTS-composed clips (about 500 SPECIMEN PII spans) with ground-truth word
@@ -40,8 +40,8 @@ Options:
   --api-stride N     run the api-down and local-only legs on every N-th clip (default 1 = all clips)
   --quick            main leg on every 3rd clip and the failure legs on every 6th; report <date>-phase3-quick.md.
                      The full run is the one that closes the gate.
-  --defect NAME      seed a defect (failsafe_off | bad_stt | slow_stt): the gate must then exit 1; report
-                     <date>-phase3-defect-NAME.md
+  --reference        run the stand-in audio module that is right by construction (validates the harness: must pass)
+  --defect NAME      with --reference, seed a defect (late_spans | no_failsafe | no_mouth): must exit 1
   --allow-tone       accept the tone-fallback dataset (unit tests only; never closes the gate)
   --plan             print the steps that would run and exit 0 without running anything
   -h, --help         this text
@@ -53,13 +53,14 @@ EOF
 
 die_usage() { echo "gate_phase3.sh: $1" >&2; echo "try: scripts/gate_phase3.sh --help" >&2; exit 2; }
 
-DATA="${SS_AUDIO_DATA:-eval/data/generated/audio}"; OUT=""; REPORT_DIR=""; API_STRIDE=1; QUICK=0; DEFECT=""; TONE=0; PLAN=0
+DATA="${SS_AUDIO_DATA:-eval/data/generated/audio}"; OUT=""; REPORT_DIR=""; API_STRIDE=1; QUICK=0; DEFECT=""; TONE=0; REF=0; PLAN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     -h | --help) usage; exit 0 ;;
     --plan) PLAN=1 ;;
     --quick) QUICK=1 ;;
     --allow-tone) TONE=1 ;;
+    --reference) REF=1 ;;
     --data) [ $# -ge 2 ] || die_usage "--data needs a directory"; DATA="$2"; shift ;;
     --data=*) DATA="${1#*=}" ;;
     --out) [ $# -ge 2 ] || die_usage "--out needs a directory"; OUT="$2"; shift ;;
@@ -74,17 +75,20 @@ while [ $# -gt 0 ]; do
   shift
 done
 case "$API_STRIDE" in '' | *[!0-9]* | 0) die_usage "--api-stride must be a positive integer, got '$API_STRIDE'" ;; esac
-case "$DEFECT" in '' | failsafe_off | bad_stt | slow_stt) ;; *) die_usage "--defect must be failsafe_off, bad_stt or slow_stt, got '$DEFECT'" ;; esac
+case "$DEFECT" in '' | late_spans | no_failsafe | no_mouth) ;; *) die_usage "--defect must be late_spans, no_failsafe or no_mouth, got '$DEFECT'" ;; esac
+[ -z "$DEFECT" ] || [ "$REF" = 1 ] || die_usage "--defect needs --reference"
 
 [ -n "$OUT" ] || OUT="eval/runs/phase3-$(date +%Y%m%d-%H%M%S)"
 PHASE_NAME=phase3
 MAIN_STRIDE=1
 if [ "$QUICK" = 1 ]; then PHASE_NAME="${PHASE_NAME}-quick"; MAIN_STRIDE=3; [ "$API_STRIDE" -ge 6 ] || API_STRIDE=6; fi
+[ "$REF" = 0 ] || PHASE_NAME="${PHASE_NAME}-reference"
 [ -z "$DEFECT" ] || PHASE_NAME="${PHASE_NAME}-defect-${DEFECT}"
 PY=(python -m eval.phase3 --data "$DATA" --out "$OUT")
 [ "$TONE" = 0 ] || PY+=(--allow-tone)
 DEF=()
-[ -z "$DEFECT" ] || DEF=(--defect "$DEFECT")
+[ "$REF" = 0 ] || DEF+=(--reference)
+[ -z "$DEFECT" ] || DEF+=(--defect "$DEFECT")
 
 step() {
   if [ "$PLAN" = 1 ]; then

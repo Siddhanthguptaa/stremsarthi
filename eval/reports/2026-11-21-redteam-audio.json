@@ -1,0 +1,3578 @@
+{
+  "banner": "",
+  "baseline": null,
+  "checks": [
+    {
+      "name": "miss rate: audio digits_fillers (PII words leaked)",
+      "note": "2/68 words, 1/6 spans leaked",
+      "op": "<=",
+      "passed": true,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.029412
+    },
+    {
+      "name": "miss rate: audio code_mixed_numbers (PII words leaked)",
+      "note": "8/51 words, 2/6 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.156863
+    },
+    {
+      "name": "miss rate: audio letter_spelling (PII words leaked)",
+      "note": "60/121 words, 2/4 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.495868
+    },
+    {
+      "name": "miss rate: audio read_across_pauses (PII words leaked)",
+      "note": "13/60 words, 3/6 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.216667
+    },
+    {
+      "name": "miss rate: audio whisper_noisy (PII words leaked)",
+      "note": "0/80 words, 0/8 spans leaked",
+      "op": "<=",
+      "passed": true,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "miss rate: audio fast_speech (PII words leaked)",
+      "note": "16/60 words, 3/6 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.266667
+    },
+    {
+      "name": "miss rate: audio overlap_speakers (PII words leaked)",
+      "note": "13/59 words, 4/6 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.220339
+    },
+    {
+      "name": "miss rate: audio background_music (PII words leaked)",
+      "note": "0/60 words, 0/6 spans leaked",
+      "op": "<=",
+      "passed": true,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "miss rate: audio split_segments (PII words leaked)",
+      "note": "2/52 words, 2/6 spans leaked",
+      "op": "<=",
+      "passed": true,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.038462
+    },
+    {
+      "name": "miss rate: audio upi_phonetic (PII words leaked)",
+      "note": "9/42 words, 4/4 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.214286
+    },
+    {
+      "name": "miss rate: audio stt_failure (PII words leaked)",
+      "note": "22/119 words, 4/12 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.05,
+      "unit": "",
+      "value": 0.184874
+    },
+    {
+      "name": "miss rate: audio asr_drops (PII words leaked)",
+      "note": "22/80 words, 6/8 spans leaked",
+      "op": "<=",
+      "passed": false,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.275
+    }
+  ],
+  "data": {
+    "categories": {
+      "asr_drops": {
+        "ci": [
+          0.1892,
+          0.3814
+        ],
+        "clips": 8,
+        "digits": {
+          "ci": [
+            0.1892,
+            0.3814
+          ],
+          "k": 22,
+          "n": 80,
+          "rate": 0.275
+        },
+        "k": 22,
+        "n": 80,
+        "rate": 0.275,
+        "reasons": {
+          "late_span": 1,
+          "no_span": 15,
+          "partial_span": 6
+        },
+        "spans": 8,
+        "spans_leaked": 6
+      },
+      "background_music": {
+        "ci": [
+          0.0,
+          0.0602
+        ],
+        "clips": 6,
+        "digits": {
+          "ci": [
+            0.0,
+            0.0602
+          ],
+          "k": 0,
+          "n": 60,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 60,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 6,
+        "spans_leaked": 0
+      },
+      "code_mixed_numbers": {
+        "ci": [
+          0.0817,
+          0.2801
+        ],
+        "clips": 6,
+        "digits": {
+          "ci": [
+            0.0817,
+            0.2801
+          ],
+          "k": 8,
+          "n": 51,
+          "rate": 0.156863
+        },
+        "k": 8,
+        "n": 51,
+        "rate": 0.156863,
+        "reasons": {
+          "no_span": 5,
+          "partial_span": 3
+        },
+        "spans": 6,
+        "spans_leaked": 2
+      },
+      "digits_fillers": {
+        "ci": [
+          0.0081,
+          0.101
+        ],
+        "clips": 6,
+        "digits": {
+          "ci": [
+            0.0081,
+            0.101
+          ],
+          "k": 2,
+          "n": 68,
+          "rate": 0.029412
+        },
+        "k": 2,
+        "n": 68,
+        "rate": 0.029412,
+        "reasons": {
+          "no_span": 2
+        },
+        "spans": 6,
+        "spans_leaked": 1
+      },
+      "fast_speech": {
+        "ci": [
+          0.1713,
+          0.3901
+        ],
+        "clips": 6,
+        "digits": {
+          "ci": [
+            0.1713,
+            0.3901
+          ],
+          "k": 16,
+          "n": 60,
+          "rate": 0.266667
+        },
+        "k": 16,
+        "n": 60,
+        "rate": 0.266667,
+        "reasons": {
+          "no_span": 15,
+          "partial_span": 1
+        },
+        "spans": 6,
+        "spans_leaked": 3
+      },
+      "letter_spelling": {
+        "ci": [
+          0.4083,
+          0.5837
+        ],
+        "clips": 4,
+        "digits": {
+          "ci": [
+            0.0,
+            0.3244
+          ],
+          "k": 0,
+          "n": 8,
+          "rate": 0.0
+        },
+        "k": 60,
+        "n": 121,
+        "rate": 0.495868,
+        "reasons": {
+          "late_span": 2,
+          "no_span": 56,
+          "partial_span": 2
+        },
+        "spans": 4,
+        "spans_leaked": 2
+      },
+      "overlap_speakers": {
+        "ci": [
+          0.1335,
+          0.3413
+        ],
+        "clips": 6,
+        "digits": {
+          "ci": [
+            0.1335,
+            0.3413
+          ],
+          "k": 13,
+          "n": 59,
+          "rate": 0.220339
+        },
+        "k": 13,
+        "n": 59,
+        "rate": 0.220339,
+        "reasons": {
+          "late_span": 3,
+          "no_span": 7,
+          "partial_span": 3
+        },
+        "spans": 6,
+        "spans_leaked": 4
+      },
+      "read_across_pauses": {
+        "ci": [
+          0.1312,
+          0.3362
+        ],
+        "clips": 6,
+        "digits": {
+          "ci": [
+            0.1312,
+            0.3362
+          ],
+          "k": 13,
+          "n": 60,
+          "rate": 0.216667
+        },
+        "k": 13,
+        "n": 60,
+        "rate": 0.216667,
+        "reasons": {
+          "no_span": 12,
+          "partial_span": 1
+        },
+        "spans": 6,
+        "spans_leaked": 3
+      },
+      "split_segments": {
+        "ci": [
+          0.0106,
+          0.1298
+        ],
+        "clips": 6,
+        "digits": {
+          "ci": [
+            0.0106,
+            0.1298
+          ],
+          "k": 2,
+          "n": 52,
+          "rate": 0.038462
+        },
+        "k": 2,
+        "n": 52,
+        "rate": 0.038462,
+        "reasons": {
+          "no_span": 2
+        },
+        "spans": 6,
+        "spans_leaked": 2
+      },
+      "stt_failure": {
+        "ci": [
+          0.1254,
+          0.2641
+        ],
+        "clips": 12,
+        "digits": {
+          "ci": [
+            0.1254,
+            0.2641
+          ],
+          "k": 22,
+          "n": 119,
+          "rate": 0.184874
+        },
+        "k": 22,
+        "n": 119,
+        "rate": 0.184874,
+        "reasons": {
+          "no_span": 20,
+          "partial_span": 2
+        },
+        "spans": 12,
+        "spans_leaked": 4
+      },
+      "upi_phonetic": {
+        "ci": [
+          0.1171,
+          0.3594
+        ],
+        "clips": 4,
+        "digits": {
+          "ci": [
+            0.0,
+            0.3244
+          ],
+          "k": 0,
+          "n": 8,
+          "rate": 0.0
+        },
+        "k": 9,
+        "n": 42,
+        "rate": 0.214286,
+        "reasons": {
+          "late_span": 4,
+          "no_span": 1,
+          "partial_span": 4
+        },
+        "spans": 4,
+        "spans_leaked": 4
+      },
+      "whisper_noisy": {
+        "ci": [
+          0.0,
+          0.0458
+        ],
+        "clips": 8,
+        "digits": {
+          "ci": [
+            0.0,
+            0.0458
+          ],
+          "k": 0,
+          "n": 80,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 80,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 8,
+        "spans_leaked": 0
+      }
+    },
+    "rows": [
+      {
+        "category": "digits_fillers",
+        "digit_leaked": 2,
+        "digit_words": 10,
+        "dur_s": 10.9936,
+        "failsafe_spans": 0,
+        "id": "rt-digits_fillers-fillers_every_2_digits-0",
+        "late_spans": 0,
+        "leaked_words": 2,
+        "n_spans": 6,
+        "over_mute": 0.438356,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 2
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "fillers_every_2_digits",
+        "vad": "silero"
+      },
+      {
+        "category": "digits_fillers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 9.5705,
+        "failsafe_spans": 0,
+        "id": "rt-digits_fillers-fillers_every_2_digits-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 7,
+        "over_mute": 0.555556,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "fillers_every_2_digits",
+        "vad": "silero"
+      },
+      {
+        "category": "digits_fillers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 6.9227,
+        "failsafe_spans": 0,
+        "id": "rt-digits_fillers-fillers_random-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.447552,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "fillers_random",
+        "vad": "silero"
+      },
+      {
+        "category": "digits_fillers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.8684,
+        "failsafe_spans": 0,
+        "id": "rt-digits_fillers-fillers_random-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.522727,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "fillers_random",
+        "vad": "silero"
+      },
+      {
+        "category": "digits_fillers",
+        "digit_leaked": 0,
+        "digit_words": 14,
+        "dur_s": 11.6852,
+        "failsafe_spans": 0,
+        "id": "rt-digits_fillers-restart_correction-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 8,
+        "over_mute": 0.33557,
+        "pii_words": 14,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "restart_correction",
+        "vad": "silero"
+      },
+      {
+        "category": "digits_fillers",
+        "digit_leaked": 0,
+        "digit_words": 14,
+        "dur_s": 10.4927,
+        "failsafe_spans": 0,
+        "id": "rt-digits_fillers-restart_correction-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 7,
+        "over_mute": 0.378601,
+        "pii_words": 14,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "restart_correction",
+        "vad": "silero"
+      },
+      {
+        "category": "code_mixed_numbers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.6536,
+        "failsafe_spans": 0,
+        "id": "rt-code_mixed_numbers-mixed_language_digits-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.047619,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "mixed_language_digits",
+        "vad": "silero"
+      },
+      {
+        "category": "code_mixed_numbers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.9619,
+        "failsafe_spans": 0,
+        "id": "rt-code_mixed_numbers-mixed_language_digits-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "mixed_language_digits",
+        "vad": "silero"
+      },
+      {
+        "category": "code_mixed_numbers",
+        "digit_leaked": 5,
+        "digit_words": 7,
+        "dur_s": 7.4947,
+        "failsafe_spans": 0,
+        "id": "rt-code_mixed_numbers-english_pair_words-0",
+        "late_spans": 0,
+        "leaked_words": 5,
+        "n_spans": 1,
+        "over_mute": 0.006667,
+        "pii_words": 7,
+        "reasons": {
+          "no_span": 3,
+          "partial_span": 2
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "english_pair_words",
+        "vad": "silero"
+      },
+      {
+        "category": "code_mixed_numbers",
+        "digit_leaked": 3,
+        "digit_words": 6,
+        "dur_s": 5.9447,
+        "failsafe_spans": 0,
+        "id": "rt-code_mixed_numbers-english_pair_words-1",
+        "late_spans": 0,
+        "leaked_words": 3,
+        "n_spans": 1,
+        "over_mute": 0.224138,
+        "pii_words": 6,
+        "reasons": {
+          "no_span": 2,
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "english_pair_words",
+        "vad": "silero"
+      },
+      {
+        "category": "code_mixed_numbers",
+        "digit_leaked": 0,
+        "digit_words": 8,
+        "dur_s": 7.8801,
+        "failsafe_spans": 0,
+        "id": "rt-code_mixed_numbers-double_triple_heavy-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.006667,
+        "pii_words": 8,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "double_triple_heavy",
+        "vad": "silero"
+      },
+      {
+        "category": "code_mixed_numbers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.2557,
+        "failsafe_spans": 0,
+        "id": "rt-code_mixed_numbers-double_triple_heavy-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.316239,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "double_triple_heavy",
+        "vad": "silero"
+      },
+      {
+        "category": "letter_spelling",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 10.0251,
+        "failsafe_spans": 0,
+        "id": "rt-letter_spelling-upi_letter_by_letter-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 6,
+        "over_mute": 0.066667,
+        "pii_words": 22,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "upi_letter_by_letter",
+        "vad": "silero"
+      },
+      {
+        "category": "letter_spelling",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 8.7784,
+        "failsafe_spans": 0,
+        "id": "rt-letter_spelling-upi_letter_by_letter-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 6,
+        "over_mute": 0.090909,
+        "pii_words": 21,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "upi_letter_by_letter",
+        "vad": "silero"
+      },
+      {
+        "category": "letter_spelling",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 16.5606,
+        "failsafe_spans": 0,
+        "id": "rt-letter_spelling-upi_z_for_zebra-0",
+        "late_spans": 1,
+        "leaked_words": 28,
+        "n_spans": 3,
+        "over_mute": 0.065217,
+        "pii_words": 39,
+        "reasons": {
+          "late_span": 2,
+          "no_span": 25,
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "upi_z_for_zebra",
+        "vad": "silero"
+      },
+      {
+        "category": "letter_spelling",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 20.3534,
+        "failsafe_spans": 0,
+        "id": "rt-letter_spelling-upi_z_for_zebra-1",
+        "late_spans": 0,
+        "leaked_words": 32,
+        "n_spans": 1,
+        "over_mute": 0.012346,
+        "pii_words": 39,
+        "reasons": {
+          "no_span": 31,
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "upi_z_for_zebra",
+        "vad": "silero"
+      },
+      {
+        "category": "read_across_pauses",
+        "digit_leaked": 6,
+        "digit_words": 10,
+        "dur_s": 14.2843,
+        "failsafe_spans": 0,
+        "id": "rt-read_across_pauses-pair_gaps_1p5s-0",
+        "late_spans": 0,
+        "leaked_words": 6,
+        "n_spans": 2,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 6
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "pair_gaps_1p5s",
+        "vad": "silero"
+      },
+      {
+        "category": "read_across_pauses",
+        "digit_leaked": 6,
+        "digit_words": 10,
+        "dur_s": 13.6062,
+        "failsafe_spans": 0,
+        "id": "rt-read_across_pauses-pair_gaps_1p5s-1",
+        "late_spans": 0,
+        "leaked_words": 6,
+        "n_spans": 2,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 6
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "pair_gaps_1p5s",
+        "vad": "silero"
+      },
+      {
+        "category": "read_across_pauses",
+        "digit_leaked": 1,
+        "digit_words": 10,
+        "dur_s": 10.8366,
+        "failsafe_spans": 0,
+        "id": "rt-read_across_pauses-halves_gap_3s-0",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 3,
+        "over_mute": 0.012121,
+        "pii_words": 10,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "halves_gap_3s",
+        "vad": "silero"
+      },
+      {
+        "category": "read_across_pauses",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 10.9726,
+        "failsafe_spans": 0,
+        "id": "rt-read_across_pauses-halves_gap_3s-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "halves_gap_3s",
+        "vad": "silero"
+      },
+      {
+        "category": "read_across_pauses",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 15.4812,
+        "failsafe_spans": 0,
+        "id": "rt-read_across_pauses-every_digit_gap_0p9s-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 9,
+        "over_mute": 0.082192,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "every_digit_gap_0p9s",
+        "vad": "silero"
+      },
+      {
+        "category": "read_across_pauses",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 15.2799,
+        "failsafe_spans": 0,
+        "id": "rt-read_across_pauses-every_digit_gap_0p9s-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 9,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "every_digit_gap_0p9s",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.2875,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-whisper_quiet-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.160377,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "whisper_quiet",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.5284,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-whisper_quiet-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.2,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "whisper_quiet",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.9846,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-white_noise_0db-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "white_noise_0db",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.5527,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-white_noise_0db-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.018349,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "white_noise_0db",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.9871,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-babble_0db-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "babble_0db",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.6392,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-babble_0db-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "babble_0db",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.4291,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-far_field_quiet-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.344828,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "far_field_quiet",
+        "vad": "silero"
+      },
+      {
+        "category": "whisper_noisy",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.7129,
+        "failsafe_spans": 0,
+        "id": "rt-whisper_noisy-far_field_quiet-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.46988,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "far_field_quiet",
+        "vad": "silero"
+      },
+      {
+        "category": "fast_speech",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 5.9418,
+        "failsafe_spans": 0,
+        "id": "rt-fast_speech-speed_1p6-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.052632,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "speed_1p6",
+        "vad": "silero"
+      },
+      {
+        "category": "fast_speech",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 6.6846,
+        "failsafe_spans": 0,
+        "id": "rt-fast_speech-speed_1p6-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 3,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "speed_1p6",
+        "vad": "silero"
+      },
+      {
+        "category": "fast_speech",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 5.6225,
+        "failsafe_spans": 0,
+        "id": "rt-fast_speech-speed_2p0-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 2,
+        "over_mute": 0.103896,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "speed_2p0",
+        "vad": "silero"
+      },
+      {
+        "category": "fast_speech",
+        "digit_leaked": 1,
+        "digit_words": 10,
+        "dur_s": 6.4442,
+        "failsafe_spans": 0,
+        "id": "rt-fast_speech-speed_2p0-1",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 4,
+        "over_mute": 0.169492,
+        "pii_words": 10,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "speed_2p0",
+        "vad": "silero"
+      },
+      {
+        "category": "fast_speech",
+        "digit_leaked": 5,
+        "digit_words": 10,
+        "dur_s": 5.4634,
+        "failsafe_spans": 0,
+        "id": "rt-fast_speech-speed_2p4-0",
+        "late_spans": 0,
+        "leaked_words": 5,
+        "n_spans": 1,
+        "over_mute": 0.066667,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 5
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "speed_2p4",
+        "vad": "silero"
+      },
+      {
+        "category": "fast_speech",
+        "digit_leaked": 10,
+        "digit_words": 10,
+        "dur_s": 5.5853,
+        "failsafe_spans": 0,
+        "id": "rt-fast_speech-speed_2p4-1",
+        "late_spans": 0,
+        "leaked_words": 10,
+        "n_spans": 0,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 10
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "speed_2p4",
+        "vad": "silero"
+      },
+      {
+        "category": "overlap_speakers",
+        "digit_leaked": 6,
+        "digit_words": 9,
+        "dur_s": 9.5183,
+        "failsafe_spans": 0,
+        "id": "rt-overlap_speakers-overlap_chatter-0",
+        "late_spans": 0,
+        "leaked_words": 6,
+        "n_spans": 1,
+        "over_mute": 0.082258,
+        "pii_words": 9,
+        "reasons": {
+          "late_span": 1,
+          "no_span": 5
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "overlap_chatter",
+        "vad": "silero"
+      },
+      {
+        "category": "overlap_speakers",
+        "digit_leaked": 4,
+        "digit_words": 10,
+        "dur_s": 8.9769,
+        "failsafe_spans": 0,
+        "id": "rt-overlap_speakers-overlap_chatter-1",
+        "late_spans": 0,
+        "leaked_words": 4,
+        "n_spans": 2,
+        "over_mute": 0.259598,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 2,
+          "partial_span": 2
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "overlap_chatter",
+        "vad": "silero"
+      },
+      {
+        "category": "overlap_speakers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.1904,
+        "failsafe_spans": 0,
+        "id": "rt-overlap_speakers-overlap_other_digits-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.611446,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "overlap_other_digits",
+        "vad": "silero"
+      },
+      {
+        "category": "overlap_speakers",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.3407,
+        "failsafe_spans": 0,
+        "id": "rt-overlap_speakers-overlap_other_digits-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 6,
+        "over_mute": 0.636364,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "overlap_other_digits",
+        "vad": "silero"
+      },
+      {
+        "category": "overlap_speakers",
+        "digit_leaked": 1,
+        "digit_words": 10,
+        "dur_s": 9.3936,
+        "failsafe_spans": 0,
+        "id": "rt-overlap_speakers-overlap_louder_6db-0",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 4,
+        "over_mute": 0.464664,
+        "pii_words": 10,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "overlap_louder_6db",
+        "vad": "silero"
+      },
+      {
+        "category": "overlap_speakers",
+        "digit_leaked": 2,
+        "digit_words": 10,
+        "dur_s": 9.0145,
+        "failsafe_spans": 0,
+        "id": "rt-overlap_speakers-overlap_louder_6db-1",
+        "late_spans": 0,
+        "leaked_words": 2,
+        "n_spans": 3,
+        "over_mute": 0.390909,
+        "pii_words": 10,
+        "reasons": {
+          "late_span": 2
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "overlap_louder_6db",
+        "vad": "silero"
+      },
+      {
+        "category": "background_music",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.2294,
+        "failsafe_spans": 0,
+        "id": "rt-background_music-music_snr_8db-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.076503,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "music_snr_8db",
+        "vad": "silero"
+      },
+      {
+        "category": "background_music",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.3954,
+        "failsafe_spans": 0,
+        "id": "rt-background_music-music_snr_8db-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "music_snr_8db",
+        "vad": "silero"
+      },
+      {
+        "category": "background_music",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.3744,
+        "failsafe_spans": 0,
+        "id": "rt-background_music-music_snr_0db-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "music_snr_0db",
+        "vad": "silero"
+      },
+      {
+        "category": "background_music",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.7892,
+        "failsafe_spans": 0,
+        "id": "rt-background_music-music_snr_0db-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.021739,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "music_snr_0db",
+        "vad": "silero"
+      },
+      {
+        "category": "background_music",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.9922,
+        "failsafe_spans": 0,
+        "id": "rt-background_music-music_snr_minus6db-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "music_snr_minus6db",
+        "vad": "silero"
+      },
+      {
+        "category": "background_music",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.1609,
+        "failsafe_spans": 0,
+        "id": "rt-background_music-music_snr_minus6db-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.013158,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "music_snr_minus6db",
+        "vad": "silero"
+      },
+      {
+        "category": "split_segments",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 9.8979,
+        "failsafe_spans": 0,
+        "id": "rt-split_segments-split_gap_2p5s-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "split_gap_2p5s",
+        "vad": "silero"
+      },
+      {
+        "category": "split_segments",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 10.1054,
+        "failsafe_spans": 0,
+        "id": "rt-split_segments-split_gap_2p5s-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.293103,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "split_gap_2p5s",
+        "vad": "silero"
+      },
+      {
+        "category": "split_segments",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 13.2396,
+        "failsafe_spans": 0,
+        "id": "rt-split_segments-split_with_chatter-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.093407,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "split_with_chatter",
+        "vad": "silero"
+      },
+      {
+        "category": "split_segments",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 13.3995,
+        "failsafe_spans": 0,
+        "id": "rt-split_segments-split_with_chatter-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.17765,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "split_with_chatter",
+        "vad": "silero"
+      },
+      {
+        "category": "split_segments",
+        "digit_leaked": 1,
+        "digit_words": 6,
+        "dur_s": 9.9718,
+        "failsafe_spans": 0,
+        "id": "rt-split_segments-otp_halves_gap_4s-0",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 2,
+        "over_mute": 0.104839,
+        "pii_words": 6,
+        "reasons": {
+          "no_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "otp_halves_gap_4s",
+        "vad": "silero"
+      },
+      {
+        "category": "split_segments",
+        "digit_leaked": 1,
+        "digit_words": 6,
+        "dur_s": 9.4326,
+        "failsafe_spans": 0,
+        "id": "rt-split_segments-otp_halves_gap_4s-1",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 1,
+        "over_mute": 0.102564,
+        "pii_words": 6,
+        "reasons": {
+          "no_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "otp_halves_gap_4s",
+        "vad": "silero"
+      },
+      {
+        "category": "upi_phonetic",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 9.3267,
+        "failsafe_spans": 0,
+        "id": "rt-upi_phonetic-handle_spelled_ok_s_b_i-0",
+        "late_spans": 1,
+        "leaked_words": 2,
+        "n_spans": 1,
+        "over_mute": 0.023585,
+        "pii_words": 11,
+        "reasons": {
+          "late_span": 1,
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "handle_spelled_ok_s_b_i",
+        "vad": "silero"
+      },
+      {
+        "category": "upi_phonetic",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 8.1319,
+        "failsafe_spans": 0,
+        "id": "rt-upi_phonetic-handle_spelled_ok_s_b_i-1",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 3,
+        "over_mute": 0.055249,
+        "pii_words": 9,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "handle_spelled_ok_s_b_i",
+        "vad": "silero"
+      },
+      {
+        "category": "upi_phonetic",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 9.077,
+        "failsafe_spans": 0,
+        "id": "rt-upi_phonetic-dot_underscore_at-0",
+        "late_spans": 1,
+        "leaked_words": 4,
+        "n_spans": 1,
+        "over_mute": 0.089888,
+        "pii_words": 11,
+        "reasons": {
+          "late_span": 1,
+          "no_span": 1,
+          "partial_span": 2
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "dot_underscore_at",
+        "vad": "silero"
+      },
+      {
+        "category": "upi_phonetic",
+        "digit_leaked": 0,
+        "digit_words": 2,
+        "dur_s": 8.6307,
+        "failsafe_spans": 0,
+        "id": "rt-upi_phonetic-dot_underscore_at-1",
+        "late_spans": 1,
+        "leaked_words": 2,
+        "n_spans": 3,
+        "over_mute": 0.030612,
+        "pii_words": 11,
+        "reasons": {
+          "late_span": 2
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "dot_underscore_at",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.4729,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-primary_429_mid_sentence-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.042857,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "primary_429_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.3467,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-primary_429_mid_sentence-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "primary_429_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 1,
+        "digit_words": 9,
+        "dur_s": 7.1086,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-primary_hang_mid_sentence-0",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 4,
+        "over_mute": 0.02381,
+        "pii_words": 9,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "primary_hang_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.6108,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-primary_hang_mid_sentence-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.116505,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "primary_hang_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 10,
+        "digit_words": 10,
+        "dur_s": 8.2886,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-empty_transcripts_mid_sentence-0",
+        "late_spans": 0,
+        "leaked_words": 10,
+        "n_spans": 0,
+        "over_mute": 0.007246,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 10
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "empty_transcripts_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 10,
+        "digit_words": 10,
+        "dur_s": 7.6386,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-empty_transcripts_mid_sentence-1",
+        "late_spans": 0,
+        "leaked_words": 10,
+        "n_spans": 0,
+        "over_mute": 0.071429,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 10
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "empty_transcripts_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.1642,
+        "failsafe_spans": 6,
+        "id": "rt-stt_failure-both_fail_mid_sentence-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 6,
+        "over_mute": 1.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "both_fail_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.7032,
+        "failsafe_spans": 5,
+        "id": "rt-stt_failure-both_fail_mid_sentence-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.441558,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "both_fail_mid_sentence",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 1,
+        "digit_words": 10,
+        "dur_s": 8.2765,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-primary_down_whole_clip-0",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 4,
+        "over_mute": 0.047619,
+        "pii_words": 10,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "primary_down_whole_clip",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 8.6931,
+        "failsafe_spans": 0,
+        "id": "rt-stt_failure-primary_down_whole_clip-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 0.092593,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "primary_down_whole_clip",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 6.9237,
+        "failsafe_spans": 5,
+        "id": "rt-stt_failure-both_down_whole_clip-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 5,
+        "over_mute": 1.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "both_down_whole_clip",
+        "vad": "silero"
+      },
+      {
+        "category": "stt_failure",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.8494,
+        "failsafe_spans": 6,
+        "id": "rt-stt_failure-both_down_whole_clip-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 6,
+        "over_mute": 1.0,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "both_down_whole_clip",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 1,
+        "digit_words": 10,
+        "dur_s": 7.2321,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-drop_10pct-0",
+        "late_spans": 0,
+        "leaked_words": 1,
+        "n_spans": 4,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "drop_10pct",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.5612,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-drop_10pct-1",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 4,
+        "over_mute": 0.038095,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "drop_10pct",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 0,
+        "digit_words": 10,
+        "dur_s": 7.66,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-drop_25pct-0",
+        "late_spans": 0,
+        "leaked_words": 0,
+        "n_spans": 3,
+        "over_mute": 0.092308,
+        "pii_words": 10,
+        "reasons": {},
+        "spans": 1,
+        "spans_leaked": 0,
+        "technique": "drop_25pct",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 3,
+        "digit_words": 10,
+        "dur_s": 7.7648,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-drop_25pct-1",
+        "late_spans": 0,
+        "leaked_words": 3,
+        "n_spans": 2,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 2,
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "drop_25pct",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 6,
+        "digit_words": 10,
+        "dur_s": 8.4606,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-drop_50pct-0",
+        "late_spans": 0,
+        "leaked_words": 6,
+        "n_spans": 1,
+        "over_mute": 0.012195,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 5,
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "drop_50pct",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 2,
+        "digit_words": 10,
+        "dur_s": 7.6369,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-drop_50pct-1",
+        "late_spans": 1,
+        "leaked_words": 2,
+        "n_spans": 2,
+        "over_mute": 0.0,
+        "pii_words": 10,
+        "reasons": {
+          "late_span": 1,
+          "partial_span": 1
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "drop_50pct",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 5,
+        "digit_words": 10,
+        "dur_s": 8.6542,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-mishear_30pct-0",
+        "late_spans": 0,
+        "leaked_words": 5,
+        "n_spans": 3,
+        "over_mute": 0.022599,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 3,
+          "partial_span": 2
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "mishear_30pct",
+        "vad": "silero"
+      },
+      {
+        "category": "asr_drops",
+        "digit_leaked": 5,
+        "digit_words": 10,
+        "dur_s": 7.7769,
+        "failsafe_spans": 0,
+        "id": "rt-asr_drops-mishear_30pct-1",
+        "late_spans": 0,
+        "leaked_words": 5,
+        "n_spans": 2,
+        "over_mute": 0.068627,
+        "pii_words": 10,
+        "reasons": {
+          "no_span": 5
+        },
+        "spans": 1,
+        "spans_leaked": 1,
+        "technique": "mishear_30pct",
+        "vad": "silero"
+      }
+    ],
+    "techniques": {
+      "asr_drops/drop_10pct": {
+        "ci": [
+          0.0089,
+          0.2361
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0089,
+            0.2361
+          ],
+          "k": 1,
+          "n": 20,
+          "rate": 0.05
+        },
+        "k": 1,
+        "n": 20,
+        "rate": 0.05,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 2,
+        "spans_leaked": 1
+      },
+      "asr_drops/drop_25pct": {
+        "ci": [
+          0.0524,
+          0.3604
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0524,
+            0.3604
+          ],
+          "k": 3,
+          "n": 20,
+          "rate": 0.15
+        },
+        "k": 3,
+        "n": 20,
+        "rate": 0.15,
+        "reasons": {
+          "no_span": 2,
+          "partial_span": 1
+        },
+        "spans": 2,
+        "spans_leaked": 1
+      },
+      "asr_drops/drop_50pct": {
+        "ci": [
+          0.2188,
+          0.6134
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.2188,
+            0.6134
+          ],
+          "k": 8,
+          "n": 20,
+          "rate": 0.4
+        },
+        "k": 8,
+        "n": 20,
+        "rate": 0.4,
+        "reasons": {
+          "late_span": 1,
+          "no_span": 5,
+          "partial_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "asr_drops/mishear_30pct": {
+        "ci": [
+          0.2993,
+          0.7007
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.2993,
+            0.7007
+          ],
+          "k": 10,
+          "n": 20,
+          "rate": 0.5
+        },
+        "k": 10,
+        "n": 20,
+        "rate": 0.5,
+        "reasons": {
+          "no_span": 8,
+          "partial_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "background_music/music_snr_0db": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "background_music/music_snr_8db": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "background_music/music_snr_minus6db": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "code_mixed_numbers/double_triple_heavy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1759
+          ],
+          "k": 0,
+          "n": 18,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "code_mixed_numbers/english_pair_words": {
+        "ci": [
+          0.3552,
+          0.8229
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.3552,
+            0.8229
+          ],
+          "k": 8,
+          "n": 13,
+          "rate": 0.615385
+        },
+        "k": 8,
+        "n": 13,
+        "rate": 0.615385,
+        "reasons": {
+          "no_span": 5,
+          "partial_span": 3
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "code_mixed_numbers/mixed_language_digits": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "digits_fillers/fillers_every_2_digits": {
+        "ci": [
+          0.0279,
+          0.301
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0279,
+            0.301
+          ],
+          "k": 2,
+          "n": 20,
+          "rate": 0.1
+        },
+        "k": 2,
+        "n": 20,
+        "rate": 0.1,
+        "reasons": {
+          "no_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 1
+      },
+      "digits_fillers/fillers_random": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "digits_fillers/restart_correction": {
+        "ci": [
+          0.0,
+          0.1206
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1206
+          ],
+          "k": 0,
+          "n": 28,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 28,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "fast_speech/speed_1p6": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "fast_speech/speed_2p0": {
+        "ci": [
+          0.0089,
+          0.2361
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0089,
+            0.2361
+          ],
+          "k": 1,
+          "n": 20,
+          "rate": 0.05
+        },
+        "k": 1,
+        "n": 20,
+        "rate": 0.05,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 2,
+        "spans_leaked": 1
+      },
+      "fast_speech/speed_2p4": {
+        "ci": [
+          0.5313,
+          0.8881
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.5313,
+            0.8881
+          ],
+          "k": 15,
+          "n": 20,
+          "rate": 0.75
+        },
+        "k": 15,
+        "n": 20,
+        "rate": 0.75,
+        "reasons": {
+          "no_span": 15
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "letter_spelling/upi_letter_by_letter": {
+        "ci": [
+          0.0,
+          0.082
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.4899
+          ],
+          "k": 0,
+          "n": 4,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 43,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "letter_spelling/upi_z_for_zebra": {
+        "ci": [
+          0.6644,
+          0.8487
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.4899
+          ],
+          "k": 0,
+          "n": 4,
+          "rate": 0.0
+        },
+        "k": 60,
+        "n": 78,
+        "rate": 0.769231,
+        "reasons": {
+          "late_span": 2,
+          "no_span": 56,
+          "partial_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "overlap_speakers/overlap_chatter": {
+        "ci": [
+          0.3171,
+          0.7267
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.3171,
+            0.7267
+          ],
+          "k": 10,
+          "n": 19,
+          "rate": 0.526316
+        },
+        "k": 10,
+        "n": 19,
+        "rate": 0.526316,
+        "reasons": {
+          "late_span": 1,
+          "no_span": 7,
+          "partial_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "overlap_speakers/overlap_louder_6db": {
+        "ci": [
+          0.0524,
+          0.3604
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0524,
+            0.3604
+          ],
+          "k": 3,
+          "n": 20,
+          "rate": 0.15
+        },
+        "k": 3,
+        "n": 20,
+        "rate": 0.15,
+        "reasons": {
+          "late_span": 2,
+          "partial_span": 1
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "overlap_speakers/overlap_other_digits": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "read_across_pauses/every_digit_gap_0p9s": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "read_across_pauses/halves_gap_3s": {
+        "ci": [
+          0.0089,
+          0.2361
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0089,
+            0.2361
+          ],
+          "k": 1,
+          "n": 20,
+          "rate": 0.05
+        },
+        "k": 1,
+        "n": 20,
+        "rate": 0.05,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 2,
+        "spans_leaked": 1
+      },
+      "read_across_pauses/pair_gaps_1p5s": {
+        "ci": [
+          0.3866,
+          0.7812
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.3866,
+            0.7812
+          ],
+          "k": 12,
+          "n": 20,
+          "rate": 0.6
+        },
+        "k": 12,
+        "n": 20,
+        "rate": 0.6,
+        "reasons": {
+          "no_span": 12
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "split_segments/otp_halves_gap_4s": {
+        "ci": [
+          0.047,
+          0.448
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.047,
+            0.448
+          ],
+          "k": 2,
+          "n": 12,
+          "rate": 0.166667
+        },
+        "k": 2,
+        "n": 12,
+        "rate": 0.166667,
+        "reasons": {
+          "no_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "split_segments/split_gap_2p5s": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "split_segments/split_with_chatter": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "stt_failure/both_down_whole_clip": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "stt_failure/both_fail_mid_sentence": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "stt_failure/empty_transcripts_mid_sentence": {
+        "ci": [
+          0.8389,
+          1.0
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.8389,
+            1.0
+          ],
+          "k": 20,
+          "n": 20,
+          "rate": 1.0
+        },
+        "k": 20,
+        "n": 20,
+        "rate": 1.0,
+        "reasons": {
+          "no_span": 20
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "stt_failure/primary_429_mid_sentence": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "stt_failure/primary_down_whole_clip": {
+        "ci": [
+          0.0089,
+          0.2361
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0089,
+            0.2361
+          ],
+          "k": 1,
+          "n": 20,
+          "rate": 0.05
+        },
+        "k": 1,
+        "n": 20,
+        "rate": 0.05,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 2,
+        "spans_leaked": 1
+      },
+      "stt_failure/primary_hang_mid_sentence": {
+        "ci": [
+          0.0094,
+          0.2464
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0094,
+            0.2464
+          ],
+          "k": 1,
+          "n": 19,
+          "rate": 0.052632
+        },
+        "k": 1,
+        "n": 19,
+        "rate": 0.052632,
+        "reasons": {
+          "partial_span": 1
+        },
+        "spans": 2,
+        "spans_leaked": 1
+      },
+      "upi_phonetic/dot_underscore_at": {
+        "ci": [
+          0.1315,
+          0.4815
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.4899
+          ],
+          "k": 0,
+          "n": 4,
+          "rate": 0.0
+        },
+        "k": 6,
+        "n": 22,
+        "rate": 0.272727,
+        "reasons": {
+          "late_span": 3,
+          "no_span": 1,
+          "partial_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "upi_phonetic/handle_spelled_ok_s_b_i": {
+        "ci": [
+          0.0524,
+          0.3604
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.4899
+          ],
+          "k": 0,
+          "n": 4,
+          "rate": 0.0
+        },
+        "k": 3,
+        "n": 20,
+        "rate": 0.15,
+        "reasons": {
+          "late_span": 1,
+          "partial_span": 2
+        },
+        "spans": 2,
+        "spans_leaked": 2
+      },
+      "whisper_noisy/babble_0db": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "whisper_noisy/far_field_quiet": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "whisper_noisy/whisper_quiet": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      },
+      "whisper_noisy/white_noise_0db": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "clips": 2,
+        "digits": {
+          "ci": [
+            0.0,
+            0.1611
+          ],
+          "k": 0,
+          "n": 20,
+          "rate": 0.0
+        },
+        "k": 0,
+        "n": 20,
+        "rate": 0.0,
+        "reasons": {},
+        "spans": 2,
+        "spans_leaked": 0
+      }
+    }
+  },
+  "date": "2026-11-21",
+  "failing_ids": [],
+  "header": {
+    "clips": 78,
+    "defect": "",
+    "git_rev": "8a1e6e353205",
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
+    },
+    "per_technique": 2,
+    "profile": "dev",
+    "reference": false,
+    "seed": 7771,
+    "suite": "redteam-audio",
+    "tts_engine": "flite",
+    "wall_s": 196.0
+  },
+  "notes": [
+    "THE RECOGNISER IS THE PHASE-3 ORACLE: it answers from the truth words with seeded errors, so these numbers measure VAD, segmentation, PII rules, merging, the fail-safe and mute timing under attack, not recognition. Overlap, whisper and ASR-drop attacks are modelled by hiding words from the oracle.",
+    "The offline TTS is English flite voices: Hindi and Hinglish are respelled; no native Indic phonetics. Compound Hindi number words and whispered or far-field speech are not real here (level and noise are applied to the English TTS).",
+    "Leak = under 90 % of a PII word is below -50 dBFS in the 48 kHz output after engine.audio_mute.MuteBook applied the spans that were ready in time (delay 4.0 s). One leaked digit counts as one leaked word; the 'spans with a leak' column is the number-level view.",
+    "Failure-injection windows are placed on the clip time of the first PII span; 'hang' never answers, '429' and '500' raise the provider errors, 'empty' returns a transcript with no words."
+  ],
+  "passed": false,
+  "phase": "redteam-audio",
+  "tables": [
+    {
+      "columns": [
+        "category",
+        "clips",
+        "PII words",
+        "leaked",
+        "leak rate",
+        "spans with a leak",
+        "ceiling"
+      ],
+      "rows": [
+        [
+          "digits_fillers",
+          6,
+          68,
+          2,
+          "2.9% (2/68, CI 1%-10%)",
+          "1/6",
+          "<= 10%"
+        ],
+        [
+          "code_mixed_numbers",
+          6,
+          51,
+          8,
+          "15.7% (8/51, CI 8%-28%)",
+          "2/6",
+          "<= 10%"
+        ],
+        [
+          "letter_spelling",
+          4,
+          121,
+          60,
+          "49.6% (60/121, CI 41%-58%)",
+          "2/4",
+          "<= 10%"
+        ],
+        [
+          "read_across_pauses",
+          6,
+          60,
+          13,
+          "21.7% (13/60, CI 13%-34%)",
+          "3/6",
+          "<= 10%"
+        ],
+        [
+          "whisper_noisy",
+          8,
+          80,
+          0,
+          "0.0% (0/80, CI 0%-5%)",
+          "0/8",
+          "<= 10%"
+        ],
+        [
+          "fast_speech",
+          6,
+          60,
+          16,
+          "26.7% (16/60, CI 17%-39%)",
+          "3/6",
+          "<= 10%"
+        ],
+        [
+          "overlap_speakers",
+          6,
+          59,
+          13,
+          "22.0% (13/59, CI 13%-34%)",
+          "4/6",
+          "<= 10%"
+        ],
+        [
+          "background_music",
+          6,
+          60,
+          0,
+          "0.0% (0/60, CI 0%-6%)",
+          "0/6",
+          "<= 10%"
+        ],
+        [
+          "split_segments",
+          6,
+          52,
+          2,
+          "3.8% (2/52, CI 1%-13%)",
+          "2/6",
+          "<= 10%"
+        ],
+        [
+          "upi_phonetic",
+          4,
+          42,
+          9,
+          "21.4% (9/42, CI 12%-36%)",
+          "4/4",
+          "<= 10%"
+        ],
+        [
+          "stt_failure",
+          12,
+          119,
+          22,
+          "18.5% (22/119, CI 13%-26%)",
+          "4/12",
+          "<= 5%"
+        ],
+        [
+          "asr_drops",
+          8,
+          80,
+          22,
+          "27.5% (22/80, CI 19%-38%)",
+          "6/8",
+          "<= 10%"
+        ]
+      ],
+      "title": "Leak rate by category (PII words not muted in the output audio)"
+    },
+    {
+      "columns": [
+        "category/technique",
+        "clips",
+        "PII words",
+        "leaked",
+        "word leak rate",
+        "digit leak rate",
+        "why (no_span: nothing muted; partial_span; late_span: ready after the samples left)"
+      ],
+      "rows": [
+        [
+          "digits_fillers/fillers_every_2_digits",
+          2,
+          20,
+          2,
+          0.1,
+          0.1,
+          "{\"no_span\": 2}"
+        ],
+        [
+          "digits_fillers/fillers_random",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "digits_fillers/restart_correction",
+          2,
+          28,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "code_mixed_numbers/mixed_language_digits",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "code_mixed_numbers/english_pair_words",
+          2,
+          13,
+          8,
+          0.615385,
+          0.615385,
+          "{\"partial_span\": 3, \"no_span\": 5}"
+        ],
+        [
+          "code_mixed_numbers/double_triple_heavy",
+          2,
+          18,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "letter_spelling/upi_letter_by_letter",
+          2,
+          43,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "letter_spelling/upi_z_for_zebra",
+          2,
+          78,
+          60,
+          0.769231,
+          0.0,
+          "{\"no_span\": 56, \"partial_span\": 2, \"late_span\": 2}"
+        ],
+        [
+          "read_across_pauses/pair_gaps_1p5s",
+          2,
+          20,
+          12,
+          0.6,
+          0.6,
+          "{\"no_span\": 12}"
+        ],
+        [
+          "read_across_pauses/halves_gap_3s",
+          2,
+          20,
+          1,
+          0.05,
+          0.05,
+          "{\"partial_span\": 1}"
+        ],
+        [
+          "read_across_pauses/every_digit_gap_0p9s",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "whisper_noisy/whisper_quiet",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "whisper_noisy/white_noise_0db",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "whisper_noisy/babble_0db",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "whisper_noisy/far_field_quiet",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "fast_speech/speed_1p6",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "fast_speech/speed_2p0",
+          2,
+          20,
+          1,
+          0.05,
+          0.05,
+          "{\"partial_span\": 1}"
+        ],
+        [
+          "fast_speech/speed_2p4",
+          2,
+          20,
+          15,
+          0.75,
+          0.75,
+          "{\"no_span\": 15}"
+        ],
+        [
+          "overlap_speakers/overlap_chatter",
+          2,
+          19,
+          10,
+          0.526316,
+          0.526316,
+          "{\"late_span\": 1, \"no_span\": 7, \"partial_span\": 2}"
+        ],
+        [
+          "overlap_speakers/overlap_other_digits",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "overlap_speakers/overlap_louder_6db",
+          2,
+          20,
+          3,
+          0.15,
+          0.15,
+          "{\"partial_span\": 1, \"late_span\": 2}"
+        ],
+        [
+          "background_music/music_snr_8db",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "background_music/music_snr_0db",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "background_music/music_snr_minus6db",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "split_segments/split_gap_2p5s",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "split_segments/split_with_chatter",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "split_segments/otp_halves_gap_4s",
+          2,
+          12,
+          2,
+          0.166667,
+          0.166667,
+          "{\"no_span\": 2}"
+        ],
+        [
+          "upi_phonetic/handle_spelled_ok_s_b_i",
+          2,
+          20,
+          3,
+          0.15,
+          0.0,
+          "{\"partial_span\": 2, \"late_span\": 1}"
+        ],
+        [
+          "upi_phonetic/dot_underscore_at",
+          2,
+          22,
+          6,
+          0.272727,
+          0.0,
+          "{\"no_span\": 1, \"partial_span\": 2, \"late_span\": 3}"
+        ],
+        [
+          "stt_failure/primary_429_mid_sentence",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "stt_failure/primary_hang_mid_sentence",
+          2,
+          19,
+          1,
+          0.052632,
+          0.052632,
+          "{\"partial_span\": 1}"
+        ],
+        [
+          "stt_failure/empty_transcripts_mid_sentence",
+          2,
+          20,
+          20,
+          1.0,
+          1.0,
+          "{\"no_span\": 20}"
+        ],
+        [
+          "stt_failure/both_fail_mid_sentence",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "stt_failure/primary_down_whole_clip",
+          2,
+          20,
+          1,
+          0.05,
+          0.05,
+          "{\"partial_span\": 1}"
+        ],
+        [
+          "stt_failure/both_down_whole_clip",
+          2,
+          20,
+          0,
+          0.0,
+          0.0,
+          "{}"
+        ],
+        [
+          "asr_drops/drop_10pct",
+          2,
+          20,
+          1,
+          0.05,
+          0.05,
+          "{\"partial_span\": 1}"
+        ],
+        [
+          "asr_drops/drop_25pct",
+          2,
+          20,
+          3,
+          0.15,
+          0.15,
+          "{\"no_span\": 2, \"partial_span\": 1}"
+        ],
+        [
+          "asr_drops/drop_50pct",
+          2,
+          20,
+          8,
+          0.4,
+          0.4,
+          "{\"no_span\": 5, \"partial_span\": 2, \"late_span\": 1}"
+        ],
+        [
+          "asr_drops/mishear_30pct",
+          2,
+          20,
+          10,
+          0.5,
+          0.5,
+          "{\"no_span\": 8, \"partial_span\": 2}"
+        ]
+      ],
+      "title": "Leak rate by technique"
+    },
+    {
+      "columns": [
+        "case id",
+        "leaked/PII words",
+        "why",
+        "late spans",
+        "failsafe spans"
+      ],
+      "rows": [
+        [
+          "rt-digits_fillers-fillers_every_2_digits-0",
+          "2/10",
+          "{\"no_span\": 2}",
+          0,
+          0
+        ],
+        [
+          "rt-code_mixed_numbers-english_pair_words-0",
+          "5/7",
+          "{\"partial_span\": 2, \"no_span\": 3}",
+          0,
+          0
+        ],
+        [
+          "rt-code_mixed_numbers-english_pair_words-1",
+          "3/6",
+          "{\"no_span\": 2, \"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-letter_spelling-upi_z_for_zebra-0",
+          "28/39",
+          "{\"no_span\": 25, \"partial_span\": 1, \"late_span\": 2}",
+          1,
+          0
+        ],
+        [
+          "rt-letter_spelling-upi_z_for_zebra-1",
+          "32/39",
+          "{\"no_span\": 31, \"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-read_across_pauses-pair_gaps_1p5s-0",
+          "6/10",
+          "{\"no_span\": 6}",
+          0,
+          0
+        ],
+        [
+          "rt-read_across_pauses-pair_gaps_1p5s-1",
+          "6/10",
+          "{\"no_span\": 6}",
+          0,
+          0
+        ],
+        [
+          "rt-read_across_pauses-halves_gap_3s-0",
+          "1/10",
+          "{\"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-fast_speech-speed_2p0-1",
+          "1/10",
+          "{\"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-fast_speech-speed_2p4-0",
+          "5/10",
+          "{\"no_span\": 5}",
+          0,
+          0
+        ],
+        [
+          "rt-fast_speech-speed_2p4-1",
+          "10/10",
+          "{\"no_span\": 10}",
+          0,
+          0
+        ],
+        [
+          "rt-overlap_speakers-overlap_chatter-0",
+          "6/9",
+          "{\"late_span\": 1, \"no_span\": 5}",
+          0,
+          0
+        ],
+        [
+          "rt-overlap_speakers-overlap_chatter-1",
+          "4/10",
+          "{\"partial_span\": 2, \"no_span\": 2}",
+          0,
+          0
+        ],
+        [
+          "rt-overlap_speakers-overlap_louder_6db-0",
+          "1/10",
+          "{\"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-overlap_speakers-overlap_louder_6db-1",
+          "2/10",
+          "{\"late_span\": 2}",
+          0,
+          0
+        ],
+        [
+          "rt-split_segments-otp_halves_gap_4s-0",
+          "1/6",
+          "{\"no_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-split_segments-otp_halves_gap_4s-1",
+          "1/6",
+          "{\"no_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-upi_phonetic-handle_spelled_ok_s_b_i-0",
+          "2/11",
+          "{\"partial_span\": 1, \"late_span\": 1}",
+          1,
+          0
+        ],
+        [
+          "rt-upi_phonetic-handle_spelled_ok_s_b_i-1",
+          "1/9",
+          "{\"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-upi_phonetic-dot_underscore_at-0",
+          "4/11",
+          "{\"no_span\": 1, \"partial_span\": 2, \"late_span\": 1}",
+          1,
+          0
+        ],
+        [
+          "rt-upi_phonetic-dot_underscore_at-1",
+          "2/11",
+          "{\"late_span\": 2}",
+          1,
+          0
+        ],
+        [
+          "rt-stt_failure-primary_hang_mid_sentence-0",
+          "1/9",
+          "{\"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-stt_failure-empty_transcripts_mid_sentence-0",
+          "10/10",
+          "{\"no_span\": 10}",
+          0,
+          0
+        ],
+        [
+          "rt-stt_failure-empty_transcripts_mid_sentence-1",
+          "10/10",
+          "{\"no_span\": 10}",
+          0,
+          0
+        ],
+        [
+          "rt-stt_failure-primary_down_whole_clip-0",
+          "1/10",
+          "{\"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-asr_drops-drop_10pct-0",
+          "1/10",
+          "{\"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-asr_drops-drop_25pct-1",
+          "3/10",
+          "{\"no_span\": 2, \"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-asr_drops-drop_50pct-0",
+          "6/10",
+          "{\"no_span\": 5, \"partial_span\": 1}",
+          0,
+          0
+        ],
+        [
+          "rt-asr_drops-drop_50pct-1",
+          "2/10",
+          "{\"partial_span\": 1, \"late_span\": 1}",
+          1,
+          0
+        ],
+        [
+          "rt-asr_drops-mishear_30pct-0",
+          "5/10",
+          "{\"no_span\": 3, \"partial_span\": 2}",
+          0,
+          0
+        ],
+        [
+          "rt-asr_drops-mishear_30pct-1",
+          "5/10",
+          "{\"no_span\": 5}",
+          0,
+          0
+        ]
+      ],
+      "title": "Leaking clips (31)"
+    },
+    {
+      "columns": [
+        "metric",
+        "value"
+      ],
+      "rows": [
+        [
+          "clips",
+          78
+        ],
+        [
+          "audio seconds",
+          696.2
+        ],
+        [
+          "mean over-mute of non-PII speech",
+          0.164
+        ],
+        [
+          "VAD",
+          [
+            "silero"
+          ]
+        ]
+      ],
+      "title": "Context"
+    }
+  ]
+}

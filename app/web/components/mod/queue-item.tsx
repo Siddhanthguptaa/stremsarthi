@@ -29,8 +29,9 @@ export const QueueItem = React.memo(function QueueItem({ entry, selected, preset
       data-key={entry.key}
       data-selected={selected ? "true" : "false"}
       aria-current={selected ? "true" : undefined}
+      tabIndex={-1}
       onClick={() => onSelect(entry.key)}
-      className={cn("space-y-3 rounded-lg border bg-card p-3", selected && "ring-2 ring-primary")}
+      className={cn("space-y-3 rounded-lg border bg-card p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring", selected && "ring-2 ring-primary")}
     >
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-semibold">{entry.author}</span>

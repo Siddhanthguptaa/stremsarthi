@@ -58,18 +58,19 @@ Deliberately **not** reused: IRL Shield `relay/archive.py`, `seal.py` (store vid
 | YuNet 2023mar, SFace 2021dec (OpenCV Zoo) | MIT, Apache-2.0 | `vision/detectors/faces/` | none |
 | PP-OCRv5/v6 ONNX via RapidOCR | Apache-2.0 | `vision/detectors/text/` | none; SHA-pinned in `models/manifest.json` |
 | EasyOCR | Apache-2.0 | optional Kannada/Bengali crops | pulls torch (extra only) |
+| IRL Shield `shield/dashboard/pairing.py` (MIT) | MIT | `relay/pairing.py` | adapted: import-URL and address-rule logic only; QR rendering dropped (done by the API), address rule relaxed to loopback/LAN-private/Tailscale; secrets hidden from repr; licence at `relay/LICENSE` |
 | IRL Shield FLV muxer / loopback-to-TLS design (MIT) | MIT | `relay/muxer.py`, `relay/destinations.py`, `relay/tls_forwarder.py` | reworked: muxer now runs in a killable spawned worker over a socketpair; licence at `relay/LICENSE`. `relay/sinkfault.py` is new code |
 | Silero VAD | MIT | `audio/` | none |
 | PrivaStream `src/models/audio/training/src/pii_detector.py` (Luhn check, overlap-merge idea) | Apache-2.0 | `audio/pii/merge.py`, `audio/pii/rules.py` | adapted, not copied whole; no DeBERTa, no training; licence at `audio/pii/LICENSE-privastream-Apache-2.0` |
 | faster-whisper / CTranslate2 | MIT | local STT fallback | none |
-| YAMNet | Apache-2.0 | `guard/music/` | none |
-| Chromaprint / pyacoustid | LGPL-2.1 / MIT | fingerprinting | dynamic use only |
+| YAMNet | Apache-2.0 | `guard/music/` | third-party ONNX conversion of Google's weights (`huggingface.co/mydubber-org/yamnet-onnx` @ fc1697c7, SHA-256 in `models/manifest.json`), unchanged, loaded only by onnxruntime; licence `models/licenses/YAMNet-Apache-2.0.txt` and `guard/music/data/` |
+| Chromaprint / pyacoustid | LGPL-2.1 / MIT | fingerprinting | dynamic use only: `libchromaprint.so.1` (v1.5.1, from the ffmpeg install in WSL) loaded through ctypes, not bundled; `fpcalc` is not installed |
 | audfprint | MIT | optional fingerprint backend | none |
 | IndicTrans2 dist-200M | MIT | demo captions | gated on Hugging Face (needs token) |
 | supervision (ByteTrack) | MIT | `vision/tracking/` | none |
 | zxing-cpp | Apache-2.0 | `vision/detectors/upi_qr/` | none |
 | MediaMTX | MIT | ingest | hash-pinned download |
-| Noto Sans (Devanagari, Kannada, Tamil, Telugu, Bengali) | OFL-1.1 | caption rendering | keep OFL texts |
+| Noto Sans (Devanagari, Kannada, Tamil, Telugu, Bengali) | OFL-1.1 | caption rendering | keep OFL texts; Kannada/Tamil/Telugu/Bengali variable fonts fetched 2026-11-21 from google/fonts `ofl/notosans<script>/`, unmodified; SHA-256 values in `engine/assets/NOTICE.md` (checked by a test); OFL texts `engine/assets/OFL-NotoSans<Script>.txt` |
 | Atkinson Hyperlegible Next | OFL-1.1 | hold slate | keep `OFL.txt` |
 | Sarvam API, Groq API | commercial APIs | audio, chat, captions | terms apply; audio chunks and chat text only, nothing stored |
 | Dejavu | MIT | not used | needs a database, looks unmaintained |

@@ -137,10 +137,51 @@ class ClipRun:
     vad: str
 
 
-DEFECTS = ("failsafe_off", "bad_stt", "slow_stt")  # seeded defects: the gate must FAIL with each of them
+DEFECTS = (
+    "late_spans",
+    "no_failsafe",
+    "no_mouth",
+)  # seeded into the reference build: the gate must FAIL with each
 
 
-def run_clip(clip: ClipTruth, pcm: np.ndarray, mode: str, seed: int, defect: str = "") -> ClipRun:
+def reference_run(clip: ClipTruth, mode: str, defect: str) -> ClipRun:
+    """A stand-in audio module that is right by construction (used to validate the harness, like eval/refengine.py):
+    PII words muted at once (``api``/``local_only``) or every voiced word muted by the fail-safe (``api_down``).
+    Seeded defects: ``late_spans`` (spans ready after the samples left), ``no_failsafe`` (nothing muted when the
+    API is down), ``no_mouth`` (no mouth-blur requests)."""
+    spans: list[dict[str, Any]] = []
+    masks: list[dict[str, Any]] = []
+    if mode == "api_down" and defect == "no_failsafe":
+        return ClipRun([], [], {}, [], {}, 0.0, 0.0, "reference")
+    items = [
+        (w.t0, w.t1) for w in clip.words if mode == "api_down" or w.pii
+    ]  # word by word: ready right after each word
+    for t0, t1 in items:
+        ready = t1 + (DELAY_S + 1.0 if defect == "late_spans" else 0.5)
+        gran = "failsafe" if mode == "api_down" else "word"
+        spans.append(
+            {
+                "id": f"ref-{len(spans)}",
+                "t0": max(0.0, t0 - 0.2),
+                "t1": t1 + 0.2,
+                "ready": ready,
+                "gran": gran,
+                "cat": "spoken_phone",
+            }
+        )
+        if defect != "no_mouth":
+            masks.append(
+                {"t0": max(0.0, t0 - 0.2), "t1": t1 + 0.2, "ready": ready, "kind": "mouth_of_speaker"}
+            )
+    lat = [sp["ready"] - sp["t0"] for sp in spans]
+    return ClipRun(spans, masks, {"stt": [0.7]}, lat or [0.0], {"spans": len(spans)}, 0.0, 0.0, "reference")
+
+
+def run_clip(
+    clip: ClipTruth, pcm: np.ndarray, mode: str, seed: int, defect: str = "", reference: bool = False
+) -> ClipRun:
+    if reference:
+        return reference_run(clip, mode, defect)
     from audio.orchestrator.pipeline import AudioPipeline  # noqa: PLC0415
     from audio.orchestrator.race import SttRace  # noqa: PLC0415
     from audio.pii.detector import SpokenPiiDetector  # noqa: PLC0415
@@ -155,18 +196,13 @@ def run_clip(clip: ClipTruth, pcm: np.ndarray, mode: str, seed: int, defect: str
 
     down = SttProviderError("down", 500)
     api, loc = API_STT, LOCAL_STT
-    if defect == "bad_stt":
-        api, loc = SttModel(0.45, 0.0, api.latency), SttModel(0.45, 0.0, loc.latency)
-    elif defect == "slow_stt":
-        api, loc = SttModel(api.drop, api.mishear, (2.5, 3.5)), SttModel(loc.drop, loc.mishear, (2.5, 3.5))
     plan = {
         "api": (api, None, loc, None),
         "perfect": (PERFECT, None, PERFECT, None),
         "api_down": (api, down, loc, down),
         "local_only": (api, down, loc, None),
     }[mode]
-    audio_over = {"failsafe_mute_voiced": False} if defect == "failsafe_off" else {}
-    cfg = Config(delay_seconds=DELAY_S, audio=audio_over)  # constructed directly: no .env, no keys, offline
+    cfg = Config(delay_seconds=DELAY_S)  # constructed directly: no .env, no keys, offline
     vad_name = "silero"
     try:
         seg = Segmenter.from_config(cfg)
@@ -185,7 +221,9 @@ def run_clip(clip: ClipTruth, pcm: np.ndarray, mode: str, seed: int, defect: str
             hedge_s=cfg.audio.race_hedge_s,
             clock=loop.time,
         )
-        det = SpokenPiiDetector(SpokenRules(watch_window_s=cfg.audio.watch_window_s, address_mute=cfg.audio.address_mute))
+        det = SpokenPiiDetector(
+            SpokenRules(watch_window_s=cfg.audio.watch_window_s, address_mute=cfg.audio.address_mute)
+        )
         pipe = AudioPipeline(cfg, bus, seg, race, det, clock=loop.time)
         t0 = loop.time()
         await feed_realtime(pipe, pcm, pts0=0.0)
@@ -198,7 +236,14 @@ def run_clip(clip: ClipTruth, pcm: np.ndarray, mode: str, seed: int, defect: str
     compute = time.process_time() - c0
     t0, bus, pipe = state["t0"], state["bus"], state["pipe"]
     spans = [
-        {"id": e.span_id, "t0": e.pts_start, "t1": e.pts_end, "ready": e.completed_at - t0, "gran": e.granularity, "cat": e.category.value}
+        {
+            "id": e.span_id,
+            "t0": e.pts_start,
+            "t1": e.pts_end,
+            "ready": e.completed_at - t0,
+            "gran": e.granularity,
+            "cat": e.category.value,
+        }
         for tp, e in bus.history
         if tp is Topic.MUTE_SPAN
     ]
@@ -211,7 +256,9 @@ def run_clip(clip: ClipTruth, pcm: np.ndarray, mode: str, seed: int, defect: str
     for tp, e in bus.history:
         if tp is Topic.TIMING and e.stage in ("stt", "pii_rules", "pii_llm"):
             timings[e.stage].append(e.t_end - e.t_start)
-    return ClipRun(spans, masks, dict(timings), list(pipe.latencies), dict(pipe.stats), pipe.leaked_s, compute, vad_name)
+    return ClipRun(
+        spans, masks, dict(timings), list(pipe.latencies), dict(pipe.stats), pipe.leaked_s, compute, vad_name
+    )
 
 
 # --------------------------------------------------------------------------- scoring one clip
@@ -222,7 +269,9 @@ def output_audio(pcm: np.ndarray, spans: list[dict[str, Any]]) -> tuple[np.ndarr
     from contracts.enums import Category  # noqa: PLC0415
     from engine.audio_mute import MuteBook  # noqa: PLC0415
 
-    up = np.clip(np.rint(resample_poly(pcm.astype(np.float64), OUT_RATE // 16_000, 1)), -32768, 32767).astype(np.int16)
+    up = np.clip(np.rint(resample_poly(pcm.astype(np.float64), OUT_RATE // 16_000, 1)), -32768, 32767).astype(
+        np.int16
+    )
     out = up.copy()
     book = MuteBook()
     order = sorted(spans, key=lambda s: s["ready"])
@@ -234,7 +283,9 @@ def output_audio(pcm: np.ndarray, spans: list[dict[str, Any]]) -> tuple[np.ndarr
             s = order[ptr]
             ptr += 1
             outcome = book.add(
-                MuteSpan(s["id"], s["t0"], s["t1"], Category(s["cat"]), s["gran"], 0.9, "eval", 0.0, "silence")
+                MuteSpan(
+                    s["id"], s["t0"], s["t1"], Category(s["cat"]), s["gran"], 0.9, "eval", 0.0, "silence"
+                )
             )
             late += int(outcome.late or outcome.leaked_samples > 0)
         book.apply(out[k : k + step], k)
@@ -335,7 +386,13 @@ def score_clip(clip: ClipTruth, env: np.ndarray) -> dict[str, Any]:
         seg = env[max(0, int(round(a / HOP_S))) : min(len(env), int(round(b / HOP_S)))]
         hn_total += seg.size * HOP_S
         hn_muted += float((seg <= metrics.MUTE_THRESHOLD_DBFS).sum()) * HOP_S
-    return {"rows": rows, "sec_total": sec_total, "sec_muted": sec_muted, "hn_total": hn_total, "hn_muted": hn_muted}
+    return {
+        "rows": rows,
+        "sec_total": sec_total,
+        "sec_muted": sec_muted,
+        "hn_total": hn_total,
+        "hn_muted": hn_muted,
+    }
 
 
 # --------------------------------------------------------------------------- legs
@@ -355,11 +412,15 @@ def _clip_pcm(data: Path, clip: ClipTruth) -> np.ndarray:
     return np.asarray(pcm, dtype=np.int16)
 
 
-def run_leg(leg: str, data: Path, limit: int | None, stride: int, seed: int, defect: str = "") -> dict[str, Any]:
+def run_leg(
+    leg: str, data: Path, limit: int | None, stride: int, seed: int, defect: str = "", reference: bool = False
+) -> dict[str, Any]:
     mode = {"main": "api", "api_down": "api_down", "local_only": "local_only", "perfect": "perfect"}[leg]
     manifest, clips = load_manifest(data)
     clips = _select(clips, limit, stride)
-    by: dict[str, dict[str, Tally]] = {k: defaultdict(Tally) for k in ("lang", "kind", "cue", "bucket", "noise", "speed")}
+    by: dict[str, dict[str, Tally]] = {
+        k: defaultdict(Tally) for k in ("lang", "kind", "cue", "bucket", "noise", "speed")
+    }
     tot_pii, tot_digit, tot_all = Tally(), Tally(), Tally()
     seqs = [0, 0]  # complete digit sequences, total digit sequences
     over_num = over_den = hn_num = hn_den = 0.0
@@ -375,7 +436,7 @@ def run_leg(leg: str, data: Path, limit: int | None, stride: int, seed: int, def
     t_wall = time.time()
     for clip in clips:
         pcm = _clip_pcm(data, clip)
-        run = run_clip(clip, pcm, mode, seed + int(clip.clip_id[1:]), defect)
+        run = run_clip(clip, pcm, mode, seed + int(clip.clip_id[1:]), defect, reference)
         vad_used.add(run.vad)
         out, late = output_audio(pcm, run.spans)
         late_spans += late
@@ -393,12 +454,23 @@ def run_leg(leg: str, data: Path, limit: int | None, stride: int, seed: int, def
                 if w.span is not None:
                     flags[w.span].append(ok)
                     sp = clip.spans[w.span]
-                    for key, val in (("lang", clip.lang), ("kind", w.kind), ("cue", sp.cue), ("bucket", clip.bucket), ("noise", clip.noise), ("speed", f"{clip.speed}")):
+                    for key, val in (
+                        ("lang", clip.lang),
+                        ("kind", w.kind),
+                        ("cue", sp.cue),
+                        ("bucket", clip.bucket),
+                        ("noise", clip.noise),
+                        ("speed", f"{clip.speed}"),
+                    ):
                         by[key][str(val)].add(d, ok)
                 if not ok:
                     missed += d
                     cov = pts_cover(run.spans, w.t0, w.t1)
-                    why = "no_span" if cov < 0.05 else ("partial_span" if cov < metrics.MUTE_MIN_FRACTION else "late_span")
+                    why = (
+                        "no_span"
+                        if cov < 0.05
+                        else ("partial_span" if cov < metrics.MUTE_MIN_FRACTION else "late_span")
+                    )
                     reasons[(why, w.kind or "", clip.spans[w.span].cue if w.span is not None else "")] += 1
         for sid, fl in flags.items():
             if clip.spans[sid].kind in ("phone", "otp", "aadhaar"):
@@ -427,25 +499,43 @@ def run_leg(leg: str, data: Path, limit: int | None, stride: int, seed: int, def
         "leg": leg,
         "mode": mode,
         "defect": defect,
+        "reference": reference,
         "n_clips": len(clips),
         "audio_s": round(audio_s, 1),
         "vad": sorted(vad_used),
-        "stt_model": "oracle: " + json.dumps({"api": API_STT.__dict__, "local": LOCAL_STT.__dict__}, default=list),
+        "stt_model": "oracle: "
+        + json.dumps({"api": API_STT.__dict__, "local": LOCAL_STT.__dict__}, default=list),
         "pii": tot_pii.asdict(),
         "digits": tot_digit.asdict(),
         "all_speech": tot_all.asdict(),
-        "digit_sequences": {"complete": seqs[0], "total": seqs[1], "rate": (seqs[0] / seqs[1]) if seqs[1] else None},
+        "digit_sequences": {
+            "complete": seqs[0],
+            "total": seqs[1],
+            "rate": (seqs[0] / seqs[1]) if seqs[1] else None,
+        },
         "over_mute": (over_num / over_den) if over_den else None,
         "over_mute_seconds": [round(over_num, 2), round(over_den, 2)],
         "hard_negative_mute": (hn_num / hn_den) if hn_den else None,
-        "audio_latency_s": {"n": len(lat), "p50": _pct(lat, 50), "p95": _pct(lat, 95), "max": round(max(lat), 4) if lat else None},
-        "stage_s": {k: {"n": len(v), "p50": _pct(v, 50), "p95": _pct(v, 95), "max": round(max(v), 4)} for k, v in sorted(stage.items())},
+        "audio_latency_s": {
+            "n": len(lat),
+            "p50": _pct(lat, 50),
+            "p95": _pct(lat, 95),
+            "max": round(max(lat), 4) if lat else None,
+        },
+        "stage_s": {
+            k: {"n": len(v), "p50": _pct(v, 50), "p95": _pct(v, 95), "max": round(max(v), 4)}
+            for k, v in sorted(stage.items())
+        },
         "pipeline_stats": dict(stats),
         "late_or_partly_late_spans": late_spans,
         "leaked_seconds_in_pipeline": round(leaked, 3),
         "compute_s_per_audio_s": round(compute / audio_s, 4) if audio_s else None,
         "wall_s": round(time.time() - t_wall, 1),
-        "mouth_blur": {"covered": mouth[0], "frames": mouth[1], "rate": (mouth[0] / mouth[1]) if mouth[1] else None},
+        "mouth_blur": {
+            "covered": mouth[0],
+            "frames": mouth[1],
+            "rate": (mouth[0] / mouth[1]) if mouth[1] else None,
+        },
         "by": {k: {kk: v.asdict() for kk, v in sorted(d.items())} for k, d in by.items()},
         "worst_clips": [{"clip": c, "missed_pii_s": round(m, 2)} for m, c in worst[:40]],
         "clips_with_misses": len(worst),
@@ -458,7 +548,10 @@ def leg_data(data: Path, n: int, seed: int, allow_tone: bool, sample: int) -> tu
     try:
         manifest, clips = load_manifest(data)
     except (OSError, ValueError, KeyError):
-        return {"leg": "data", "error": f"no dataset at {data}; run: python -m eval.data_gen.audio --out {data}"}, EXIT_ENV
+        return {
+            "leg": "data",
+            "error": f"no dataset at {data}; run: python -m eval.data_gen.audio --out {data}",
+        }, EXIT_ENV
     problems: list[str] = []
     t = manifest["totals"]
     if manifest.get("engine") != "flite" and not allow_tone:
@@ -479,22 +572,42 @@ def leg_data(data: Path, n: int, seed: int, allow_tone: bool, sample: int) -> tu
             problems.append(f"{clip.clip_id}: word beyond the end")
     if bad_hash:
         problems.append(f"{bad_hash} sampled clips do not match their manifest hash")
-    out = {"leg": "data", "seed": manifest["seed"], "engine": manifest["engine"], "totals": t, "problems": problems}
+    out = {
+        "leg": "data",
+        "seed": manifest["seed"],
+        "engine": manifest["engine"],
+        "totals": t,
+        "problems": problems,
+    }
     return out, (EXIT_FAIL if problems else EXIT_OK)
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m eval.phase3", description=__doc__.split("\n\n")[0])
-    p.add_argument("--leg", choices=("data", "main", "api_down", "local_only", "perfect", "report"), required=True)
+    p.add_argument(
+        "--leg", choices=("data", "main", "api_down", "local_only", "perfect", "report"), required=True
+    )
     p.add_argument("--data", default=DEFAULT_DATA)
     p.add_argument("--out", default="")
     p.add_argument("--seed", type=int, default=DEFAULT_SEED)
     p.add_argument("--n", type=int, default=DEFAULT_N)
     p.add_argument("--limit", type=int, default=0, help="only the first N selected clips (smoke runs)")
-    p.add_argument("--stride", type=int, default=1, help="every k-th clip (api_down and local_only use a subset)")
+    p.add_argument(
+        "--stride", type=int, default=1, help="every k-th clip (api_down and local_only use a subset)"
+    )
     p.add_argument("--generate", action="store_true", help="build the dataset first when it is missing")
-    p.add_argument("--allow-tone", action="store_true", help="accept the tone fallback engine (unit tests only)")
-    p.add_argument("--defect", choices=DEFECTS, default="", help="seed a defect to prove the gate fails")
+    p.add_argument(
+        "--allow-tone", action="store_true", help="accept the tone fallback engine (unit tests only)"
+    )
+    p.add_argument(
+        "--reference", action="store_true", help="run the stand-in audio module that is right by construction"
+    )
+    p.add_argument(
+        "--defect",
+        choices=DEFECTS,
+        default="",
+        help="with --reference: seed a defect to prove the gate fails",
+    )
     p.add_argument("--results", default="")
     p.add_argument("--report-dir", default="")
     p.add_argument("--phase-name", default="phase3")
@@ -505,7 +618,12 @@ def main(argv: list[str] | None = None) -> int:
     if a.leg == "report":
         from .phase3_report import build_report  # noqa: PLC0415
 
-        return build_report(out, Path(a.results) if a.results else None, a.phase_name, Path(a.report_dir) if a.report_dir else None)
+        return build_report(
+            out,
+            Path(a.results) if a.results else None,
+            a.phase_name,
+            Path(a.report_dir) if a.report_dir else None,
+        )
     if a.generate and not (data / "manifest.json").exists():
         try:
             build_suite(data, a.seed, a.n, "tone" if a.allow_tone else "flite")
@@ -516,16 +634,38 @@ def main(argv: list[str] | None = None) -> int:
         res, rc = leg_data(data, a.n, a.seed, a.allow_tone, 10)
     else:
         if not (data / "manifest.json").exists():
-            print(f"ENV ERROR: no dataset at {data} (python -m eval.data_gen.audio --out {data})", file=sys.stderr)
+            print(
+                f"ENV ERROR: no dataset at {data} (python -m eval.data_gen.audio --out {data})",
+                file=sys.stderr,
+            )
             return EXIT_ENV
         try:
-            res = run_leg(a.leg, data, a.limit or None, a.stride, a.seed, a.defect)
+            if a.defect and not a.reference:
+                print(
+                    "ERROR: --defect needs --reference (defects are seeded into the stand-in build)",
+                    file=sys.stderr,
+                )
+                return EXIT_ENV
+            res = run_leg(a.leg, data, a.limit or None, a.stride, a.seed, a.defect, a.reference)
         except ImportError as exc:
             print(f"ENV ERROR: cannot import the audio/engine modules ({exc.name})", file=sys.stderr)
             return EXIT_ENV
         rc = EXIT_OK
-    (out / f"phase3-{a.leg}.json").write_text(json.dumps(res, indent=1, sort_keys=True, default=str) + "\n", encoding="utf-8")
-    keys = ("leg", "n_clips", "pii", "digits", "all_speech", "over_mute", "audio_latency_s", "mouth_blur", "problems", "error")
+    (out / f"phase3-{a.leg}.json").write_text(
+        json.dumps(res, indent=1, sort_keys=True, default=str) + "\n", encoding="utf-8"
+    )
+    keys = (
+        "leg",
+        "n_clips",
+        "pii",
+        "digits",
+        "all_speech",
+        "over_mute",
+        "audio_latency_s",
+        "mouth_blur",
+        "problems",
+        "error",
+    )
     print(json.dumps({k: res[k] for k in keys if k in res}, indent=1, default=str))
     if rc == EXIT_OK and a.leg != "data":
         from .phase3_report import evaluate  # noqa: PLC0415

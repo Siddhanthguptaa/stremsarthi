@@ -60,12 +60,15 @@ class Vocab:
     ninety: frozenset[str]
     at_strong: tuple[tuple[str, ...], ...]
     at_weak: tuple[tuple[str, ...], ...]
+    at_partial: tuple[tuple[str, ...], ...]
+    at_fuzzy: tuple[tuple[str, ...], ...]
     handles: frozenset[str]
     cue_generic: tuple[tuple[str, ...], ...]
     cue_address_open: tuple[tuple[str, ...], ...]
     addr_strong: tuple[tuple[str, ...], ...]
     addr_weak: tuple[tuple[str, ...], ...]
     name_stop: frozenset[str]
+    cue_filler: frozenset[str]
 
 
 @lru_cache(maxsize=1)
@@ -92,12 +95,15 @@ def load_vocab(path: Path | None = None) -> Vocab:
         ninety=words(raw["ninety"]),
         at_strong=phrases(raw["at_markers"]["strong"]),
         at_weak=phrases(raw["at_markers"]["weak"]),
+        at_partial=phrases(raw["at_markers"].get("partial", [])),
+        at_fuzzy=tuple(tuple(p) for p in raw["at_markers"].get("fuzzy", [])),  # "*" matches any one token
         handles=words(raw["handles"]),
         cue_generic=phrases(raw["cues"]["generic"]),
         cue_address_open=phrases(raw["cues"]["address_open"]),
         addr_strong=phrases(raw["address"]["strong"]),
         addr_weak=phrases(raw["address"]["weak"]),
         name_stop=words(raw["name_stop"]),
+        cue_filler=words(raw.get("cue_filler", [])),
     )
 
 
@@ -111,6 +117,7 @@ class Tok:
     seg_id: int
     widx0: int  # first source word (index into TranscriptWindow.words)
     widx1: int  # last source word
+    spelled: bool = False  # several spoken letters joined into one token (``o k s b i``)
 
 
 def tokenize(words: Sequence[Word]) -> list[Tok]:
@@ -152,6 +159,7 @@ def join_single_letters(toks: Sequence[Tok], max_gap_s: float = 0.6) -> list[Tok
                     grp[0].seg_id,
                     grp[0].widx0,
                     grp[-1].widx1,
+                    True,
                 )
             )
             i = j + 1
@@ -161,8 +169,35 @@ def join_single_letters(toks: Sequence[Tok], max_gap_s: float = 0.6) -> list[Tok
     return out
 
 
+FOR_WORDS = frozenset({"for", "फॉर"})
+
+
+def collapse_for_words(toks: Sequence[Tok], max_gap_s: float = 0.6) -> list[Tok]:
+    """``z for zebra`` is the letter ``z``: the clarifying word is dropped into the letter's time span."""
+    out: list[Tok] = []
+    i, n = 0, len(toks)
+    while i < n:
+        t = toks[i]
+        if (
+            _single_letter(t.text)
+            and i + 2 < n
+            and toks[i + 1].text in FOR_WORDS
+            and toks[i + 2].text.isalpha()
+            and toks[i + 2].text.isascii()
+            and toks[i + 2].text[0] == t.text
+            and toks[i + 1].t0 - t.t1 < max_gap_s
+            and toks[i + 2].t0 - toks[i + 1].t1 < max_gap_s
+        ):
+            out.append(Tok(t.text, t.t0, toks[i + 2].t1, t.approx or toks[i + 2].approx, t.seg_id, t.widx0, toks[i + 2].widx1))
+            i += 3
+        else:
+            out.append(t)
+            i += 1
+    return out
+
+
 def prepare(words: Sequence[Word]) -> list[Tok]:
-    return join_single_letters(tokenize(words))
+    return join_single_letters(collapse_for_words(tokenize(words)))
 
 
 # --------------------------------------------------------------------------- number words
@@ -183,53 +218,106 @@ def to_digits(text: str, vocab: Vocab | None = None) -> str | None:
 
 @dataclass(frozen=True, slots=True)
 class NumRun:
-    digits: str  # expanded digits ("" if only compound words such as "sau")
+    digits: str  # expanded digits ("" if only compound words such as "sau"); "?" stands for a bridged token
     tok0: int  # index range into the token list
     tok1: int
     t0: float
     t1: float
     plus: bool  # preceded by "plus" (a country code follows)
+    singles: int = 0  # digits that were spoken one by one (``nau``, ``5``), not as a multi-digit numeral
+    compound: bool = False  # contains ``sau`` / ``hazaar`` ...: a quantity, not a digit string
+    counting: bool = False  # 1 2 3 / 5 4 3 ...: someone counting, not a code
 
     @property
     def n(self) -> int:
         return len(self.digits)
 
 
+# English two-digit number words ("ninety eight" is 98): read as digit pairs inside a run.
+EN_TEENS = {
+    "ten": "10", "eleven": "11", "twelve": "12", "thirteen": "13", "fourteen": "14", "fifteen": "15",
+    "sixteen": "16", "seventeen": "17", "eighteen": "18", "nineteen": "19",
+}  # fmt: skip
+EN_TENS = {
+    "twenty": "2", "thirty": "3", "forty": "4", "fourty": "4", "fifty": "5", "sixty": "6", "seventy": "7",
+    "eighty": "8", "ninety": "9",
+}  # fmt: skip
+BRIDGE_MAX_S = 0.8  # a bridged token is at most this long
+# Words that are real connectors, not a mis-heard digit: they end a number run.
+BRIDGE_STOP = frozenset(
+    {"aur", "and", "or", "ya", "phir", "then", "toh", "to", "plus", "at", "और", "या", "तो"}
+)
+
+
+def _is_counting(digits: str) -> bool:
+    if len(digits) < 3 or not digits.isdigit():
+        return False
+    steps = {int(b) - int(a) for a, b in zip(digits, digits[1:], strict=False)}
+    return steps == {1} or steps == {-1}
+
+
+def _digit_token(t: Tok, v: Vocab) -> bool:
+    return digit_value(t.text, v) is not None or t.text in v.repeat or t.text in v.ninety
+
+
 def number_runs(toks: Sequence[Tok], gap_s: float = 1.0, vocab: Vocab | None = None) -> list[NumRun]:
     """Maximal runs of number tokens whose gaps are below ``gap_s`` (a run continues across segments).
 
     ``double``/``triple`` repeat the next single digit; ``ninety one`` is read as 91; compound words
-    (``sau``, ``hazaar``, ``lakh``) keep the run contiguous but add no digits.
+    (``sau``, ``hazaar``, ``lakh``) keep the run contiguous but add no digits. One short unknown token between
+    two digit tokens is bridged (``?``): a recogniser that mis-hears a digit must not split a number in two.
     """
     v = vocab or load_vocab()
     runs: list[NumRun] = []
     cur_digits: list[str] = []
     cur: list[int] = []  # token indices
     plus_flag = False
+    singles = 0
+    compound = False
 
     def close() -> None:
-        nonlocal cur_digits, cur, plus_flag
+        nonlocal cur_digits, cur, plus_flag, singles, compound
         if cur:
+            digits = "".join(cur_digits)
             runs.append(
-                NumRun("".join(cur_digits), cur[0], cur[-1], toks[cur[0]].t0, toks[cur[-1]].t1, plus_flag)
+                NumRun(
+                    digits,
+                    cur[0],
+                    cur[-1],
+                    toks[cur[0]].t0,
+                    toks[cur[-1]].t1,
+                    plus_flag,
+                    singles,
+                    compound,
+                    not compound and _is_counting(digits),
+                )
             )
-        cur_digits, cur, plus_flag = [], [], False
+        cur_digits, cur, plus_flag, singles, compound = [], [], False, 0, False
 
     i, n = 0, len(toks)
     while i < n:
         t = toks[i]
         piece: str | None = None
         span = 1
-        if t.text in v.repeat and i + 1 < n:
+        one = 0  # single digits this piece contributes
+        if t.text in EN_TEENS:
+            piece, one = EN_TEENS[t.text], 2
+        elif t.text in EN_TENS:
+            piece, one = EN_TENS[t.text] + "0", 2
+            nxt = digit_value(toks[i + 1].text, v) if i + 1 < n else None
+            if nxt is not None and len(nxt) == 1 and nxt != "0" and toks[i + 1].t0 - t.t1 < gap_s:
+                piece, span = EN_TENS[t.text] + nxt, 2
+        elif t.text in v.repeat and i + 1 < n:
             nxt = digit_value(toks[i + 1].text, v)
             if nxt is not None and len(nxt) == 1 and toks[i + 1].t0 - t.t1 < gap_s:
-                piece, span = nxt * v.repeat[t.text], 2
+                piece, span, one = nxt * v.repeat[t.text], 2, v.repeat[t.text]
         elif t.text in v.ninety and i + 1 < n and digit_value(toks[i + 1].text, v) == "1":
-            piece, span = "91", 2
+            piece, span, one = "91", 2, 2
         elif t.text in v.compound:
             piece = ""
         else:
             piece = digit_value(t.text, v)
+            one = 1 if piece is not None and len(piece) == 1 else 0
         if piece is None:
             if t.text in v.plus and not cur:  # "plus nine one": a country code follows
                 nxt = toks[i + 1] if i + 1 < n else None
@@ -240,6 +328,19 @@ def number_runs(toks: Sequence[Tok], gap_s: float = 1.0, vocab: Vocab | None = N
                 )
                 i += 1
                 continue
+            if (
+                cur
+                and i + 1 < n
+                and t.t0 - toks[cur[-1]].t1 < gap_s * 0.6
+                and t.t1 - t.t0 <= BRIDGE_MAX_S
+                and t.text not in BRIDGE_STOP
+                and _digit_token(toks[i + 1], v)
+                and toks[i + 1].t0 - t.t1 < gap_s * 0.6
+            ):  # mis-heard digit between two digits: keep the run whole
+                cur_digits.append("?")
+                cur.append(i)
+                i += 1
+                continue
             close()
             i += 1
             continue
@@ -247,6 +348,69 @@ def number_runs(toks: Sequence[Tok], gap_s: float = 1.0, vocab: Vocab | None = N
             close()
         cur_digits.append(piece)
         cur.extend(range(i, i + span))
+        singles += one
+        compound = compound or (t.text in v.compound)
         i += span
     close()
+    return runs
+
+
+# --------------------------------------------------------------------------- spelled ids
+def is_letter_token(t: Tok) -> bool:
+    """A single spoken letter (``d``) or several joined ones (``rahul`` spelt out: ``r a h u l``)."""
+    return t.spelled or _single_letter(t.text)
+
+
+@dataclass(frozen=True, slots=True)
+class IdRun:
+    tok0: int
+    tok1: int
+    t0: float
+    t1: float
+    letters: int  # spoken letters in the run
+    digits: int  # digit tokens in the run
+
+
+def id_runs(toks: Sequence[Tok], gap_s: float = 0.6, vocab: Vocab | None = None) -> list[IdRun]:
+    """Runs of spelled letters and digit tokens, as when someone dictates a UPI id, an e-mail or a PAN.
+
+    ``letters`` leaves out a lone ``a`` or ``i`` (also ordinary words) so that "i do" is not a spelt id; they
+    still keep a run together. One short unknown token between two members is bridged, as in ``number_runs``."""
+    v = vocab or load_vocab()
+    runs: list[IdRun] = []
+    i, n = 0, len(toks)
+
+    def like(t: Tok) -> bool:
+        return is_letter_token(t) or _digit_token(t, v)
+
+    while i < n:
+        if not like(toks[i]):
+            i += 1
+            continue
+        j = i
+        while j + 1 < n:
+            nxt = toks[j + 1]
+            if like(nxt) and nxt.t0 - toks[j].t1 < gap_s:
+                j += 1
+            elif (
+                j + 2 < n
+                and like(toks[j + 2])
+                and nxt.t0 - toks[j].t1 < gap_s
+                and toks[j + 2].t0 - nxt.t1 < gap_s
+                and nxt.t1 - nxt.t0 <= BRIDGE_MAX_S
+                and nxt.text not in BRIDGE_STOP
+                and nxt.text.isalpha()
+            ):
+                j += 2  # a mis-heard letter or digit between two members
+            else:
+                break
+        members = [t for t in toks[i : j + 1] if like(t)]
+        letters = sum(
+            len(t.text) if t.spelled else (0 if t.text in ("a", "i") else 1)
+            for t in members
+            if is_letter_token(t)
+        )
+        digits = sum(1 for t in members if not is_letter_token(t))
+        runs.append(IdRun(i, j, toks[i].t0, toks[j].t1, letters, digits))
+        i = j + 1
     return runs

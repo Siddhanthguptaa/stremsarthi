@@ -139,6 +139,22 @@ NEGATIVE_BUCKETS: dict[str, str] = {
     "neg_game": "screens",
     "faces_neg": "faces",
     "qr_negative": "upi_qr",
+    "neg_scene": "text",
+}
+
+#: negative buckets read on a subset of the detector's mask categories only. ``neg_text`` holds text screens with
+#: no PII, and the text detector's ``mask_all_text`` rule masks every signboard-like text box there BY DESIGN, so
+#: its false masks are the PII categories only. ``neg_scene`` (natural scenes and text-free UI) is the signboard
+#: negative: there every ``signboard`` mask is a false mask (informational, not gated).
+NEGATIVE_COUNT_CATEGORIES: dict[str, tuple[str, ...]] = {
+    "neg_text": ("phone_number", "pin_code", "upi_id", "email", "pan"),
+}
+#: informational second reading of a negative bucket: masks of these categories only
+NEGATIVE_INFO_CATEGORIES: dict[str, tuple[str, ...]] = {
+    "neg_text": ("signboard",),
+    "neg_scene": ("signboard",),
 }
 
 LEVELS = ("clean", "light", "heavy")
+#: levels the recall rows are gated on (docs/DECISIONS.md D-48). Heavy is a stress level: reported, not gated.
+GATE_LEVELS = ("clean", "light")

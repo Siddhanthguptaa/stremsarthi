@@ -1,7 +1,7 @@
 """``!hold`` / ``!unhold`` chat commands: platform roles in, ``HoldCommand`` events out.
 
 * ``!hold``: broadcaster or moderator (``commands.hold_roles``). ``!unhold``: broadcaster only by default
-  (``commands.unhold_roles``). Anyone else is ignored and reported once per window as
+  (``commands.unhold_roles``). Anyone else is ignored and reported once per window (shared by all actors; the rest are counted) as
   ``SafetyEvent(detail_code="cmd_denied")``.
 * Dedupe by ``(platform, message_id)`` so a redelivered message cannot toggle twice.
 * Rate limit: one accepted command per actor per ``rate_limit_s``. The window is kept per command kind,
@@ -59,7 +59,8 @@ class HoldCommands:
         self._clock: Clock = clock or SystemClock()
         self._seen: OrderedDict[tuple[str, str], None] = OrderedDict()
         self._accepted_at: OrderedDict[tuple[str, str], float] = OrderedDict()
-        self._denied_at: OrderedDict[str, float] = OrderedDict()
+        self._denied_window_start: float | None = None
+        self.denied_suppressed = 0  # denials not reported as an event (same window)
 
     def update_config(self, config: ChatCommandsConfig) -> None:
         self._cfg = config
@@ -107,14 +108,14 @@ class HoldCommands:
             self._seen.popitem(last=False)
 
     def _deny(self, command: Command, actor: str, mid: str, now: float) -> CommandOutcome:
-        last = self._denied_at.get(actor)
-        if last is None or now - last >= self._cfg.rate_limit_s:  # one event per window: no flooding
-            self._denied_at[actor] = now
-            self._denied_at.move_to_end(actor)
-            while len(self._denied_at) > _LIMIT_CAP:
-                self._denied_at.popitem(last=False)
+        # One event per window across ALL actors (a flood of viewers typing !hold must not flood the bus); the
+        # rest are only counted in ``denied_suppressed``.
+        if self._denied_window_start is None or now - self._denied_window_start >= self._cfg.rate_limit_s:
+            self._denied_window_start = now
             if self._publisher is not None:
                 self._publisher.safety(DENIED_CODE, source="chat.commands")
+        else:
+            self.denied_suppressed += 1
         return self._done(command, "denied", actor, mid)
 
     @staticmethod

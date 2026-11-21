@@ -63,3 +63,17 @@ token file survives an API restart); the web app sends `app`; others are `api`. 
   `POST /api/mod/action` (moderator only; 404 `not_found`, 409 `not_pending` / `staff_message` / `busy`, 429, 503) publishes
   `ModAction` on `chat.modaction`. Staff messages can be approved or dismissed, never deleted or timed out.
   `GET /api/chat/overlay` (streamer): hidden count and allowed messages only.
+
+## Go-live orchestration, risk and safety report (T6.1)
+- `orchestrator.py` spawns `python -m engine.main --profile <p>` (which builds relay, vision, audio and guard through
+  `module:build`) and, when `chat.enabled`, `python -m chat.main --profile <p>`; stdout/stderr are discarded (chat output is
+  scanned only for the fixed status codes `groq_key_missing`, `yt_*`, `twitch_*`). Engine death is reported, never
+  restarted; chat restarts only on exit 3 (bus), max 3 times. Stop: SIGTERM, `SESSION_STOP_TIMEOUT_S` grace, then kill.
+  An engine already heartbeating (run by hand) is attached to, not spawned. `SESSION_SPAWN=false` never spawns.
+  Env: `SESSION_ENGINE_CMD`, `SESSION_CHAT_CMD` (`{profile}` replaced), `SESSIONS_DIR`, `SESSION_TTL_S`, `INGEST_BIND_HOST`.
+- Keys: `PUT|DELETE /api/destinations/{youtube|twitch}/key` (RAM only, passed to the engine env), `GET /api/destinations`.
+  No endpoint returns a key. `GET /api/session` fills `ingest` URLs and `processes`; `GET /api/session/health` = readiness.
+- `GET /api/pairing`, `/api/pairing/{rtmp|srt}.png` (streamer only, 409 before a session): relay helper with local fallback.
+- `GET /api/risk` -> `{level: ok|watch|warn|danger, meter_level, score, signals[]}`; WS carries `guard.meter`/`guard.risk`.
+- `GET /api/report[/{id}[/printable|/export?format=json|html]]`, `DELETE /api/session/{id}/data`. `recorder.py` writes
+  `events.jsonl` (SafetyEvents only); `report.py` runs the privacy guard on every report.

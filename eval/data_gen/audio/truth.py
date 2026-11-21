@@ -15,7 +15,9 @@ class WordTruth:
     t0: float
     t1: float
     kind: str | None = None  # PII kind or None
-    digit: bool = False  # a spoken digit of a number (phone, otp, aadhaar, digits inside an upi id or pincode)
+    digit: bool = (
+        False  # a spoken digit of a number (phone, otp, aadhaar, digits inside an upi id or pincode)
+    )
     span: int | None = None  # index into ClipTruth.spans
     hard_neg: bool = False  # a number-bearing non-PII phrase (score, level, price...): must NOT be muted
 
@@ -50,7 +52,9 @@ class ClipTruth:
     pcm_sha256: str
     words: list[WordTruth] = field(default_factory=list)
     spans: list[SpanTruth] = field(default_factory=list)
-    face_ranges: list[tuple[float, float]] = field(default_factory=list)  # allowlisted face visible (video side)
+    face_ranges: list[tuple[float, float]] = field(
+        default_factory=list
+    )  # allowlisted face visible (video side)
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)

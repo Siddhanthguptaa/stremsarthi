@@ -40,18 +40,30 @@ def is_allowed_bind(host: str) -> bool:
     return any(address in net for net in _ALLOWED_NETWORKS)
 
 
+WILDCARD = "0.0.0.0"  # noqa: S104 - the one deliberate all-interfaces bind, see RelayAddress.allow_wildcard
+
+
 @dataclass(frozen=True)
 class RelayAddress:
-    """Where MediaMTX listens. RTSP (internal reader) and the API are always loopback."""
+    """Where MediaMTX listens. RTSP (internal reader) and the API are always loopback.
+
+    ``host`` is a loopback, LAN private or Tailscale literal. ``0.0.0.0`` (every interface, needed
+    when WSL2 mirrored networking must expose the phone ports) is refused unless ``allow_wildcard``
+    is set on purpose; ``relay.security`` callers then also require credentials and an SRT passphrase
+    (see ``relay.srt.validate_exposure``). Only RTMP and SRT ever bind ``host``; RTSP and the API
+    stay on 127.0.0.1.
+    """
 
     host: str = LOOPBACK
     rtmp_port: int = 1935
     srt_port: int = 8890
     rtsp_port: int = 8554
     api_port: int = 9997
+    allow_wildcard: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.host, str) or not is_allowed_bind(self.host):
+        wildcard_ok = self.allow_wildcard is True and self.host == WILDCARD
+        if not isinstance(self.host, str) or not (wildcard_ok or is_allowed_bind(self.host)):
             raise ValueError("Relay bind must be an explicit IPv4 loopback, LAN private or Tailscale address")
         ports = (self.rtmp_port, self.srt_port, self.rtsp_port, self.api_port)
         if any(type(p) is not int or not 1024 <= p <= 65535 for p in ports):
@@ -59,16 +71,27 @@ class RelayAddress:
         if len(set(ports)) != len(ports):
             raise ValueError("Relay ports must be distinct")
 
+    @property
+    def connect_host(self) -> str:
+        """Address an in-process client dials: loopback when the bind is the wildcard."""
+        return LOOPBACK if self.host == WILDCARD else self.host
+
     # --- URL builders (credentials are only ever embedded in memory-held URLs) ---
     def rtmp(self, path: str, credentials: Credentials | None = None) -> str:
         _check_path(path)
         query = (
             "?" + urlencode({"user": credentials.user, "pass": credentials.password}) if credentials else ""
         )
-        return f"rtmp://{self.host}:{self.rtmp_port}/{path}{query}"
+        return f"rtmp://{self.connect_host}:{self.rtmp_port}/{path}{query}"
 
     def srt(
-        self, action: str, path: str, credentials: Credentials | None = None, *, latency_ms: int = 120
+        self,
+        action: str,
+        path: str,
+        credentials: Credentials | None = None,
+        *,
+        latency_ms: int = 120,
+        passphrase: str | None = None,
     ) -> str:
         if action not in ("read", "publish"):
             raise ValueError("Unknown SRT action")
@@ -78,10 +101,15 @@ class RelayAddress:
             streamid += f":{credentials.user}:{credentials.password}"
         # FFmpeg and libsrt callers do not percent-decode `streamid`, so it is passed raw. Every
         # component matches [A-Za-z0-9_-] (see Credentials), so nothing needs escaping.
-        return (
-            f"srt://{self.host}:{self.srt_port}?streamid={streamid}"
-            f"&pkt_size=1316&mode=caller&latency={int(latency_ms) * 1000}"
+        url = (
+            f"srt://{self.connect_host}:{self.srt_port}?streamid={streamid}"
+            f"&pkt_size=1316&mode=caller&latency={int(latency_ms) * 1000}"  # FFmpeg takes microseconds
         )
+        if passphrase:
+            from relay.srt import validate_passphrase
+
+            url += f"&passphrase={validate_passphrase(passphrase)}&pbkeylen=16"
+        return url
 
     def rtsp(self, path: str, credentials: Credentials | None = None) -> str:
         _check_path(path)
@@ -149,7 +177,7 @@ def mediamtx_users(address: RelayAddress, phone: Credentials, internal: Credenti
         {
             "user": internal.user,
             "pass": internal.password,
-            "ips": [LOOPBACK, address.host],
+            "ips": sorted({LOOPBACK, address.connect_host}),
             "permissions": [
                 {"action": "read", "path": PATH_CAMERA},
                 {"action": "publish", "path": PATH_SHIELDED},
@@ -162,7 +190,7 @@ def mediamtx_users(address: RelayAddress, phone: Credentials, internal: Credenti
 
 # --- redaction -----------------------------------------------------------------------------
 _URL_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.\-]{1,12}://[^\s'\"<>]+")
-_KV_RE = re.compile(r"(?i)\b(pass(?:word)?|user(?:name)?|key|token|secret|streamid)=([^\s&'\"]+)")
+_KV_RE = re.compile(r"(?i)\b(pass(?:word|phrase)?|user(?:name)?|key|token|secret|streamid)=([^\s&'\"]+)")
 _LIVE_PATH_RE = re.compile(r"(/live2?/)[A-Za-z0-9_\-]{4,}")
 
 

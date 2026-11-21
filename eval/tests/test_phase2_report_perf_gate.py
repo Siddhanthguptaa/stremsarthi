@@ -62,7 +62,7 @@ def records(n=25):
         }
 
     return [t(i, "aadhaar", 1.0) for i in range(n)] + [
-        t(i, "pan", 0.0 if i < 5 else 1.0, "heavy" if i < 5 else "clean") for i in range(n)
+        t(i, "pan", 0.0 if i < 5 else 1.0, "light" if i < 5 else "clean") for i in range(n)
     ]
 
 
@@ -100,7 +100,7 @@ def test_phase2_report_lists_every_category_with_status_and_never_passes_missing
     )
     assert rows["plate"]["reason"].startswith("detector 'plates' missing")
     assert (
-        rows["pan"]["levels"]["stills"]["heavy"]["recall"] == 0.0
+        rows["pan"]["levels"]["stills"]["light"]["recall"] == 0.0
         and rows["pan"]["levels"]["stills"]["clean"]["recall"] == 1.0
     )
     assert js["data"]["detectors"]["plates"] == "missing" and js["data"]["detectors"]["cards"] == "ok"

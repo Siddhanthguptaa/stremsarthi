@@ -43,6 +43,8 @@ AUDIO_RATE = 48_000
 AUDIO_BLOCK_SAMPLES = 960  # 20 ms at 48 kHz
 HOLD_ACTOR = "relay_ingest"
 STAGE_INGEST_DECODE = "ingest_decode"
+# MediaMTX supervisor event codes that prove the phone link (or the relay) is gone.
+TRANSPORT_LOSS_CODES = frozenset({"publisher-disconnected", "mediamtx-exit"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -414,6 +416,23 @@ class NetworkInput:
             self._hold_active = False
         self.stats_counts["hold_released"] += 1
         self._publish(Topic.HOLD, HoldCommand(HoldSource.AUTO_TRANSPORT, False, HOLD_ACTOR))
+
+    def notify_transport_event(self, code: str) -> None:
+        """Hard evidence that the phone link is gone: assert the transport hold at once.
+
+        Fed by the MediaMTX supervisor (``publisher-disconnected`` on ``camera``, ``mediamtx-exit``).
+        The frame-arrival watchdog stays the authority; this only makes a clean disconnect faster than
+        ``hold_after_s``. It is safe against false alarms: when a new publisher replaces a stale one,
+        the hold asserts and the first two in-spacing frames of the new connection release it.
+        Before the first frame there is nothing to protect (the engine starts in PROTECT), so it is
+        ignored until media has been seen.
+        """
+        if code not in TRANSPORT_LOSS_CODES or self._closed or self._last_media is None:
+            return
+        self.stats_counts["transport_events"] += 1
+        self.stats_counts["transport_event_" + code.replace("-", "_")] += 1
+        self._streak = 0  # recovery needs fresh frames, not the backlog already queued
+        self._assert_hold()
 
     def _note_media(self, arrival: float) -> None:
         """Record one decoded frame for the transport hold.

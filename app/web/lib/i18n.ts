@@ -1,5 +1,7 @@
 /** English and Hindi labels. `hi` must cover every `en` key (enforced by the type and a unit test). */
 
+import { enStreamer, hiStreamer } from "@/lib/i18n-streamer"
+
 export const LANGS = ["en", "hi"] as const
 export type Lang = (typeof LANGS)[number]
 export const LANG_STORAGE_KEY = "ss.lang"
@@ -306,6 +308,7 @@ export const en = {
   "mod.role.body": "This console is for moderators. Ask the streamer for a moderator link and open it on this device.",
   "mod.role.checking": "Checking your access…",
   "mod.role.failed": "Could not check your access. Reload the page.",
+  ...enStreamer,
 } as const
 
 export type I18nKey = keyof typeof en
@@ -612,6 +615,7 @@ export const hi: Record<I18nKey, string> = {
   "mod.role.body": "यह कंसोल मॉडरेटरों के लिए है। स्ट्रीमर से मॉडरेटर लिंक माँगें और उसे इसी डिवाइस पर खोलें।",
   "mod.role.checking": "आपकी पहुँच जाँच रहे हैं…",
   "mod.role.failed": "पहुँच जाँची नहीं जा सकी। पेज दोबारा लोड करें।",
+  ...hiStreamer,
 }
 
 const dictionaries: Record<Lang, Record<I18nKey, string>> = { en, hi }

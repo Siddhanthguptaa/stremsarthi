@@ -11,7 +11,8 @@ from collections import Counter
 from pathlib import Path
 
 from ..common.specimen import scan_obj
-from .suite import BUCKETS, DEFAULT_FACES_CACHE, DEFAULT_N, EnvError, build_suite
+from .clips import FACE_CLIP_BUCKETS
+from .suite import BUCKETS, DEFAULT_FACES_CACHE, DEFAULT_N, EnvError, build_suite, refresh_dataset
 
 EXIT_OK, EXIT_FAIL, EXIT_ENV = 0, 1, 2
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,6 +37,26 @@ def add_arguments(p: argparse.ArgumentParser) -> None:
         help="30 fps clips per clip bucket (0 = images only, default %(default)s)",
     )
     p.add_argument("--clip-seconds", type=float, default=5.0, help="clip length (spec: 5 to 10 s)")
+    p.add_argument(
+        "--face-clips", type=int, default=None, help="clips per face bucket (default: same as --clips)"
+    )
+    p.add_argument(
+        "--face-clip-seconds",
+        type=float,
+        default=None,
+        help="length of the face clips (default: --clip-seconds; Gate 2 uses 10 so an allowlisted face has settled frames)",
+    )
+    p.add_argument(
+        "--refresh-buckets",
+        nargs="*",
+        default=None,
+        help="do not regenerate: re-render only the stills of these buckets into an existing --out (patches manifest.json)",
+    )
+    p.add_argument(
+        "--refresh-face-clips",
+        action="store_true",
+        help="do not regenerate: re-render only the face clips (--face-clips, --face-clip-seconds) into an existing --out",
+    )
     p.add_argument("--no-fetch", action="store_true", help="do not download missing portraits")
 
 
@@ -44,6 +65,37 @@ def run(a: argparse.Namespace) -> int:
     if not out.is_absolute():
         out = ROOT / out
     cache = a.faces_cache if Path(a.faces_cache).is_absolute() else str(ROOT / a.faces_cache)
+    overrides = {
+        b: (
+            a.face_clips if a.face_clips is not None else a.clips,
+            a.face_clip_seconds if a.face_clip_seconds is not None else a.clip_seconds,
+        )
+        for b in FACE_CLIP_BUCKETS
+        if a.face_clips is not None or a.face_clip_seconds is not None
+    }
+    if a.refresh_buckets or a.refresh_face_clips:
+        try:
+            m = refresh_dataset(
+                out,
+                tuple(a.refresh_buckets or ()),
+                {
+                    b: (a.face_clips or a.clips, a.face_clip_seconds or a.clip_seconds)
+                    for b in FACE_CLIP_BUCKETS
+                }
+                if a.refresh_face_clips
+                else None,
+                cache,
+                fetch=not a.no_fetch,
+                workers=a.workers,
+            )
+        except EnvError as exc:
+            print(f"ENV ERROR: {exc}", file=sys.stderr)
+            return EXIT_ENV
+        print(
+            f"refreshed {out}: {len(m['items'])} images, {len(m['clips']['items'])} clips, "
+            f"manifest_sha256={m['manifest_sha256'][:16]}"
+        )
+        return EXIT_OK
     try:
         manifest = build_suite(
             out,
@@ -55,6 +107,7 @@ def run(a: argparse.Namespace) -> int:
             fetch=not a.no_fetch,
             clips_per_bucket=a.clips,
             clip_seconds=a.clip_seconds,
+            clip_overrides=overrides or None,
         )
     except EnvError as exc:
         print(f"ENV ERROR: {exc}", file=sys.stderr)

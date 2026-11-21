@@ -6,6 +6,8 @@ Environment names are the plain field names in upper case (``SECRET_KEY``, ``REQ
 
 from __future__ import annotations
 
+import shlex
+import sys
 from typing import Annotated, Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -73,6 +75,16 @@ class ApiSettings(BaseSettings):
     hold_release_limit: int = 8
     hold_release_window_s: float = 10.0
     session_start_timeout_s: float = 30.0
+    # Go-live orchestration (T6.1). ``session_spawn=false`` never starts child processes (the engine is
+    # run by hand with scripts/run_engine.sh, as in tests). Commands are shell-style strings; ``{profile}``
+    # is replaced. They contain no secrets: keys travel in the child's environment.
+    session_spawn: bool = Field(True, validation_alias="SESSION_SPAWN")
+    session_engine_cmd: str | None = Field(None, validation_alias="SESSION_ENGINE_CMD")
+    session_chat_cmd: str | None = Field(None, validation_alias="SESSION_CHAT_CMD")
+    session_stop_timeout_s: float = Field(10.0, validation_alias="SESSION_STOP_TIMEOUT_S")
+    session_ttl_s: float = Field(21600.0, validation_alias="SESSION_TTL_S")
+    sessions_dir: str = Field("~/.streamsarthi/sessions", validation_alias="SESSIONS_DIR")
+    ingest_host: str = Field("127.0.0.1", validation_alias="INGEST_BIND_HOST")
     # Moderator actions per moderator token (a held key or a script must not flood the platform APIs).
     mod_action_limit: int = 30
     mod_action_window_s: float = 10.0
@@ -103,6 +115,16 @@ class ApiSettings(BaseSettings):
     @property
     def bind_host(self) -> str:
         return self.lan_host or self.host
+
+    def engine_argv(self) -> list[str]:
+        if self.session_engine_cmd:
+            return shlex.split(self.session_engine_cmd)
+        return [sys.executable, "-m", "engine.main", "--profile", "{profile}"]
+
+    def chat_argv(self) -> list[str]:
+        if self.session_chat_cmd:
+            return shlex.split(self.session_chat_cmd)
+        return [sys.executable, "-m", "chat.main", "--profile", "{profile}"]
 
     def secret(self) -> str:
         if self.secret_key is None or not self.secret_key.get_secret_value():

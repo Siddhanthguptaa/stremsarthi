@@ -14,7 +14,8 @@
       "ppocr-v5-english-rec",
       "ppocr-v5-devanagari-rec",
       "ppocr-v5-tamil-rec",
-      "ppocr-v5-telugu-rec"
+      "ppocr-v5-telugu-rec",
+      "yamnet"
     ],
     "demo": [
       "yunet-2023mar",
@@ -25,7 +26,8 @@
       "ppocr-v5-english-rec",
       "ppocr-v5-devanagari-rec",
       "ppocr-v5-tamil-rec",
-      "ppocr-v5-telugu-rec"
+      "ppocr-v5-telugu-rec",
+      "yamnet"
     ]
   },
   "artifacts": {
@@ -249,6 +251,20 @@
           960
         ]
       ]
+    },
+    "yamnet": {
+      "id": "yamnet",
+      "task": "audio_event",
+      "filename": "yamnet.onnx",
+      "url": "https://huggingface.co/mydubber-org/yamnet-onnx/resolve/fc1697c7001385c7aead5a7411cf0474a4812a5d/yamnet.onnx",
+      "sha256": "844ee869ca5426d12c6aa1876280c40099487bda74827da1ccbeeaffbe7143dd",
+      "bytes": 16093406,
+      "source": "https://huggingface.co/mydubber-org/yamnet-onnx/tree/fc1697c7001385c7aead5a7411cf0474a4812a5d",
+      "conversion": "Third-party ONNX conversion of Google's YAMNet, unchanged weights; loaded only through onnxruntime, never executed",
+      "upstream_model": "YAMNet (Google, AudioSet)",
+      "license": "Apache-2.0",
+      "license_source": "https://github.com/tensorflow/models/blob/master/research/audioset/yamnet/LICENSE",
+      "license_file": "licenses/YAMNet-Apache-2.0.txt"
     }
   }
 }

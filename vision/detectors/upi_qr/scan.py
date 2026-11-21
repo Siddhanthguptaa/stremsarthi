@@ -37,6 +37,7 @@ RECT_SIDE = 288  # rectified candidate size (px)
 RECT_MARGIN = 0.12  # quiet-zone margin added around a candidate before rectifying (fraction of side)
 CROP_PAD = 0.35
 CROP_TARGET_PX = 240.0
+FRAME_SEARCH_SCALE = 0.5  # finder-pattern search on the whole frame runs at half size (about 4x cheaper)
 
 
 @dataclass(slots=True)
@@ -123,15 +124,22 @@ def _rectify(gray: np.ndarray, quad: np.ndarray) -> np.ndarray | None:
     return cv2.warpPerspective(gray, mat, (RECT_SIDE, RECT_SIDE), flags=cv2.INTER_LINEAR, borderValue=255)
 
 
-def _aruco_quads(det: cv2.QRCodeDetectorAruco, image: np.ndarray) -> list[np.ndarray]:
+def _aruco_quads(det: cv2.QRCodeDetectorAruco, image: np.ndarray, scale: float = 1.0) -> list[np.ndarray]:
+    """Finder-pattern candidates. ``scale`` < 1 searches a shrunk copy (finder patterns of a code that matters
+    are tens of pixels wide) and maps the quads back; a smaller code is still read by zxing on the full frame."""
+    work = image
+    if scale < 1.0:
+        work = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
     try:
-        ok, pts = det.detectMulti(image)
+        ok, pts = det.detectMulti(work)
     except cv2.error:
         return []
     if not ok or pts is None:
         return []
     return [
-        order_quad(p) for p in np.asarray(pts, dtype=np.float32).reshape(-1, 4, 2) if _side(p) >= MIN_SIDE_PX
+        order_quad(p / scale)
+        for p in np.asarray(pts, dtype=np.float32).reshape(-1, 4, 2)
+        if _side(p) / scale >= MIN_SIDE_PX
     ]
 
 
@@ -218,7 +226,7 @@ def scan(
                 cv2.fillConvexPoly(
                     probe, np.round(expand_quad(f.quad, 0.2)).astype(np.int32), (127, 127, 127)
                 )
-        cands = _aruco_quads(aruco, probe)
+        cands = _aruco_quads(aruco, probe, FRAME_SEARCH_SCALE)
         lap("aruco")
         for quad in cands:
             if any(bbox_iou(quad, f.quad) > 0.3 for f in found):

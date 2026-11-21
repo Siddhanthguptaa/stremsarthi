@@ -209,8 +209,12 @@ def find_card_quad(
     text_boxes: list[np.ndarray],
     *,
     aspect_range: tuple[float, float] = (ASPECT_MIN, ASPECT_MAX),
+    whole_frame: bool = True,
 ) -> CardQuad:
-    """Expand ``number_box`` (4x2) to the whole card. Always returns a quad (see the module docstring)."""
+    """Expand ``number_box`` (4x2) to the whole card. Always returns a quad (see the module docstring).
+
+    ``whole_frame=False`` skips the second, whole-frame contour search (about 20-35 ms): the caller uses it for
+    unconfirmed hits, which are kept only when a card outline is found right around the number."""
     h, w = image.shape[:2]
     num_long, _ = side_lengths(number_box)
     num_area = max(poly_area(number_box), 1.0)
@@ -232,7 +236,9 @@ def find_card_quad(
             and edge_contrast(image, q) >= MIN_EDGE_CONTRAST
         )
 
-    for half in (1.9 * num_long, None):  # near the number first, then the whole frame
+    for half in (
+        (1.9 * num_long, None) if whole_frame else (1.9 * num_long,)
+    ):  # near the number, then the frame
         roi = _roi_around(number_box, (h, w), half) if half else (0, 0, w, h)
         cands = [q for q in _dedupe(card_candidates(image, roi, MIN_AREA_FACTOR * num_area)) if acceptable(q)]
         if cands:

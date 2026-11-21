@@ -104,7 +104,12 @@ class ConfigStore:
 
     # --- read ------------------------------------------------------------------------------
     def configured_secrets(self) -> dict[str, bool]:
-        return {name: getattr(self.config, name) is not None for name in SECRET_FIELDS}
+        # ``KEY=`` in .env loads as an empty SecretStr: that is "not set", not "set".
+        def is_set(value: object) -> bool:
+            get = getattr(value, "get_secret_value", None)
+            return bool(get().strip()) if get is not None else value is not None
+
+        return {name: is_set(getattr(self.config, name)) for name in SECRET_FIELDS}
 
     def public(self) -> dict[str, Any]:
         """What the UI may see: no secrets, no private terms, no engine internals or file paths."""

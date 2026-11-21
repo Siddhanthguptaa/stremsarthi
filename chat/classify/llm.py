@@ -29,8 +29,19 @@ SYSTEM_PROMPT = (
     "Classify each chat message for a live stream of an Indian streamer. Messages may be Hinglish "
     "(Hindi in Latin letters), Devanagari, Kannada, Tamil, Telugu, Bengali or English. Return JSON only. "
     'Schema: {"results":[{"i":int,"labels":["abuse"|"doxxing"|"scam"|"fake_upi"|"clean"],'
-    '"confidence":0..1,"target":"streamer"|"viewer"|"none"}]}. '
-    'One result per message index. Use "clean" when the message is harmless, including friendly banter.'
+    '"confidence":0..1,"target":"streamer"|"viewer"|"none"}]}. One result per message index. '
+    "abuse: insults or slurs aimed at a person, threats of violence or death (also vague ones such as 'watch your back'), "
+    "sexual comments, propositions or demands aimed at a person, and hate against a group (caste, religion, region, "
+    "nationality, gender, sexuality, disability), even without a listed bad word. "
+    "doxxing: asking for or giving someone's private details (home address, phone, school, workplace, real name, family), "
+    "including indirect asks such as 'who knows where he lives'. "
+    "scam: fake giveaway, phishing, KYC, loan or lottery lure, hack-tool offer, suspicious link. "
+    "fake_upi: a UPI ID (also written 'name at ybl' or 'name[at]okaxis') or a QR code or 'scan this' request that asks "
+    "viewers to pay or to receive money. "
+    'Use "clean" for: friendly banter and teasing between friends, praise that uses swear words, quoted or reported abuse '
+    "('he called me ...', 'ban whoever wrote ...'), asking people to stop abusing, warnings or moderator notices about "
+    "scams, ordinary talk about money, UPI, games, news or sport, group names without hate, and a person's own details. "
+    "Judge the structure and intent, not single words. confidence is how sure you are of the labels."
 )
 KNOWN_LABELS = frozenset({"abuse", "doxxing", "scam", "fake_upi"})
 MAX_CHARS = 500

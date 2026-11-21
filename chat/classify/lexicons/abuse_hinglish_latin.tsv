@@ -19,8 +19,8 @@ bhosda	abuse	3	hi	substr
 bhosadi	abuse	3	hi	substr
 bsdk	abuse	3	hi	word
 bhosdk	abuse	3	hi	word
-chut	abuse	3	hi	word
-lund	abuse	3	hi	word
+chut	abuse	3	hi	word	mention
+lund	abuse	3	hi	word	mention
 lauda	abuse	3	hi	word
 lavda	abuse	3	hi	word
 lawda	abuse	3	hi	word
@@ -29,12 +29,12 @@ lavde	abuse	3	hi	word
 loda	abuse	2	hi	word
 lode	abuse	2	hi	word
 lodu	abuse	2	hi	word
-chutiya	abuse	2	hi	word
-chutiye	abuse	2	hi	word
+chutiya	abuse	2	hi	word	mention
+chutiye	abuse	2	hi	word	mention
 chutiyapa	abuse	2	hi	word
 chutiyapanti	abuse	2	hi	word
-chutia	abuse	2	hi	word
-chutiyo	abuse	2	hi	word
+chutia	abuse	2	hi	word	mention
+chutiyo	abuse	2	hi	word	mention
 chodu	abuse	2	hi	word
 gandu	abuse	2	hi	word
 gaandu	abuse	2	hi	word
@@ -51,10 +51,10 @@ haramzada	abuse	2	hi	word
 haramzade	abuse	2	hi	word
 haramzadi	abuse	2	hi	word
 haraamzaada	abuse	2	hi	word
-kutta	abuse	2	hi	word
-kutte	abuse	2	hi	word
-kuttiya	abuse	2	hi	word
-kutiya	abuse	2	hi	word
+kutta	abuse	2	hi	word	frame
+kutte	abuse	2	hi	word	frame
+kuttiya	abuse	2	hi	word	frame
+kutiya	abuse	2	hi	word	frame
 kutte ki aulad	abuse	2	hi	word
 kutte ke bachche	abuse	2	hi	word
 suar ki aulad	abuse	2	hi	word
@@ -63,8 +63,8 @@ bakchodi	abuse	1	hi	word
 bkl	abuse	2	hi	word
 mkc	abuse	2	hi	word
 tmkc	abuse	2	hi	word
-mc	abuse	1	hi	word
-bc	abuse	1	hi	word
+mc	abuse	1	hi	word	mention
+bc	abuse	1	hi	word	mention
 bhadwa	abuse	2	hi	word
 bhadwe	abuse	2	hi	word
 bhadve	abuse	2	hi	word
@@ -79,17 +79,17 @@ veshya	abuse	2	hi	word
 dhandhewali	abuse	2	hi	word
 hijra	abuse	2	hi	word
 hijda	abuse	2	hi	word
-chakka	abuse	2	hi	word
+chakka	abuse	2	hi	word	cricket
 napunsak	abuse	2	hi	word
-kamina	abuse	1	hi	word
-kamine	abuse	1	hi	word
-kameena	abuse	1	hi	word
-kamini	abuse	1	hi	word
-saala	abuse	1	hi	word
-saale	abuse	1	hi	word
-sala	abuse	1	hi	word
+kamina	abuse	1	hi	word	frame
+kamine	abuse	1	hi	word	frame
+kameena	abuse	1	hi	word	frame
+kamini	abuse	1	hi	word	frame
+saala	abuse	1	hi	word	frame
+saale	abuse	1	hi	word	frame
+sala	abuse	1	hi	word	frame
 tatti	abuse	1	hi	word
-chudail	abuse	1	hi	word
+chudail	abuse	1	hi	word	frame
 ullu ka pattha	abuse	1	hi	word
 teri maa ki	abuse	2	hi	word
 teri maa ka	abuse	2	hi	word
@@ -111,7 +111,7 @@ fucker	abuse	2	en	word
 fuk	abuse	2	en	word
 fck	abuse	2	en	word
 motherfucker	abuse	3	en	word
-mf	abuse	1	en	word
+mf	abuse	1	en	word	mention
 fuck you	abuse	2	en	word
 fuck off	abuse	2	en	word
 bitch	abuse	2	en	word
@@ -125,8 +125,104 @@ nigga	abuse	2	en	word
 faggot	abuse	3	en	word
 retard	abuse	2	en	word
 retarded	abuse	2	en	word
-dumbass	abuse	1	en	word
-idiot	abuse	1	en	word
-loser	abuse	1	en	word
+dumbass	abuse	1	en	word	frame
+idiot	abuse	1	en	word	frame
+loser	abuse	1	en	word	frame
 kys	abuse	3	en	word
 suck my	abuse	2	en	word
+
+# Added: spelling variants are folded at match time (chootiya = chutiya), so list one spelling. ctx column: frame = only when aimed at someone, mention = not when explained or a place name.
+bakland	abuse	2	hi	word
+baklol	abuse	2	hi	word
+baklund	abuse	2	hi	word
+bklol	abuse	2	hi	word
+bakchodi	abuse	2	hi	word
+chakke	abuse	2	hi	word	cricket
+chhakke	abuse	2	hi	word	cricket
+hijde	abuse	2	hi	word
+mdrchod	abuse	3	hi	word
+mderchod	abuse	3	hi	word
+mdrchd	abuse	3	hi	word
+mcbc	abuse	2	hi	word
+bcmc	abuse	2	hi	word
+bkc	abuse	2	hi	word
+bhk	abuse	2	hi	word
+bhkl	abuse	3	hi	word
+mkb	abuse	2	hi	word
+bsdke	abuse	3	hi	word
+bhosadika	abuse	3	hi	word
+bhosad	abuse	3	hi	word
+madarjat	abuse	2	hi	word
+tharki	abuse	2	hi	word
+chhapri	abuse	2	hi	word
+nalayak	abuse	2	hi	word
+nikamma	abuse	2	hi	word	frame
+nikammi	abuse	2	hi	word	frame
+nikamme	abuse	2	hi	word	frame
+harami kutte	abuse	2	hi	word
+gandmasti	abuse	2	hi	word
+lauda lassan	abuse	2	hi	word
+bhosdiwale	abuse	3	hi	word
+bhosdiwala	abuse	3	hi	word
+gaandu	abuse	2	hi	word
+chinar	abuse	2	hi	word
+randi ke	abuse	2	hi	word
+randi ka	abuse	2	hi	word
+teri ma ka	abuse	2	hi	word
+teri maa chod	abuse	2	hi	word
+gadha	abuse	1	hi	word	frame
+gadhe	abuse	1	hi	word	frame
+ullu	abuse	1	hi	word	frame
+bewakoof	abuse	1	hi	word	frame
+bevkoof	abuse	1	hi	word	frame
+bevakoof	abuse	1	hi	word	frame
+bewkoof	abuse	1	hi	word	frame
+chapri	abuse	1	hi	word	frame
+bhikari	abuse	1	hi	word	frame
+gawar	abuse	1	hi	word	frame
+jahil	abuse	1	hi	word	frame
+gadhe ki aulad	abuse	2	hi	word
+gadha hai tu	abuse	2	hi	word
+kutte jaisa	abuse	2	hi	word
+kutte jaise	abuse	2	hi	word
+kutte ki tarah	abuse	2	hi	word
+piece of shit	abuse	3	en	word
+piece of trash	abuse	2	en	word
+piece of garbage	abuse	2	en	word
+go die	abuse	3	en	word
+go kill yourself	abuse	3	en	word
+hope you die	abuse	3	en	word
+drop dead	abuse	3	en	word
+prick	abuse	2	en	word
+scum	abuse	2	en	word
+scumbag	abuse	2	en	word
+moron	abuse	2	en	word
+cretin	abuse	2	en	word
+waste of space	abuse	2	en	word
+brain dead	abuse	2	en	word
+braindead	abuse	2	en	word
+retarded	abuse	2	en	word
+dickhead	abuse	2	en	word
+douchebag	abuse	2	en	word
+twat	abuse	2	en	word
+wanker	abuse	2	en	word
+shithead	abuse	2	en	word
+bullshit	abuse	1	en	word
+shit	abuse	1	en	word
+pathetic	abuse	1	en	word	frame
+worthless	abuse	1	en	word	frame
+trash	abuse	1	en	word	frame
+garbage	abuse	1	en	word	frame
+stupid	abuse	1	en	word	frame
+useless	abuse	1	en	word	frame
+clown	abuse	1	en	word	frame
+disgusting	abuse	1	en	word	frame
+dumb	abuse	1	en	word	frame
+ugly	abuse	1	en	word	frame
+fat	abuse	1	en	word	frame
+loser	abuse	1	en	word	frame
+(?:should(?:'?ve| have) been aborted|aborted you|abort(?:ed)? (?:you|u)\b)	abuse	3	en	regex
+\b(?:go|just) (?:die|kys)\b	abuse	3	en	regex
+\b(?:your|ur|u r|you r) (?:mom|mum|mother|mama|family) (?:is|was|died|should)\b.{0,20}\b(?:dead|die|died|whore|slut|trash)\b	abuse	3	en	regex
+\b(?:get|have|hope\s+(?:you|u)\s+(?:get|have)|go\s+get|die\s+of)\s+cancer\b	abuse	3	en	regex
+choot	abuse	3	hi	word	mention

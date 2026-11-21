@@ -25,7 +25,16 @@ def tone(n: int, first: int = 0, amp: int = 10000) -> np.ndarray:
 
 
 class Rig:
-    def __init__(self, *, watchdog: float | None = 1.5, grace: float | None = 1.0, audio: bool = True, **eng):
+    def __init__(
+        self,
+        *,
+        watchdog: float | None = 1.5,
+        grace: float | None = 1.0,
+        audio: bool = True,
+        host=None,
+        lag: float | None = None,
+        **eng,
+    ):
         self.config = Config(_env_file=None, delay_seconds=D, **({"engine": eng} if eng else {}))
         self.bus = LocalBus()
         self.now = [T0]
@@ -35,20 +44,27 @@ class Rig:
             self.config,
             SyntheticSource(1),
             self.sink,
-            audio_host=FakeAudioHost() if audio else None,
+            audio_host=(host or FakeAudioHost()) if audio else None,
             bus=self.bus,
             engine=engine,
             clock=lambda: self.now[0],
             audio_watchdog_s=watchdog,
             audio_grace_s=grace,
+            audio_heartbeat_lag_s=lag,
         )
         self.sub = self.bus.subscribe([Topic.SAFETY_EVENT, Topic.ENGINE_STATUS])
 
-    def beat(self, t: float) -> None:
-        self.bus.publish(Topic.TIMING, StageTiming("audio_heartbeat", 0, None, t, t))
+    def beat(self, t: float, pts: float | None = -1.0) -> None:
+        pts = max(0.0, t - T0) if pts == -1.0 else pts  # default: the host has seen the audio up to now
+        self.bus.publish(Topic.TIMING, StageTiming("audio_heartbeat", 0, pts, t, t))
 
     def run(
-        self, seconds: float, *, beats: tuple[float, float] | None = None, beat_every: float = 0.5
+        self,
+        seconds: float,
+        *,
+        beats: tuple[float, float] | None = None,
+        beat_every: float = 0.5,
+        beat_pts=None,
     ) -> None:
         """Real-time ingest of video and a 440 Hz tone; heartbeats every ``beat_every`` s inside ``beats``
         (offsets from T0); keeps stepping ``D + 0.5`` s past the end so everything is emitted."""
@@ -64,7 +80,7 @@ class Rig:
                 s.engine.submit_result(lane_result(Lane.FAST, seq, t + 0.01))
             if beats and beats[0] <= t - T0 < beats[1] and t - last_beat >= beat_every:
                 last_beat = t
-                self.beat(t)
+                self.beat(t, beat_pts(t - T0) if beat_pts else -1.0)
             s.step(t)
 
     def audio(self) -> np.ndarray:
@@ -113,7 +129,9 @@ def test_a_dead_audio_module_mutes_everything_and_reports_it():
 
 def test_grace_period_tolerates_a_slow_start_then_heartbeats_take_over():
     rig = Rig(watchdog=1.5, grace=4.0)
-    rig.run(7.0, beats=(3.0, 20.0))  # first heartbeat 3 s in: inside the 4 s grace
+    rig.run(
+        7.0, beats=(2.0, 20.0)
+    )  # first heartbeat 2 s in: inside the grace (4 s requested, clamped to 2.5)
     assert rig.session.counts["audio_watchdog"] == 0
     n = 7 * RATE
     assert np.array_equal(rig.audio()[:n], tone(n))
@@ -219,3 +237,101 @@ def test_hold_received_is_logged_with_the_engine_clock_and_engine_delay_keeps_pt
     assert delays
     for x in delays:
         assert x["pts"] is not None and x["seq"] == round(x["pts"] * FPS)
+
+
+# ------------------------------------------------------------------ privacy reviewer fixes (D-46)
+
+
+def test_default_config_never_lets_unchecked_audio_out_when_the_host_never_starts():
+    """Defaults (grace 10 s requested, timeout 3 s) with a 3 s delay: the grace is clamped to delay - 0.5 s and
+    emitted audio is muted until a heartbeat vouches for it. Not one sample goes out in 12 s of audio."""
+    rig = Rig(watchdog=None, grace=None)
+    s = rig.session
+    assert s.audio_grace_s == D - 0.5 and s.audio_watchdog_s == D - 0.5
+    rig.run(12.0)
+    assert not rig.audio().any() and s.audio_unchecked and s.counts["audio_watchdog"] == 1
+
+
+def test_explicit_long_grace_is_clamped_too():
+    rig = Rig(watchdog=1.5, grace=30.0)
+    assert rig.session.audio_grace_s == D - 0.5
+    rig.run(8.0)
+    assert not rig.audio().any()
+
+
+def test_a_healthy_host_with_default_settings_is_not_muted():
+    rig = Rig(watchdog=None, grace=None)
+    rig.run(8.0, beats=(0.5, 30.0), beat_every=1.0)  # the real host beats once a second
+    n = 8 * RATE
+    assert np.array_equal(rig.audio()[:n], tone(n))
+    assert rig.session.counts["audio_watchdog"] == 0 and rig.session.counts["audio_unvouched"] == 0
+
+
+def test_a_late_first_heartbeat_mutes_only_what_was_not_vouched_for():
+    rig = Rig(watchdog=None, grace=None)
+    rig.run(8.0, beats=(2.0, 30.0), beat_every=1.0)  # inside the clamped 2.5 s grace
+    assert rig.session.counts["audio_watchdog"] == 0
+    assert np.array_equal(rig.audio()[: 8 * RATE], tone(8 * RATE))
+
+
+def test_alive_but_stuck_loop_is_muted_from_where_its_pts_stopped():
+    """Heartbeats keep coming but their pts froze at 1.0 s: the loop is alive, the audio intake is not."""
+    rig = Rig(watchdog=None, grace=None)
+    s = rig.session
+    rig.run(10.0, beats=(0.0, 30.0), beat_every=0.5, beat_pts=lambda off: min(off, 1.0))
+    audio = rig.audio()
+    cut = 30 * SLICE  # 1.0 s
+    assert np.array_equal(audio[:cut], tone(cut))
+    assert not audio[cut : 10 * RATE].any()  # nothing after the frozen pts is ever emitted
+    assert s.audio_beats_rejected > 0 and s.counts["audio_unvouched"] > 0
+    assert s.audio_unchecked and s.counts["audio_watchdog"] == 1  # and the watchdog reports it
+
+
+def test_a_lagging_or_pts_less_beat_is_ignored_once_audio_has_advanced():
+    rig = Rig(watchdog=None, grace=None)
+    s = rig.session
+    for seq in range(150):  # 5 s of audio ingested
+        s.on_audio(seq * SLICE, tone(SLICE, seq * SLICE))
+    newest = 150 * SLICE / RATE
+    assert s.audio_heartbeat(now=T0, pts=None) is False  # nothing proves it has seen the audio
+    assert s.audio_heartbeat(now=T0, pts=newest - 2.5) is False  # more than the 2 s margin behind
+    assert s.audio_heartbeat(now=T0, pts=newest - 1.5) is True
+    assert s.audio_beats_rejected == 2 and s.audio_heartbeats == 1
+
+
+def test_heartbeat_lag_margin_is_configurable():
+    rig = Rig(watchdog=None, grace=None, lag=0.5)
+    s = rig.session
+    for seq in range(60):
+        s.on_audio(seq * SLICE, tone(SLICE, seq * SLICE))
+    newest = 60 * SLICE / RATE
+    assert s.audio_heartbeat(now=T0, pts=newest - 1.0) is False
+    assert s.audio_heartbeat(now=T0, pts=newest - 0.3) is True
+
+
+def test_first_beat_before_any_audio_is_accepted():
+    rig = Rig(watchdog=None, grace=None)
+    assert rig.session.audio_heartbeat(now=T0, pts=None) is True
+
+
+class FailingHost(FakeAudioHost):
+    def __init__(self, fail_on: int) -> None:
+        super().__init__()
+        self.fail_on, self.calls = fail_on, 0
+
+    def feed(self, chunk) -> None:
+        self.calls += 1
+        if self.calls == self.fail_on:
+            raise RuntimeError("feed failed")
+        super().feed(chunk)
+
+
+def test_a_block_that_could_not_be_handed_to_the_audio_host_goes_out_as_silence():
+    rig = Rig(watchdog=None, grace=None, host=FailingHost(fail_on=61))
+    rig.run(6.0, beats=(0.0, 30.0), beat_every=0.5)
+    audio = rig.audio()
+    k = 60  # the 61st block: samples [k * SLICE, (k + 1) * SLICE)
+    assert rig.session.counts["audio_errors"] == 1
+    assert not audio[k * SLICE : (k + 1) * SLICE].any()
+    assert np.array_equal(audio[: k * SLICE], tone(k * SLICE))
+    assert np.array_equal(audio[(k + 1) * SLICE : 6 * RATE], tone(6 * RATE)[(k + 1) * SLICE :])

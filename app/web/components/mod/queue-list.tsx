@@ -1,9 +1,13 @@
 "use client"
 
+import { Inbox } from "lucide-react"
+
 import type { Lang } from "@/lib/i18n"
 import type { ModActionKind, QueueEntry, TimeoutPreset } from "@/lib/mod-state"
+import { modText } from "@/lib/screen-text"
 import { useLanguage } from "@/components/shell/language-provider"
 import { QueueItem } from "@/components/mod/queue-item"
+import { Button } from "@/components/ui/button"
 
 interface QueueListProps {
   items: readonly QueueEntry[]
@@ -14,16 +18,31 @@ interface QueueListProps {
   lang: Lang
   onSelect: (key: string) => void
   onAct: (entry: QueueEntry, action: ModActionKind) => void
+  /** Offered in the "filters hide everything" state. */
+  onClearFilters?: () => void
 }
 
 /** Newest first. A polite live log so a screen reader hears new arrivals. */
-export function QueueList({ items, filtered, selectedKey, preset, lang, onSelect, onAct }: QueueListProps) {
+export function QueueList({ items, filtered, selectedKey, preset, lang, onSelect, onAct, onClearFilters }: QueueListProps) {
   const { t } = useLanguage()
   if (items.length === 0) {
     return (
-      <p role="status" className="rounded-lg border bg-card px-3 py-6 text-center text-sm text-muted-foreground" data-testid="mod-empty">
-        {filtered ? t("mod.emptyFiltered") : t("mod.empty")}
-      </p>
+      <div
+        role="status"
+        className="flex flex-col items-center gap-2 rounded-lg border bg-card px-4 py-8 text-center"
+        data-testid="mod-empty"
+      >
+        <Inbox aria-hidden className="size-8 text-muted-foreground" />
+        <p className="font-semibold">{filtered ? t("mod.emptyFiltered") : modText(lang, "modx.empty.title")}</p>
+        <p className="max-w-prose text-sm text-muted-foreground">
+          {filtered ? modText(lang, "modx.filtered.body") : t("mod.empty")}
+        </p>
+        {filtered && onClearFilters ? (
+          <Button type="button" variant="outline" className="min-h-11" onClick={onClearFilters}>
+            {modText(lang, "modx.filter.clear")}
+          </Button>
+        ) : null}
+      </div>
     )
   }
   return (

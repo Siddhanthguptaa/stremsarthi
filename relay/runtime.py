@@ -27,8 +27,10 @@ from relay.egress import Egress
 from relay.encoder import Encoder, EncoderSettings, describe_command, select_encoder
 from relay.ingest import NetworkInput
 from relay.mediamtx import MediaMTXSupervisor
-from relay.security import PATH_SHIELDED, Credentials, RelayAddress
+from relay.pairing import PairingInfo, build_pairing
+from relay.security import PATH_SHIELDED, WILDCARD, Credentials, RelayAddress
 from relay.sink import EgressFrameSink
+from relay.srt import generate_passphrase, tuning_warnings
 from relay.tls_forwarder import TLSForwarder
 
 log = logging.getLogger("relay.runtime")
@@ -38,6 +40,7 @@ ENV_BIND_HOST = "INGEST_BIND_HOST"  # default 127.0.0.1; a LAN or Tailscale addr
 ENV_PORT_RTSP = "INGEST_PORT_RTSP"  # internal RTSP reader port, default 8554
 ENV_PUBLISH_USER = "INGEST_PUBLISH_USER"  # optional fixed publisher login so OBS survives restarts
 ENV_PUBLISH_PASSWORD = "INGEST_PUBLISH_PASSWORD"
+ENV_SRT_PASSPHRASE = "INGEST_SRT_PASSPHRASE"  # optional fixed phone passphrase; else generated per run
 
 
 class RelaySource(NetworkInput):
@@ -48,6 +51,22 @@ class RelaySource(NetworkInput):
     def publish_url(self, protocol: str) -> str:
         """URL for OBS or a phone (``rtmp`` or ``srt``). Contains the login: never log it."""
         return self.supervisor.publish_url(protocol)
+
+    def pairing(self, public_host: str, *, stream_name: str = "Stream Sarthi") -> PairingInfo:
+        """Phone pairing payload (Moblin import URL, generic SRT and RTMP URLs) for ``public_host``.
+
+        ``public_host`` is the loopback, LAN or Tailscale address the phone dials. Secret: never log.
+        """
+        sup = self.supervisor
+        return build_pairing(
+            public_host,
+            sup.phone,
+            rtmp_port=sup.address.rtmp_port,
+            srt_port=sup.address.srt_port,
+            srt_passphrase=sup.srt_passphrase,
+            latency_ms=sup.srt_latency_ms,
+            stream_name=stream_name,
+        )
 
 
 def _publisher_credentials(env: dict[str, str]) -> Credentials | None:
@@ -121,17 +140,48 @@ def build_egress_sink(
         raise
 
 
-def build(config: Config, bus: EventBus, *, environ: dict[str, str] | None = None) -> RelayEndpoints:
-    env = dict(os.environ if environ is None else environ)
-    address = RelayAddress(
-        host=env.get(ENV_BIND_HOST, "127.0.0.1"),
+def _bind_address(config: Config, env: dict[str, str]) -> RelayAddress:
+    """Bind host from ``relay.ingest_bind_host`` (env ``INGEST_BIND_HOST`` overrides it).
+
+    ``0.0.0.0`` is accepted only because it was written down on purpose; the supervisor then also
+    requires the publish login and an SRT passphrase (``relay.srt.validate_exposure``).
+    """
+    host = env.get(ENV_BIND_HOST) or config.relay.ingest_bind_host
+    return RelayAddress(
+        host=host,
         rtmp_port=config.ingest_port_rtmp,
         srt_port=config.ingest_port_srt,
-        rtsp_port=int(env.get(ENV_PORT_RTSP, "8554")),
+        rtsp_port=int(env.get(ENV_PORT_RTSP) or config.relay.rtsp_port),
         api_port=config.relay.mediamtx_api_port,
+        allow_wildcard=host == WILDCARD,
     )
+
+
+def _srt_passphrase(address: RelayAddress, env: dict[str, str]) -> str | None:
+    fixed = env.get(ENV_SRT_PASSPHRASE)
+    if fixed:
+        return fixed
+    return None if address.host.startswith("127.") else generate_passphrase()
+
+
+def build(config: Config, bus: EventBus, *, environ: dict[str, str] | None = None) -> RelayEndpoints:
+    env = dict(os.environ if environ is None else environ)
+    address = _bind_address(config, env)
+    for warning in tuning_warnings(config.relay.srt_latency_ms, config.relay.ingest_hold_after_s):
+        log.warning("relay tuning: %s", warning)
+    transport: dict[str, Any] = {}
+
+    def on_mediamtx_event(event: dict[str, Any]) -> None:
+        source_ref = transport.get("source")
+        if source_ref is not None and event.get("path") in (None, "camera"):
+            source_ref.notify_transport_event(str(event.get("code")))
+
     supervisor = MediaMTXSupervisor(
-        address, phone=_publisher_credentials(env), srt_latency_ms=config.relay.srt_latency_ms
+        address,
+        phone=_publisher_credentials(env),
+        srt_latency_ms=config.relay.srt_latency_ms,
+        srt_passphrase=_srt_passphrase(address, env),
+        on_event=on_mediamtx_event,
     ).start()
     session_id = uuid.uuid4().hex
     try:
@@ -146,6 +196,7 @@ def build(config: Config, bus: EventBus, *, environ: dict[str, str] | None = Non
         supervisor.stop()
         raise
     source.supervisor = supervisor
+    transport["source"] = source
     source.add_close_hook(supervisor.stop)
     try:
         sink = build_egress_sink(

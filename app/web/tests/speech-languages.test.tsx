@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { ApiRequestError, type CategorySettings, type PublicConfig } from "@/lib/api"
+import { ApiRequestError, type CategorySettings, type ConfigPatch, type PublicConfig } from "@/lib/api"
 import {
   buildLanguagesPatch,
   controlsReducer,
@@ -61,7 +61,9 @@ describe("language edits in the reducer", () => {
 function makeApi() {
   return {
     getConfig: vi.fn(async () => config()),
-    patchConfig: vi.fn(async (patch: { audio?: { languages: string[] } }) => config(patch.audio?.languages ?? ["hi", "en"])),
+    patchConfig: vi.fn(async (patch: ConfigPatch) =>
+      config((patch.audio as { languages?: string[] } | undefined)?.languages ?? ["hi", "en"]),
+    ),
   }
 }
 

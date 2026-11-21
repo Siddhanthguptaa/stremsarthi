@@ -52,10 +52,19 @@ class RunStats:
 
 @dataclass
 class RunOptions:
-    fast_still_runs: int = 4
+    #: fast-lane runs per still; None = ``cfg.vision.face_vote_min + 2`` (the identity vote needs >= face_vote_min
+    #: matched samples out of face_vote_window, so fewer runs can never allow an allowlisted face in a still)
+    fast_still_runs: int | None = None
     only_buckets: set[str] | None = None
     max_per_bucket: int | None = None
     progress: Callable[[str], None] | None = None
+
+
+def resolve_fast_still_runs(requested: int | None, cfg: Config) -> int:
+    """The fast-lane runs per still: the explicit value, else ``vision.face_vote_min + 2`` read from the config."""
+    if requested is not None:
+        return max(1, int(requested))
+    return int(cfg.vision.face_vote_min) + 2
 
 
 class Runner:
@@ -63,6 +72,7 @@ class Runner:
         self.dset = dset
         self.cfg = config
         self.opt = options or RunOptions()
+        self.fast_still_runs = resolve_fast_still_runs(self.opt.fast_still_runs, config)
         self.timings = Timings()
         self.stats = RunStats()
         self.records: list[dict[str, Any]] = []
@@ -132,7 +142,7 @@ class Runner:
         stride = self.cfg.detect.stride
         for lane, dets in sorted(self.dset.by_lane().items(), key=lambda kv: LANE_ORDER.index(kv[0])):
             planner = self._planner(lane, "iou")
-            runs = self.opt.fast_still_runs if lane is Lane.FAST else 1
+            runs = self.fast_still_runs if lane is Lane.FAST else 1
             prev: tuple[Any, ...] = ()
             last: LaneRun | None = None
             for r in range(runs):

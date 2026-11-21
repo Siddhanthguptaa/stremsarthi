@@ -39,8 +39,26 @@ log = logging.getLogger("audio.orchestrator")
 
 WINDOW_S = 8.0  # transcript window kept for the rules (5.4)
 RING_S = 8.0  # recent audio kept for the Groq context (>= 3 s requests)
-FAILSAFE_PAD_S = 0.1
+FAILSAFE_PAD_S = 0.25  # VAD end-of-speech trims soft word tails: pad generously (the fail-safe is final)
 MAX_BOUNDS = 64
+
+
+class ThinTranscript(RuntimeError):
+    """A voiced segment came back with no words, or far fewer than its speech can hold."""
+
+
+MIN_WORDS_PER_S = 1.0  # a voiced second holds at least this many words, else the transcript is not trusted
+
+
+def too_thin(seg: Segment, tr: Any) -> bool:
+    """Voiced speech (VAD) with an empty or near-empty transcript is unverified, not "no speech": a provider that
+    answers 200 with nothing (rate-limit page, silence heard, hallucination filter) must not let speech through."""
+    from audio.orchestrator.window import norm  # noqa: PLC0415
+
+    n = sum(1 for w in tr.words if norm(w.text))
+    if n == 0 and any(norm(t) for t in str(tr.text).split()):
+        n = 1  # text without word records still counts as heard
+    return n < max(1, int(seg.speech_ms / 1000.0 * MIN_WORDS_PER_S))
 
 
 class PcmRing:
@@ -122,6 +140,7 @@ class AudioPipeline:
                 "stt_failed",
                 "dropped_chunks",
                 "chunk_failsafe",
+                "thin_transcript",
             ),
             0,
         )
@@ -220,6 +239,9 @@ class AudioPipeline:
         except SttAllFailed:
             self.stats["stt_failed"] += 1
             self._failsafe(seg, "stt_failed")
+        except ThinTranscript:
+            self.stats["thin_transcript"] += 1
+            self._failsafe(seg, "thin_transcript")
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # never leave voiced speech without a verdict
@@ -236,6 +258,9 @@ class AudioPipeline:
         t0 = self.clock()
         tr = await self.race.transcribe(seg, self.lang, self._context)
         self._timing("stt", seg, t0, self.clock())
+        if too_thin(seg, tr):
+            self.bus.publish(Topic.TRANSCRIPT, tr)  # still local-only; the guard sees it
+            raise ThinTranscript
         if prev is not None:
             await asyncio.shield(prev)  # commit in stream order (the previous one ends by its own deadline)
         self.bus.publish(Topic.TRANSCRIPT, tr)  # local only: never bridged
@@ -245,7 +270,11 @@ class AudioPipeline:
         spans += await self.detector.detect(win)
         planned = self.planner.plan(spans, win, self._bounds, seg.pts_end)
         tail = [p for p in planned if p.tail_extended]
-        self._carry = Carry(tail[-1].anchor_t1, tail[-1].category, tail[-1].confidence) if tail else None
+        self._carry = (
+            Carry(tail[-1].anchor_t1, tail[-1].category, tail[-1].confidence, tail[-1].carry_kind)
+            if tail
+            else None
+        )
         self.stats["verdicts"] += 1
         self._emit(planned, seg)
 

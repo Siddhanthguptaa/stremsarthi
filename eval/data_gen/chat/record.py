@@ -36,7 +36,16 @@ def pick(rng: random.Random, seq: list[str] | tuple[str, ...]) -> str:
 
 # --- obfuscation (applied only to Latin text) ----------------------------------------------------------------------
 LEET = {"a": "4", "e": "3", "i": "1", "o": "0", "s": "5", "t": "7"}
-HOMOGLYPH = {"a": "а", "e": "е", "o": "о", "c": "с", "p": "р", "x": "х", "i": "і", "y": "у"}  # Cyrillic look-alikes
+HOMOGLYPH = {
+    "a": "а",
+    "e": "е",
+    "o": "о",
+    "c": "с",
+    "p": "р",
+    "x": "х",
+    "i": "і",
+    "y": "у",
+}  # Cyrillic look-alikes
 FULLWIDTH = {c: chr(ord(c) + 0xFEE0) for c in "abcdefghijklmnopqrstuvwxyz"}
 ZW = "​"
 
@@ -84,7 +93,18 @@ def hyphenated(word: str, rng: random.Random) -> str:
     return word[:i] + rng.choice(("-", ".", "_", "'")) + word[i:]
 
 
-OBFUSCATORS = ("leet", "spaced", "dotted", "starred", "stretched", "homoglyph", "zero_width", "fullwidth", "hyphen", "upper")
+OBFUSCATORS = (
+    "leet",
+    "spaced",
+    "dotted",
+    "starred",
+    "stretched",
+    "homoglyph",
+    "zero_width",
+    "fullwidth",
+    "hyphen",
+    "upper",
+)
 
 
 def obfuscate(word: str, rng: random.Random, how: str | None = None) -> tuple[str, str]:

@@ -194,3 +194,12 @@ def test_engine_audio_watchdog_defaults_and_limits():
         make(engine={"audio_watchdog_s": -1})
     with pytest.raises(ValidationError):
         make(engine={"audio_grace_s": 61})
+
+
+def test_runtime_extras_default_and_override():
+    assert make().runtime.extras == {
+        "guard_risk": "guard.risk.service:build",
+        "captions": "audio.captions:build",
+        "guard_music": "guard.music:build",
+    }
+    assert make(runtime={"extras": {}}).runtime.extras == {}

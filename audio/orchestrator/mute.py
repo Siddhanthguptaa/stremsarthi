@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from audio.orchestrator.window import norm
+from audio.pii.numbers import load_vocab
 from contracts.enums import Category
 from contracts.speech import PiiSpan, TranscriptWindow, Word
 
@@ -22,6 +23,19 @@ NUMBER_WORDS = frozenset(
     సున్నా ఒకటి రెండు మూడు నాలుగు ఐదు ఆరు ఏడు ఎనిమిది తొమ్మిది
     শূন্য এক দুই তিন চার পাঁচ ছয় সাত আট নয়""".split()
 )
+
+
+# Words that continue a spelt-out UPI id after its letters: "... c f at the rate of okicici".
+AT_WORDS = frozenset("at the rate of attherate dot underscore dash एट द दी दि रेट ऐट डॉट अंडरस्कोर".split())
+
+
+MARKER_END = frozenset("of rate at attherate रेट एट ऐट".split())  # the handle comes next
+
+
+def is_letter_word(text: str) -> bool:
+    """A single spoken ASCII letter (``d``)."""
+    n = norm(text)
+    return len(n) == 1 and n.isalpha() and n.isascii()
 
 
 def is_number_token(text: str) -> bool:
@@ -41,6 +55,7 @@ class PlannedSpan:
     granularity: str  # "word" | "segment" | "failsafe"
     tail_extended: bool = False
     anchor_t1: float = 0.0  # unpadded end of the last PII word (for the carry)
+    carry_kind: str = "number"  # "number" | "id": what may continue it in the next segment
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +65,7 @@ class Carry:
     anchor_t1: float
     category: Category
     confidence: float
+    kind: str = "number"  # "id": letters, ``at the rate of`` and a handle continue it, not only digits
 
 
 def _code(text: str) -> str:
@@ -62,9 +78,9 @@ class SpanPlanner:
         pad_s: float = 0.2,
         merge_gap_s: float = 0.3,
         min_span_s: float = 0.3,
-        tail_ext_s: float = 0.5,
+        tail_ext_s: float = 0.3,
         tail_touch_s: float = 0.2,
-        number_gap_s: float = 1.0,
+        number_gap_s: float = 2.0,
     ) -> None:
         self.pad_s = pad_s
         self.merge_gap_s = merge_gap_s
@@ -81,9 +97,23 @@ class SpanPlanner:
         new: Sequence[Word] = window.words[window.new_from_index :]
         run: list[Word] = []
         prev_t1 = carry.anchor_t1
+        handles = load_vocab().handles
+        expect_handle = False  # right after "at the rate of": the handle, whatever it is
         for w in new:
-            if w.t0 - prev_t1 >= self.number_gap_s or not is_number_token(w.text):
+            if w.t0 - prev_t1 >= self.number_gap_s:
                 break
+            nt = norm(w.text)
+            ok = is_number_token(w.text)
+            if not ok and carry.kind == "id":
+                ok = (
+                    is_letter_word(w.text)
+                    or nt in AT_WORDS
+                    or nt in handles
+                    or (expect_handle and nt.isalpha())
+                )
+            if not ok:
+                break
+            expect_handle = carry.kind == "id" and nt in MARKER_END
             run.append(w)
             prev_t1 = w.t1
         if not run:
@@ -95,7 +125,7 @@ class SpanPlanner:
                 run[0].t0,
                 run[-1].t1,
                 carry.confidence,
-                "carry_number",
+                "carry_id" if carry.kind == "id" else "carry_number",
                 "segment" if approx else "word",
             )
         ]
@@ -120,15 +150,24 @@ class SpanPlanner:
                     if b is not None:
                         lo, hi = min(lo, b[0]), max(hi, b[1])
             tail = False
+            kind = "number"
             if inside:
                 last = max(inside, key=lambda w: w.t1)
-                tail = is_number_token(last.text) and s.pts_end >= newest_end - self.tail_touch_s
+                if any(is_letter_word(w.text) for w in inside):
+                    kind = "id"
+                tail = (
+                    is_number_token(last.text)
+                    or is_letter_word(last.text)
+                    or (
+                        kind == "id" and norm(last.text) in AT_WORDS
+                    )  # "... at the rate of": the handle follows
+                ) and s.pts_end >= newest_end - self.tail_touch_s
             anchor = max([s.pts_end] + [w.t1 for w in inside])
             end = hi + self.pad_s + (self.tail_ext_s if tail else 0.0)
             reason = _code(("ambiguous:" if s.ambiguous else "") + s.reason)
             raw.append(
                 PlannedSpan(
-                    max(0.0, lo - self.pad_s), end, s.category, s.confidence, reason, gran, tail, anchor
+                    max(0.0, lo - self.pad_s), end, s.category, s.confidence, reason, gran, tail, anchor, kind
                 )
             )
         raw.sort(key=lambda p: p.pts_start)
@@ -146,6 +185,7 @@ class SpanPlanner:
                     "segment" if "segment" in (m.granularity, p.granularity) else "word",
                     m.tail_extended or p.tail_extended,
                     max(m.anchor_t1, p.anchor_t1),
+                    "id" if "id" in (m.carry_kind, p.carry_kind) else "number",
                 )
             else:
                 merged.append(p)
@@ -156,7 +196,7 @@ class SpanPlanner:
                 lo = max(0.0, mid - self.min_span_s / 2)
                 p = PlannedSpan(
                     lo, lo + self.min_span_s, p.category, p.confidence, p.reason, p.granularity,
-                    p.tail_extended, p.anchor_t1,
+                    p.tail_extended, p.anchor_t1, p.carry_kind,
                 )  # fmt: skip
             out.append(p)
         return out

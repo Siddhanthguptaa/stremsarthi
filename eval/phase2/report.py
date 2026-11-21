@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ..harness.report import Check, Report, Table, git_rev, hardware_info, write_report
-from .rows import ALL_ROWS, LEVELS, ROWS
+from .rows import ALL_ROWS, GATE_LEVELS, LEVELS, ROWS
 
 ROOT = Path(__file__).resolve().parents[2]
 LEGS = ("offline", "perf-cpu", "perf-gpu")
@@ -55,15 +55,21 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
     data: dict[str, Any] = {}
     notes: list[str] = []
     cat_rows, lvl_rows, attr_rows, missed_rows = [], [], [], []
+    warm_rows: list[list[Any]] = []
+    warm_note = ""
     for r in ALL_ROWS:
         st = rows.get(r.key)
         if st is None:
             continue
         status = _status_of(checks, r.title) if r.gated else ("NOT RUN" if st["status"] != "ok" else "info")
         img, clip = st["img"]["gate"], st["clip"]["gate"]
+        warm = st["clip"].get("warmup")
+        label = r.title
+        if warm:  # the warm-up rule is stated right next to the gate row
+            label += f" [clips: settled, >= {warm['settled_s']:g} s after the track first appears]"
         cat_rows.append(
             [
-                r.title,
+                label,
                 r.detector,
                 img["n"],
                 _f(img["value"]),
@@ -76,7 +82,8 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
         )
         for src in ("img", "clip"):
             if st[src]["all"]["n"]:
-                lvl_rows.append([r.title, SRC_LABEL[src], *[_lv(st[src]["levels"][lv]) for lv in LEVELS]])
+                name = r.title + (" (settled frames)" if src == "clip" and st[src].get("warmup") else "")
+                lvl_rows.append([name, SRC_LABEL[src], *[_lv(st[src]["levels"][lv]) for lv in LEVELS]])
         for attr, groups in st["img"]["attrs"].items():
             attr_rows.append([r.title, attr, "; ".join(f"{k}: {_lv(b)}" for k, b in groups.items())])
         for src in ("img", "clip"):
@@ -84,6 +91,29 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
                 missed_rows.append(
                     [r.key, SRC_LABEL[src], len(st[src]["missed"]), " ".join(st[src]["missed"][:40])]
                 )
+        if warm:
+            warm_rows.append(
+                [
+                    f"settled (gate row, >= {warm['settled_s']:g} s)",
+                    *[_lv(warm["settled"]["levels"][lv]) for lv in LEVELS],
+                    _lv(warm["settled"]["gate"]),
+                ]
+            )
+            warm_rows.append(
+                [
+                    f"steady (>= {warm['steady_s']:g} s)",
+                    *[_lv(warm["steady"]["levels"][lv]) for lv in LEVELS],
+                    _lv(warm["steady"]["gate"]),
+                ]
+            )
+            warm_rows.append(
+                [
+                    "all frames (includes the warm-up)",
+                    *[_lv(warm["all"]["levels"][lv]) for lv in LEVELS],
+                    _lv(warm["all"]["gate"]),
+                ]
+            )
+            warm_note = warm["rule"]
         data[r.key] = {
             "status": status,
             "reason": st["reason"],
@@ -95,6 +125,11 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
                 for s in ("img", "clip")
             },
         }  # fmt: skip
+        if warm:
+            data[r.key]["warmup"] = {
+                k: {"recall": warm[k]["gate"]["value"], "n": warm[k]["gate"]["n"]}
+                for k in ("settled", "steady", "all")
+            } | {"settled_s": warm["settled_s"], "steady_s": warm["steady_s"]}
         if status == "NOT RUN" and st["reason"]:
             notes.append(f"NOT RUN: {r.title}: {st['reason']}")
     sc = m.get("scoring", {})
@@ -123,6 +158,44 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
             lvl_rows,
         )
     )
+    gl = tuple(sc.get("gate_levels", GATE_LEVELS))
+    stress_lv = [lv for lv in LEVELS if lv not in gl]
+    if stress_lv:
+        stress_rows = []
+        for r in ROWS:
+            st = rows.get(r.key)
+            if st is None:
+                continue
+            for src in ("img", "clip"):
+                if not st[src]["all"]["n"]:
+                    continue
+                for lv in stress_lv:
+                    b = st[src]["levels"][lv]
+                    if b["n"]:
+                        meets = "yes" if b["value"] >= (r.target or 0.0) else "no"
+                        name = r.title + (
+                            " (settled frames)" if src == "clip" and st[src].get("warmup") else ""
+                        )
+                        stress_rows.append(
+                            [name, SRC_LABEL[src], lv, b["n"], _f(b["value"]), r.target, meets]
+                        )
+        tables.append(
+            Table(
+                f"Stress levels ({'+'.join(stress_lv)}): reported, NOT gated (D-48); the gate targets are shown for "
+                "reference only",
+                ["category", "set", "level", "n", "recall", "target (reference)", "meets target"],
+                stress_rows,
+            )
+        )
+    if warm_rows:
+        tables.append(
+            Table(
+                "Allowlisted faces left visible on clips: settled / steady / all frames. " + warm_note,
+                ["view", *LEVELS, "gate levels"],
+                warm_rows,
+            )
+        )
+        notes.append("warm-up rule (allowlisted faces on clips): " + warm_note)
     if attr_rows:
         tables.append(
             Table("Recall by sub-group (stills)", ["category", "attribute", "recall by value"], attr_rows)
@@ -152,13 +225,36 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
         )
     )
     neg = m.get("negatives", {})
-    nrow = [[b, v["n"], v["false"], _f(v["rate"]), v["protect"]] for b, v in neg.items()]
+    nrow = [
+        [
+            b,
+            v["n"],
+            v["false"],
+            _f(v["rate"]),
+            ", ".join(v.get("counted_cats") or []) or "any mask of the detector",
+            v.get("info") if v.get("info_cats") else None,
+            _f(v.get("info_rate")) if v.get("info_cats") else None,
+            v["protect"],
+        ]
+        for b, v in neg.items()
+    ]
     dis = m.get("distractors", {}).get("all", {})
     tables.append(
         Table(
-            f"Hard negatives: items/frames where the detector under test produced a mask (distractors masked: "
-            f"{dis.get('k', 0)}/{dis.get('n', 0)})",
-            ["bucket/set", "n", "false masks", "rate", "slated (protect)"],
+            f"Hard negatives: items/frames where the detector under test produced a false mask (distractors masked: "
+            f"{dis.get('k', 0)}/{dis.get('n', 0)}). neg_text is read on PII masks only (phone_number, pin_code, "
+            "upi_id, email, pan): its signboard masks come from the text detector's mask_all_text rule, by design. "
+            "neg_scene (natural scenes and text-free UI) is the signboard negative: informational, not gated",
+            [
+                "bucket/set",
+                "n",
+                "false masks",
+                "rate",
+                "counted as false",
+                "signboard-only masks",
+                "signboard rate",
+                "slated (protect)",
+            ],
             nrow,
         )
     )
@@ -179,17 +275,43 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
         )  # fmt: skip
     )
     lat = m.get("latency", {})
-    lrow = [
-        [k, v["n"], v["p50_ms"], v["p95_ms"], v["max_ms"], v.get("budget_ms"), v.get("within_budget")]
-        for k, v in lat.get("lanes_ms", {}).items()
-    ]
+    lrow = []
+    prod = lat.get("production") or {}
+    for k, v in (prod.get("lanes_ms") or {}).items():
+        lrow.append(
+            [
+                f"{k}, production OCR budget {prod.get('budget_ms')} ms (judged)",
+                v["n"], v["p50_ms"], v["p95_ms"], v["max_ms"], v.get("budget_ms"), v.get("within_budget"),
+            ]
+        )  # fmt: skip
+    for k, v in lat.get("lanes_ms", {}).items():
+        lrow.append(
+            [
+                f"{k}, recall pass, OCR budget lifted (ceiling, informational)",
+                v["n"], v["p50_ms"], v["p95_ms"], v["max_ms"], v.get("budget_ms"), v.get("within_budget"),
+            ]
+        )  # fmt: skip
     tables.append(
         Table(
-            "Latency per lane, offline CPU (ms; budget from docs/PLAN.md 2.5, informational)",
-            ["lane", "runs", "p50", "p95", "max", "budget p95", "within"],
+            "Latency per lane, offline CPU (ms; budget from docs/PLAN.md 2.5). The 5000 ms OCR budget lift is used for "
+            "the recall pass ONLY; the lane is judged on the production-budget pass (latency stills of every bucket; "
+            "shared machine, so indicative)",
+            ["lane / pass", "runs", "p50", "p95", "max", "budget p95", "within"],
             lrow,
         )
     )
+    if prod.get("rows"):
+        tables.append(
+            Table(
+                f"Recall at the production OCR budget ({prod.get('budget_ms')} ms, budget-capped) vs the lifted budget "
+                f"({prod.get('lifted_budget_ms')} ms), same {prod.get('images')} stills (informational)",
+                ["row", "visible target frames", "production budget", "lifted budget"],
+                [
+                    [k, v["n"], _f(v["recall_production"]), _f(v["recall_lifted"])]
+                    for k, v in prod["rows"].items()
+                ],
+            )
+        )
     drow = [
         [k, v["n"], v["p50_ms"], v["p95_ms"], v["max_ms"]] for k, v in lat.get("detectors_ms", {}).items()
     ]
@@ -218,6 +340,7 @@ def offline_tables(leg: dict[str, Any]) -> tuple[list[Table], dict[str, Any], li
     data["flicker"] = {k: fl.get(k) for k in ("windows", "flickering", "fraction", "static_clips")}
     data["detectors"] = {i: d["state"] for i, d in det.items()}
     data["lanes_ms"] = lat.get("lanes_ms", {})
+    data["lanes_ms_production"] = prod.get("lanes_ms", {})
     return tables, data, notes
 
 
@@ -281,7 +404,7 @@ def baseline_values(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "rows": {k: {"stills": v["stills"]["recall"], "clips": v["clips"]["recall"]} for k, v in data.get("rows", {}).items()},
         "flicker": data.get("flicker", {}).get("fraction"),
-        "lane_p95_ms": {k: v.get("p95_ms") for k, v in data.get("lanes_ms", {}).items()},
+        "lane_p95_ms": {k: v.get("p95_ms") for k, v in (data.get("lanes_ms_production") or data.get("lanes_ms", {})).items()},
         "perf": data.get("perf", {}),
     }  # fmt: skip
 
@@ -305,8 +428,15 @@ def build_report(
     }
     off = legs.get("offline")
     if off:
+        gl = off["measurements"].get("scoring", {}).get("gate_levels", list(GATE_LEVELS))
+        stress = [lv for lv in LEVELS if lv not in gl]
+        rep.banner = f"Gate scope: {'+'.join(gl)}" + (
+            f" (D-48); {'+'.join(stress)}-level recall is reported but not gated" if stress else ""
+        )
         rep.header["dataset"] = off["measurements"].get("dataset", {})
         rep.header["scoring"] = off["measurements"].get("scoring", {})
+        rep.header["offline_run"] = off.get("header", {})
+        rep.header["seeded_defect"] = (off["measurements"].get("run") or {}).get("seeded_defect")
     if gate_results:
         rep.header["commands"] = [s["command"] for s in gate_results.get("steps", [])]
         rows = []
@@ -324,6 +454,7 @@ def build_report(
         rep.data["flicker"] = data["flicker"]
         rep.data["detectors"] = data["detectors"]
         rep.data["lanes_ms"] = data["lanes_ms"]
+        rep.data["lanes_ms_production"] = data.get("lanes_ms_production", {})
         rep.notes += notes
         rep.failing_ids = list(off["measurements"].get("failing_ids", []))
         run = off["measurements"].get("run", {})

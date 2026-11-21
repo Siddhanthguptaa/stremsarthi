@@ -38,6 +38,7 @@ from .llm import LlmResult, LlmStage, LlmTransport
 from .normalize import normalize
 from .rules import RuleMatcher, default_matcher
 from .scam import detect_scam
+from .suspect import detect_shapes, detect_suspects
 
 _LOG = logging.getLogger("chat.classify")
 
@@ -178,11 +179,21 @@ class ChatClassifier:
         cands: list[Candidate] = []
         if not staff:
             rr = self._matcher.match(norm)
-            if rr.matched:
+            if (
+                rr.matched and rr.soft == "reported"
+            ):  # quoted, reported or discussed: the LLM may look, else allow
+                cands.append(
+                    Candidate(Category.CHAT_ABUSE, min(rr.score, 0.5), "rules_reported", lenient=True)
+                )
+            elif rr.matched and rr.soft == "banter":  # friendly teasing with mild words
+                cands.append(Candidate(Category.CHAT_ABUSE, 0.2, "rules_banter"))
+            elif rr.matched:
                 cands.append(
                     Candidate(Category.CHAT_ABUSE, rr.score, f"rules_{rr.kind}", severe=rr.severity == 3)
                 )
-            cands.extend(detect_scam(norm.link_text))
+            cands.extend(detect_scam(norm.link_text, fanged=norm.fanged))
+            if not rr.matched:
+                cands.extend(detect_shapes(norm))
         cands.extend(self._dox.detect(norm, include_private=not staff))
         if staff:
             if cands:
@@ -193,10 +204,12 @@ class ChatClassifier:
                     )
                 )
             return FastOutcome(self._allow(msg, t0, "clean", 1.0))
+        cfg = self._cfg.classify
+        if not any(c.score >= cfg.allow_below and not c.lenient for c in cands):
+            cands.extend(detect_suspects(norm))  # weak shapes: only an LLM can tell (else allowed)
         if not cands:
             return FastOutcome(self._allow(msg, t0, "clean", 1.0))
         top = max(cands, key=lambda c: c.score)
-        cfg = self._cfg.classify
         if top.score < cfg.allow_below:
             return FastOutcome(self._allow(msg, t0, "below_threshold", 1.0 - top.score), top=top)
         cats = _ordered_categories(cands, cfg.allow_below)
@@ -212,6 +225,8 @@ class ChatClassifier:
                 needs_llm=True,
                 top=top,
             )
+        if top.lenient:  # local fallback for a doubtful, mostly harmless message: allow (not hold)
+            return FastOutcome(self._allow(msg, t0, f"{top.reason}_allow", 1.0 - top.score))
         return FastOutcome(
             self._verdict(msg, t0, ChatAction.HOLD_FOR_MOD, cats, top.score, "llm_unavailable_hold", "rules"),
             top=top,
@@ -243,6 +258,8 @@ class ChatClassifier:
         except TimeoutError:
             result = None
         if result is None:
+            if top.lenient:
+                return self._allow(msg, t0, f"{top.reason}_timeout_allow", 1.0 - top.score)
             return self._verdict(
                 msg, t0, ChatAction.HOLD_FOR_MOD, (top.category,), top.score, "llm_timeout_hold", "rules"
             )

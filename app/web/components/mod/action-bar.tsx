@@ -14,6 +14,7 @@ interface ActionBarProps {
 }
 
 const btn = "h-auto min-h-11 whitespace-normal text-center"
+const kbd = "ml-1 hidden rounded border px-1 font-mono text-[10px] leading-4 opacity-80 md:inline"
 
 /** Approve / delete / timeout / dismiss for one message. Staff messages can only be approved or dismissed. */
 export function ActionBar({ entry, preset, onAct }: ActionBarProps) {
@@ -23,21 +24,25 @@ export function ActionBar({ entry, preset, onAct }: ActionBarProps) {
   const length = t(`mod.t.${preset}` as I18nKey)
   return (
     <div role="group" aria-label={t("mod.item").replace("{author}", entry.author)} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <Button type="button" className={btn} onClick={() => onAct(entry, "approve")} disabled={working}>
+      <Button type="button" className={btn} aria-keyshortcuts="A" onClick={() => onAct(entry, "approve")} disabled={working}>
         <Check aria-hidden />
         {t("mod.approve")}
+        <kbd aria-hidden className={kbd}>A</kbd>
       </Button>
-      <Button type="button" variant="destructive" className={btn} onClick={() => onAct(entry, "delete")} disabled={working || removeBlocked}>
+      <Button type="button" variant="destructive" className={btn} aria-keyshortcuts="D" onClick={() => onAct(entry, "delete")} disabled={working || removeBlocked}>
         <Trash2 aria-hidden />
         {t("mod.delete")}
+        <kbd aria-hidden className={kbd}>D</kbd>
       </Button>
-      <Button type="button" variant="outline" className={btn} onClick={() => onAct(entry, "timeout")} disabled={working || removeBlocked}>
+      <Button type="button" variant="outline" className={btn} aria-keyshortcuts="T" onClick={() => onAct(entry, "timeout")} disabled={working || removeBlocked}>
         <Clock aria-hidden />
         {t("mod.timeout").replace("{length}", length)}
+        <kbd aria-hidden className={kbd}>T</kbd>
       </Button>
-      <Button type="button" variant="secondary" className={btn} onClick={() => onAct(entry, "dismiss")} disabled={working}>
+      <Button type="button" variant="secondary" className={btn} aria-keyshortcuts="X" onClick={() => onAct(entry, "dismiss")} disabled={working}>
         <X aria-hidden />
         {t("mod.dismiss")}
+        <kbd aria-hidden className={kbd}>X</kbd>
       </Button>
     </div>
   )

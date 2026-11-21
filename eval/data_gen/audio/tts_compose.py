@@ -166,7 +166,9 @@ def stretch(x: np.ndarray, speed: float) -> np.ndarray:
 class Composer:
     """Builds one clip: words placed back to back with pauses; every word keeps its exact start and end."""
 
-    def __init__(self, engine: FliteEngine | ToneEngine, voice: str, speed: float, rng: random.Random) -> None:
+    def __init__(
+        self, engine: FliteEngine | ToneEngine, voice: str, speed: float, rng: random.Random
+    ) -> None:
         self.engine, self.voice, self.speed, self.rng = engine, voice, speed, rng
         self.chunks: list[np.ndarray] = []
         self.pos = 0

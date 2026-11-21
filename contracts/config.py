@@ -170,8 +170,12 @@ class GuardConfig(_Model):
     enabled: bool = True
     music_on_threshold: float = Field(0.5, ge=0.0, le=1.0)
     music_off_threshold: float = Field(0.3, ge=0.0, le=1.0)
-    fp_max_ber: float = Field(0.35, ge=0.0, le=1.0)  # fingerprint bit-error-rate ceiling
-    fp_margin: float = Field(0.05, ge=0.0, le=1.0)  # best match must beat the runner-up by this
+    fp_max_ber: float = Field(
+        0.22, ge=0.0, le=1.0
+    )  # fingerprint bit-error-rate ceiling (D-50; spec 0.35 gave 9/60 false matches)
+    fp_margin: float = Field(
+        0.10, ge=0.0, le=1.0
+    )  # best match must beat the runner-up by this (D-50; spec 0.05)
     profanity_enabled: bool = True
     # Words that make on-screen text risky. Matching happens in vision/ (guard never sees OCR text).
     risky_text_blocklist: list[str] = Field(default_factory=list, repr=False)
@@ -231,8 +235,18 @@ def _default_modules() -> dict[str, str]:
     }
 
 
+def _default_extras() -> dict[str, str]:
+    # Optional in-process services (guard, captions): a failure to load one is a logged warning, never fatal.
+    return {
+        "guard_risk": "guard.risk.service:build",
+        "captions": "audio.captions:build",
+        "guard_music": "guard.music:build",
+    }
+
+
 class RuntimeConfig(_Model):
     modules: dict[str, str] = Field(default_factory=_default_modules)
+    extras: dict[str, str] = Field(default_factory=_default_extras)
 
 
 class RelayConfig(_Model):

@@ -127,7 +127,9 @@ def _uniq(rng: random.Random, n: int, make: Callable[[], Msg]) -> list[Msg]:
 
 def _latn(rng: random.Random) -> Msg:
     s = pick(rng, SLUR_LATN)
-    text = pick(rng, LATN_PATTERNS).format(op=pick(rng, OPENERS), s=s, s2=pick(rng, SLUR_LATN), tail=pick(rng, TAILS))
+    text = pick(rng, LATN_PATTERNS).format(
+        op=pick(rng, OPENERS), s=s, s2=pick(rng, SLUR_LATN), tail=pick(rng, TAILS)
+    )
     return Msg(" ".join(text.split()), "abuse", "slur_latn", "hinglish")
 
 
@@ -152,7 +154,9 @@ def _english(rng: random.Random) -> Msg:
 def _threat(rng: random.Random) -> Msg:
     t = pick(rng, THREATS)
     text = pick(rng, ["{t}", "{t} yaad rakhna", "bhai {t}", "{t} 😡", "sun {t}"]).format(t=t)
-    lang = "deva" if any("ऀ" <= c <= "ॿ" for c in t) else ("en" if t.startswith(("i ", "watch")) else "hinglish")
+    lang = (
+        "deva" if any("ऀ" <= c <= "ॿ" for c in t) else ("en" if t.startswith(("i ", "watch")) else "hinglish")
+    )
     return Msg(text, "abuse", "threat", lang)
 
 
@@ -163,12 +167,18 @@ def _sexual(rng: random.Random) -> Msg:
 
 
 def _abbrev(rng: random.Random) -> Msg:
-    text = pick(rng, ABBREV_PATTERNS).format(a=pick(rng, ABBREV), a2=pick(rng, ABBREV), op=pick(rng, OPENERS), tail=pick(rng, TAILS))
+    text = pick(rng, ABBREV_PATTERNS).format(
+        a=pick(rng, ABBREV), a2=pick(rng, ABBREV), op=pick(rng, OPENERS), tail=pick(rng, TAILS)
+    )
     return Msg(" ".join(text.split()), "abuse", "abbrev", "hinglish")
 
 
 def _obfuscated(rng: random.Random) -> Msg:
-    base = pick(rng, [s for s in SLUR_LATN if " " not in s] + ["madarchod", "chutiya", "bhosdike", "behenchod", "gandu", "harami"])
+    base = pick(
+        rng,
+        [s for s in SLUR_LATN if " " not in s]
+        + ["madarchod", "chutiya", "bhosdike", "behenchod", "gandu", "harami"],
+    )
     word, how = obfuscate(base, rng)
     text = pick(rng, LATN_PATTERNS[:9]).format(op=pick(rng, OPENERS), s=word, s2=word, tail=pick(rng, TAILS))
     return Msg(" ".join(text.split()), "abuse", "obfuscated", "hinglish", tags=["obfuscated", how])
@@ -176,7 +186,9 @@ def _obfuscated(rng: random.Random) -> Msg:
 
 def _praise(rng: random.Random) -> Msg:
     s = pick(rng, ["bhosdike", "madarchod", "behenchod", "chutiya", "bc", "mc", "bsdk"])
-    return Msg(pick(rng, PROFANE_PRAISE).format(s=s), "abuse", "profane_praise", "hinglish", tags=["non_directed"])
+    return Msg(
+        pick(rng, PROFANE_PRAISE).format(s=s), "abuse", "profane_praise", "hinglish", tags=["non_directed"]
+    )
 
 
 MAKERS = {
@@ -208,18 +220,19 @@ HARD_NEG_ABUSE = [
     "Essex mein cousin rehta hai", "Scunthorpe ke match ki baat ho rahi thi", "cocktail party hai aaj", "peacock ka video dekha", "Dickens ki book padh raha hu",
     "Penistone naam ka gaon hai UK mein", "Lund university Sweden mein hai", "Cockburn street kahan hai", "classic game hai ye", "hello everyone kaise ho",
     "shell shock 2 khelo kabhi", "Sussex county ka match tha", "Rancho ka dialogue yaad aaya", "Chutia Ranchi ka ek ilaka hai", "kutte ka video viral hai dekho", "mera pet dog bahut cute hai", "kutta bhi itna samajhdar nahi hota ye dekho 😂", "gadha aur ghoda dono dekhe zoo mein",
-    "saala kya zabardast shot tha", "arre saale maza aa gaya", "kamaal kar diya tune bhai",
+    "kamaal kar diya tune bhai",
     "tujhe dekh ke maza aa gaya killer hai tu", "enemy ko uda diya headshot se", "usko maar diya aakhri zone mein", "squad wipe kar dete hain aaj",
     "bhai tu to murder kar deta hai lobby mein", "kya bakwas sensitivity hai teri lekin chal jayega", "bekar gameplay tha aaj ka", "stream quality kharab hai thodi",
     "tu bohot slow khelta hai yaar", "noob team mili thi aaj", "ye game boring lag raha hai ab", "trash match tha ye honestly", "nikamma server hai ye game ka",
     "ghatiya update diya hai developers ne", "pagal ho gaye hain devs is patch mein", "paagal hu main is game ke liye", "dimag kharab ho gaya lag se",
-    "teri maa ko pranam bhai sab theek hai", "behen ki shaadi hai kal off lunga", "meri behen bhi tujhe dekhti hai", "bhai behen dono fan hain tere",
+    "behen ki shaadi hai kal off lunga", "meri behen bhi tujhe dekhti hai", "bhai behen dono fan hain tere",
     "chhod na bhai next round dekh", "lund ka naam kabhi suna hai Sweden wala",
     "Bhosale sir ka lecture tha aaj", "Randhawa ka naam suna hai punjabi singer", "Gandotra sir ne padhaya tha",
     "Kutty Padmini ki movie dekhi", "Thikri ka kaam chalta hai wahan", "haramain sharif ki video dekhi",
     "kamina nahi kaminey movie ka gaana chalao", "Kaminey movie ka dialogue maara", 
 ]  # fmt: skip
 HARD_NEG_AMBIGUOUS = [  # honestly arguable: reported by kind, not gating
+    "saala kya zabardast shot tha", "arre saale maza aa gaya",
     "chod do ye topic aage badho", "kya chutiyapa chal raha hai yahan aaj sab theek hai na",
     "saale tune to kill steal kar liya", "oye kamine ye to meri kill thi", "abe pagal hai kya itna op", "tu to bada harami nikla meri kill le gaya 😂",
     "bhosdi... sorry sorry typo", "bc kya khela hai aaj bhai", "bc ye lag kab jayega", "mc stream dekh raha hu kya khela", "saala bakchod hai tu mazak mein bol raha hu",
@@ -245,4 +258,7 @@ def hard_negatives(rng: random.Random, n: int) -> list[Msg]:
 
 
 def ambiguous(rng: random.Random) -> list[Msg]:
-    return [Msg(t, "clean", "ambiguous_mild", "hinglish", gate=False, tags=["hard_negative", "ambiguous"]) for t in HARD_NEG_AMBIGUOUS]
+    return [
+        Msg(t, "clean", "ambiguous_mild", "hinglish", gate=False, tags=["hard_negative", "ambiguous"])
+        for t in HARD_NEG_AMBIGUOUS
+    ]

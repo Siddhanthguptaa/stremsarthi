@@ -8,10 +8,12 @@ from audio.pii.merge import Cand
 from audio.pii.numbers import Tok, Vocab
 from contracts.enums import Category
 
-MAX_TOKENS = 12
+MAX_TOKENS = 12  # tokens after the last cue or number that still belong to the address
+MAX_REGION = 40
 PAUSE_S = 0.8
 PRE_TOKENS = 2  # weak cues ("shastri nagar", "mg road") also cover the name before them
 WEAK_CONTEXT_TOKENS = 12
+FILLER_SKIP = 2  # "my address IS ...": filler words right after an opening cue are not part of the address
 
 
 def _phrase_at(toks: Sequence[Tok], i: int, phrases: tuple[tuple[str, ...], ...]) -> int:
@@ -28,9 +30,12 @@ def find_address(
     cue_active_at: Callable[[float], bool],
     is_number: Callable[[str], bool],
 ) -> list[Cand]:
-    """Address regions. ``address``/``pata`` open a region; strong cues (``flat number``, ``gali``) cover the
-    following up to 12 tokens or until a pause of 0.8 s; weak cues (``road``, ``near``) need a watch window
-    or another address cue / number nearby, so ordinary speech about roads is not muted."""
+    """Address regions. ``address``/``pata`` open a region that starts after the cue; strong cues
+    (``flat number``, ``gali``) cover themselves and what follows; weak cues (``road``, ``near``) need a watch
+    window or another address cue / number nearby, so ordinary speech about roads is not muted.
+
+    A region runs until a pause of 0.8 s or until 12 tokens pass with no further number or address cue: a
+    full address (flat, building, sector, landmark, city, pin code) is one region, a stray cue is not."""
     n = len(toks)
     hits: list[tuple[int, int, str]] = []  # (start, end, kind)
     i = 0
@@ -46,6 +51,7 @@ def find_address(
             i += k
         else:
             i += 1
+    anchors = {h[1] for h in hits} | {h[0] for h in hits}
     out: list[Cand] = []
     for idx, (s, e, kind) in enumerate(hits):
         if kind == "weak":
@@ -55,12 +61,33 @@ def find_address(
             if not (cue_active_at(toks[s].t0) or near):
                 continue
         first = s
-        if kind == "weak":
+        last = e
+        if kind == "open":
+            first = e + 1
+            skipped = 0
+            while (
+                first < n
+                and skipped < FILLER_SKIP
+                and toks[first].text in vocab.cue_filler
+                and toks[first].t0 - toks[first - 1].t1 < PAUSE_S
+            ):
+                first += 1
+                skipped += 1
+            if first >= n or toks[first].t0 - toks[first - 1].t1 >= PAUSE_S:
+                continue  # nothing said after the cue yet: the next segment's window finds the region
+            last = first - 1
+        elif kind == "weak":
             while first > 0 and s - first < PRE_TOKENS and toks[first].t0 - toks[first - 1].t1 < PAUSE_S:
                 first -= 1
-        last = e
-        while last + 1 < n and last - e < MAX_TOKENS and toks[last + 1].t0 - toks[last].t1 < PAUSE_S:
+        anchor = last
+        while last + 1 < n and last + 1 - first < MAX_REGION and last - anchor < MAX_TOKENS:
+            if toks[last + 1].t0 - toks[last].t1 >= PAUSE_S:
+                break
             last += 1
+            if last in anchors or is_number(toks[last].text):
+                anchor = last
+        if last < first:
+            continue
         cue = cue_active_at(toks[s].t0) or kind == "open"
         conf = min(1.0, 0.6 + (0.15 if cue else 0.0))
         span = toks[first : last + 1]

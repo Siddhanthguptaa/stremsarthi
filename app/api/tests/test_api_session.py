@@ -165,7 +165,8 @@ def test_stop_publishes_and_the_session_ends_when_the_engine_does(
     assert keyed.get("/api/session").json()["state"] == "stopping"
 
     set_engine(keyed, publish, sample, wait_until, "ready")
-    assert keyed.get("/api/session").json()["state"] == "ended"
+    # "ended" arrives once the stop task has drained the bus and stored the report (T6.1)
+    assert wait_until(lambda: keyed.get("/api/session").json()["state"] == "ended", timeout=5.0)
     # an ended session no longer blocks the next one
     assert keyed.post("/api/session/start", json={"destinations": [YT]}).status_code == 200
 

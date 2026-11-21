@@ -32,6 +32,7 @@ EMBEDDING_DIM = 128
 DET_W, DET_H = 640, 360  # the FAST lane detects on this copy of the 1280x720 frame
 NMS_THRESHOLD = 0.3
 TOP_K = 50
+CROP_SIDE = 224  # the weak-face re-search resizes its window to this long side (square canvas)
 LOW_LIGHT_LUMA = 60.0  # mean luma below this triggers CLAHE (PrivaStream lowlight_trigger)
 
 # YuNet row layout: x, y, w, h, then five landmarks (x, y) each, then the score.
@@ -166,6 +167,7 @@ class FaceModels:
 
     def warmup(self) -> None:
         self.detect(np.zeros((DET_H, DET_W, 3), np.uint8), 0.6)
+        self.detect(np.zeros((CROP_SIDE, CROP_SIDE, 3), np.uint8), 0.6)  # the re-search's input size
         self.embed_aligned(np.zeros((112, 112, 3), np.uint8))  # SFace aligned-crop size
 
 

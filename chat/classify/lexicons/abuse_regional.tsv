@@ -7,8 +7,8 @@ soolemaga	abuse	3	kn	substr
 bosudi	abuse	3	kn	word
 bosdi maga	abuse	3	kn	word
 boli maga	abuse	3	kn	word
-tika	abuse	2	kn	word
-huccha	abuse	1	kn	word
+tika	abuse	2	kn	word	frame
+huccha	abuse	1	kn	word	frame
 otha	abuse	3	ta	word
 ottha	abuse	3	ta	word
 punda	abuse	3	ta	word
@@ -19,13 +19,12 @@ thevdiya	abuse	3	ta	word
 thevidiyapaiyan	abuse	3	ta	word
 koothi	abuse	3	ta	word
 kuthi	abuse	2	ta	word
-sunni	abuse	2	ta	word
 naaye	abuse	1	ta	word
 loosu	abuse	1	ta	word
 lanja	abuse	3	te	word
 lanjakoduku	abuse	3	te	word
 lanjakodaka	abuse	3	te	word
-munda	abuse	2	te	word
+munda	abuse	2	te	word	frame
 na kodaka	abuse	2	te	word
 dengey	abuse	3	te	word
 dengu	abuse	3	te	word
@@ -74,3 +73,218 @@ kuttar baccha	abuse	2	bn	word
 হারামজাদি	abuse	2	bn	word
 বোকাচোদা	abuse	3	bn	word
 কুত্তার বাচ্চা	abuse	2	bn	word
+
+# Added: more Kannada, Tamil, Telugu and Bengali terms (romanised and native).
+bosdi	abuse	3	kn	word
+sule	abuse	3	kn	word
+soole	abuse	3	kn	word
+sulemagane	abuse	3	kn	word
+bevarsi	abuse	3	kn	word
+bevarsi maga	abuse	3	kn	word
+nayi	abuse	1	kn	word	frame
+hucchu munde	abuse	2	kn	word
+ಬೋಸಡಿ	abuse	3	kn	word
+ಸೂಳೆ ಮಕ್ಕಳೆ	abuse	3	kn	word
+ಬೇವರ್ಸಿ	abuse	3	kn	word
+ommala	abuse	3	ta	word
+ommale	abuse	3	ta	word
+poolu	abuse	3	ta	word
+mayiru	abuse	2	ta	word
+thevdiya	abuse	3	ta	word
+ஓம்மாள	abuse	3	ta	word
+ஓம்மாளே	abuse	3	ta	word
+மயிரு	abuse	2	ta	word
+பூளு	abuse	3	ta	word
+erripuka	abuse	2	te	word
+erripooka	abuse	2	te	word
+erripuku	abuse	2	te	word
+lanjamunda	abuse	3	te	word
+lanjamundakoduku	abuse	3	te	word
+lanjakodaka	abuse	3	te	word
+bokka	abuse	2	te	word
+kojja	abuse	2	te	word
+gaadida	abuse	1	te	word
+ఎర్రిపుక	abuse	2	te	word
+ఎర్రిపూకా	abuse	2	te	word
+లంజముండ	abuse	3	te	word
+లంజకొడకా	abuse	3	te	word
+బొక్క	abuse	2	te	word
+gandu	abuse	2	bn	word
+bhodai	abuse	3	bn	word
+bessha	abuse	2	bn	word
+banchod	abuse	3	bn	word
+bokachodar	abuse	3	bn	word
+magir chele	abuse	3	bn	word
+গান্ডু	abuse	2	bn	word
+গাণ্ডু	abuse	2	bn	word
+ভোদাই	abuse	3	bn	word
+বেশ্যা	abuse	2	bn	word
+মাগির ছেলে	abuse	3	bn	word
+বাঞ্চোদ	abuse	3	bn	word
+খানকির ছেলে	abuse	3	bn	word
+pooka	abuse	3	te	word	frame
+puka	abuse	3	te	word	frame
+thika	abuse	2	kn	word
+
+# Round 2: more Telugu and Kannada (Latin and native script) plus Tamil and Bengali; threats are in threat.tsv.
+dengutha	abuse	3	te	word
+dengesta	abuse	3	te	word
+dengestha	abuse	3	te	word
+dengesthanu	abuse	3	te	word
+dengamma	abuse	3	te	word
+pukulo	abuse	3	te	word
+puku	abuse	3	te	word
+pookulo	abuse	3	te	word
+modda	abuse	3	te	word
+moddalo	abuse	3	te	word
+badkhow	abuse	3	te	word
+badkhav	abuse	3	te	word
+yedava	abuse	2	te	word
+edava	abuse	2	te	word
+yedhava	abuse	2	te	word
+vedhava	abuse	2	te	word
+vedava	abuse	2	te	word
+vedhavalu	abuse	2	te	word
+pichi pooku	abuse	2	te	word
+pichi puku	abuse	2	te	word
+dunnapothu	abuse	2	te	word
+dunna	abuse	1	te	word	frame
+kukka	abuse	1	te	word	frame
+chetta	abuse	1	te	word	frame
+sannasi	abuse	1	te	word	frame
+mundakodaka	abuse	3	te	word
+mundakoduku	abuse	3	te	word
+lanjakoduka	abuse	3	te	word
+lanjalu	abuse	3	te	word
+nee yavva	abuse	2	te	word
+ni yavva	abuse	2	te	word
+nee yamma	abuse	2	te	word
+ni yamma	abuse	2	te	word
+nayala	abuse	2	te	word
+nakodaka	abuse	2	te	word
+nakoduku	abuse	2	te	word
+na koduku	abuse	2	te	word
+ఎదవ	abuse	2	te	word
+వెధవ	abuse	2	te	word
+దెంగుతా	abuse	3	te	word
+దెంగేస్తా	abuse	3	te	word
+మొడ్డ	abuse	3	te	word
+పూకులో	abuse	3	te	word
+పుకు	abuse	3	te	word
+బాడ్కో	abuse	3	te	word
+నీ యమ్మ	abuse	2	te	word
+నీ అమ్మ	abuse	1	te	word
+నా కొడుకు	abuse	2	te	word
+నాకొడకా	abuse	2	te	word
+లంజకొడకా	abuse	3	te	word
+లంజలు	abuse	3	te	word
+దున్న	abuse	1	te	word	frame
+గాడిద	abuse	1	te	word	frame
+కుక్క	abuse	1	te	word	frame
+సన్నాసి	abuse	1	te	word	frame
+mundemaga	abuse	3	kn	word
+mundegandu	abuse	3	kn	word
+bolimaga	abuse	3	kn	word
+bolimagane	abuse	3	kn	word
+bolemaga	abuse	3	kn	word
+soolemakkale	abuse	3	kn	word
+soole makkale	abuse	3	kn	word
+sulemakkale	abuse	3	kn	word
+bosudike	abuse	3	kn	word
+bosadike	abuse	3	kn	word
+nayimaga	abuse	2	kn	word
+nayi maga	abuse	2	kn	word
+naayi maga	abuse	2	kn	word
+naayi	abuse	1	kn	word	frame
+halkat	abuse	2	kn	word
+halkatt	abuse	2	kn	word
+halkaa	abuse	2	kn	word
+lafanga	abuse	2	kn	word
+lafangi	abuse	2	kn	word
+hucchu	abuse	1	kn	word	frame
+ಮುಂಡೆ	abuse	3	kn	word
+ಮುಂಡೆಮಗ	abuse	3	kn	word
+ಬೋಳಿಮಗನೆ	abuse	3	kn	word
+ಸೂಳೆಮಗನೆ	abuse	3	kn	word
+ಸೂಳೆಮಕ್ಕಳೆ	abuse	3	kn	word
+ಬೋಸುಡಿಕೆ	abuse	3	kn	word
+ಹಲ್ಕಟ್	abuse	2	kn	word
+ಲಫಂಗ	abuse	2	kn	word
+ತಿಕ	abuse	2	kn	word
+ಗಾಂಡು	abuse	2	kn	word
+ನಾಯಿ	abuse	1	kn	word	frame
+ಕತ್ತೆ	abuse	1	kn	word	frame
+ಹುಚ್ಚ	abuse	1	kn	word	frame
+ನಾಯಿಮಗ	abuse	2	kn	word
+oombu	abuse	3	ta	word
+oombura	abuse	3	ta	word
+umbu	abuse	2	ta	word
+koodhi	abuse	3	ta	word
+koodhi	abuse	3	ta	word
+pundamavane	abuse	3	ta	word
+pundamavan	abuse	3	ta	word
+punda mone	abuse	3	ta	word
+thaayoli	abuse	3	ta	word
+thayoli	abuse	3	ta	word
+kena	abuse	2	ta	word	frame
+kenapayale	abuse	2	ta	word
+kenapunda	abuse	3	ta	word
+mairu	abuse	2	ta	word
+mayir	abuse	2	ta	word
+soothu	abuse	3	ta	word
+kunji	abuse	2	ta	word
+kundi	abuse	2	ta	word
+pannada	abuse	2	ta	word
+panni	abuse	1	ta	word	frame
+saniyan	abuse	2	ta	word
+kaluthai	abuse	1	ta	word	frame
+ஓம்பு	abuse	3	ta	word
+பன்னாடை	abuse	2	ta	word
+சனியன்	abuse	2	ta	word
+கேனை	abuse	2	ta	word	frame
+சூத்து	abuse	3	ta	word
+குண்டி	abuse	2	ta	word
+கூதி	abuse	3	ta	word
+ஒம்மால	abuse	3	ta	word
+ஓத்த	abuse	3	ta	word
+shuorer bachha	abuse	2	bn	word
+shuorer bachcha	abuse	2	bn	word
+shuor	abuse	1	bn	word	frame
+bhoda	abuse	3	bn	word
+chodon	abuse	3	bn	word
+bokachodar	abuse	3	bn	word
+শুয়োরের বাচ্চা	abuse	2	bn	word
+চোদ	abuse	3	bn	word
+চোদা	abuse	3	bn	word
+ভোদা	abuse	3	bn	word
+হারামি	abuse	2	bn	word
+কুত্তা	abuse	1	bn	word	frame
+শালা	abuse	1	bn	word	frame
+boku	abuse	2	te	word	frame
+దెంగ	abuse	3	te	word
+bhosadpappu	abuse	3	hi	word
+chutmarike	abuse	3	hi	word
+chutmarika	abuse	3	hi	word
+jhantu	abuse	2	hi	word
+jhaantu	abuse	2	hi	word
+
+poda sunni	abuse	2	ta	word
+sunni payale	abuse	2	ta	word
+denga	abuse	3	te	word
+dengara	abuse	3	te	word
+lanjkodka	abuse	3	te	word
+lanjakodka	abuse	3	te	word
+sooley maga	abuse	3	kn	word
+sooley magane	abuse	3	kn	word
+sooley	abuse	3	kn	word
+bolimagne	abuse	3	kn	word
+oththa	abuse	3	ta	word
+oothaa	abuse	3	ta	word
+devadiya	abuse	3	ta	word
+thevudiya	abuse	3	ta	word
+devdiya	abuse	3	ta	word
+boka choda	abuse	3	bn	word
+bokachudi	abuse	3	bn	word
+bokachuda	abuse	3	bn	word
+harmjada	abuse	2	bn	word
+harmzada	abuse	2	hi	word

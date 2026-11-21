@@ -127,6 +127,7 @@ class OcrService:
         self._batch = REC_BATCH
         self._memo_key: tuple[int, float, float] | None = None
         self._memo: OcrResult | None = None
+        self._weak_memo: tuple[np.ndarray, np.ndarray] | None = None
         self.last_timing = OcrTiming()
 
     # ------------------------------------------------------------------ lifecycle
@@ -154,7 +155,7 @@ class OcrService:
     def close(self) -> None:
         with self._lock:
             self._det = self._rec = None
-            self._memo = self._memo_key = None
+            self._memo = self._memo_key = self._weak_memo = None
 
     # ------------------------------------------------------------------ OcrProvider
     def __call__(self, frame: Frame) -> OcrResult:
@@ -165,7 +166,17 @@ class OcrService:
                 return self._memo
             result = self._run(frame.image)
             self._memo_key, self._memo = key, result
+            assert self._det is not None
+            self._weak_memo = self._det.last_weak
             return result
+
+    def weak_boxes(self, frame: Frame) -> tuple[np.ndarray, np.ndarray]:
+        """(boxes (N,4,2), det scores (N,)) of faint text regions the normal read missed on ``frame`` (the one
+        the last ``__call__`` saw; empty otherwise). Geometry only, never recognised: for mask-all-text."""
+        with self._lock:
+            if self._weak_memo is not None and self._memo_key == (frame.seq, frame.pts, frame.arrival):
+                return self._weak_memo
+        return np.zeros((0, 4, 2), np.float32), np.zeros((0,), np.float32)
 
     def _run(self, image: np.ndarray) -> OcrResult:
         self._ensure_loaded()

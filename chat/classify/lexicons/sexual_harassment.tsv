@@ -1,10 +1,10 @@
 # Sexual harassment and sexual violence terms. Hand-curated. category: sexual
 # Columns: term<TAB>category<TAB>severity(1-3)<TAB>lang<TAB>match(word|substr|regex)
-rape	sexual	3	en	word
-raped	sexual	3	en	word
-rapist	sexual	3	en	word
-balatkar	sexual	3	hi	word
-balatkari	sexual	3	hi	word
+rape	sexual	3	en	word	topic
+raped	sexual	3	en	word	topic
+rapist	sexual	3	en	word	topic
+balatkar	sexual	3	hi	word	topic
+balatkari	sexual	3	hi	word	topic
 nudes	sexual	2	en	word
 nude bhej	sexual	2	hi	word
 nude bhejo	sexual	2	hi	word
@@ -21,10 +21,72 @@ kapde utar	sexual	2	hi	word
 send nudes	sexual	2	en	word
 show boobs	sexual	2	en	word
 show tits	sexual	2	en	word
-बलात्कार	sexual	3	hi	word
-बलात्कारी	sexual	3	hi	word
-रेप	sexual	3	hi	word
+बलात्कार	sexual	3	hi	word	topic
+बलात्कारी	sexual	3	hi	word	topic
+रेप	sexual	3	hi	word	topic
 चुदाई	sexual	2	hi	word
 न्यूड	sexual	2	hi	word
 नंगी	sexual	2	hi	word
 कपड़े उतार	sexual	2	hi	word
+
+# Added: harassment phrasings (regex entries are matched on the lowercase lexicon view).
+\bbina\s+kap(?:d|r)(?:e|a|o|on)\b	sexual	2	hi	regex
+\braat\s+ko\s+(?:akeli|milne|ghar|aa)\b	sexual	2	hi	regex
+\bhotel\s+(?:chal|chalo|chalte|chalna|aa|aao)\b	sexual	2	hi	regex
+\bakeli\s+ho\b	sexual	2	hi	regex
+\bsexy\s+ho\b	sexual	2	hi	regex
+\bkapd(?:e|o)\s+(?:utaro|utar|nikalo|hatao)\b	sexual	2	hi	regex
+\b(?:apni|ur|your)\s+(?:photo|pic|pics)\s+bhej.{0,25}(?:nahi|nude|bina|private)	sexual	2	hi	regex
+\b(?:send|share)\s+(?:ur|your)\s+(?:nudes?|pics?\s+without)	sexual	2	hi	regex
+\bkitne\s+mein\s+(?:milegi|chalegi)\b	sexual	2	hi	regex
+\brate\s+kya\s+hai\s+tera\b	sexual	2	hi	regex
+\bdm\s+me\s+aa\s+(?:akeli|sexy)\b	sexual	2	hi	regex
+रात को मिलने	sexual	2	hi	word
+रात को अकेली	sexual	2	hi	word
+अकेली हो	sexual	2	hi	word
+बिना कपड़ों	sexual	2	hi	word
+बिना कपड़े	sexual	2	hi	word
+होटल चल	sexual	2	hi	word
+होटल चलो	sexual	2	hi	word
+सेक्सी हो	sexual	2	hi	word
+अकेली	sexual	1	hi	word
+
+# Round 2: harassment STRUCTURES (body-reveal requests, propositions, pricing a person, sexual violence).
+\b(?:rape|balatkar)\s+(?:kar|karna|karunga|karenge|karte|karwa|ho|hona|honi|hoga|honi\s+chahiye|karne)\w*	sexual	3	hi	regex
+\b(?:rape|raping)\s+(?:you|u|her|him|ur|your)\b|\bgang\s*rape\b|\b(?:should|needs\s+to|deserves?\s+to\s+be)\s+(?:be\s+)?raped\b	sexual	3	en	regex
+\b(?:show|dikha|dikhao|dikhana|dikhado|dikha\s+do|zoom|zoom\s+in)\b.{0,20}\b(?:body|chest|boobs?|boobies|cleavage|legs?|thighs?|figure|gaand|gand|stan|bra|panty|ass|butt|bum|nipple|navel|nabhi|waist|kamar|tummy)\b	sexual	2	hi	regex
+\b(?:tu|tum|aap)\s+(?:kya\s+)?(?:sexy|hot|maal|item|patakha)\b|\b(?:sexy|hot|maal|item|patakha)\s+(?:lag\s+rahi|lagti|lagrahi|lag\s+ri|lag\s+rahe)\b|\b(?:kya\s+)?(?:maal|item|patakha)\s+(?:hai|ho)\s+(?:tu|tum|yaar)\b	sexual	2	hi	regex
+\b(?:mere|mereko|mere\s+ko|ek)\s+(?:saath|sath|sang)\s+(?:so|soyegi|soegi|soyogi|sone|sex|hotel|raat|night|chal|chalegi|chalogi|bed|date)\w*	sexual	2	hi	regex
+\b(?:sleep|sleeping|sex|hookup|hook\s+up|bang|fuck)\s+with\s+(?:me|u|you)\b|\bwanna\s+(?:sleep|fuck|bang|hookup|hook\s+up|have\s+sex)\b|\b(?:ek\s+)?raat\s+(?:ke\s+liye|ka|ki)\b.{0,15}\b(?:kitna|kitne|rate|price|available|free|milegi|chalegi)\b|\b(?:kitna|kitne|rate|price)\b.{0,12}\b(?:ek\s+raat|raat\s+ka|night|ghanta|ek\s+ghante)\b	sexual	2	hi	regex
+\bbed\s+(?:pe|par|me|mein)\s+(?:aa|chal|aao|chalo|kab)\w*|\bbistar\s+(?:pe|par|me|mein)\b|\b(?:moan|moaning)\b	sexual	2	hi	regex
+\b(?:available|free)\s+ho\s+(?:kya|kya\s+raat|aaj\s+raat)\b	sexual	2	hi	regex
+\b(?:nude|nudes|nangi)\s+(?:video|pic|pics|photo|photos|bhej|bhejo|dikha|dikhao|dena|do)\b	sexual	2	hi	regex
+मेरे\s+साथ\s+सो\S*	sexual	2	hi	regex
+कितने\s+में\s+(?:चलेगी|चलोगी|मिलेगी|मिलोगी)	sexual	2	hi	regex
+कपडे\s+उतार\S*	sexual	2	hi	regex
+बॉडी\s+दिखा\S*	sexual	2	hi	regex
+रेप\s+कर\S*	sexual	3	hi	regex
+रात\s+भर\s+(?:के\s+लिए|साथ)	sexual	2	hi	regex
+सेक्स\s+(?:करेगी|करोगी|करने|चैट)	sexual	2	hi	regex
+न्यूड\s+भेज\S*	sexual	2	hi	regex
+
+# Round 2b: more harassment structures (proposition, "come to my room", pricing, wear-this requests, control remarks).
+\b(?:come|aao|aa\s+jao|chalo|chal)\s+(?:to\s+)?(?:my|mere|meri)\s+(?:room|bed|ghar|hotel|flat|place)\b	sexual	2	hi	regex
+\braat\s+(?:\w+\s+){0,3}?(?:mere|meri)\s+(?:saath|sath|ghar|room|bed)\b|\b(?:aaj\s+)?raat\s+(?:ko\s+)?(?:call|msg|message|video\s+call|dm|inbox)\s+(?:karo|kar|karna|krna)\b	sexual	2	hi	regex
+\bi\s+want\s+to\s+(?:kiss|touch|fuck|hug|bang|sleep\s+with|lick|suck)\w*\s+(?:you|u)\b|\b(?:kiss|touch|lick|suck)\s+(?:you|u|ur|your)\b	sexual	2	en	regex
+\b(?:bikini|swimsuit|lingerie|short\s+skirt|mini\s+skirt)\b.{0,25}\b(?:pehen|pehn|pahan|pahno|wear|stream|karo)\w*|\b(?:pehen|pehn|pahan|pahno|wear)\w*\s+(?:\w+\s+){0,3}?(?:bikini|swimsuit|lingerie)\b	sexual	2	hi	regex
+\bskin\s+(?:show|dikha|dikhao)|\bshow\s+(?:some\s+|thoda\s+(?:sa\s+)?)?skin\b|\b(?:send|share)\s+(?:pics|photos?)\s+without\s+(?:clothes|kapde)\b	sexual	2	hi	regex
+\b(?:control|kabu|kaabu)\s+(?:nahi|nhi|mat)\s+(?:hota|ho\s+raha|hoga|rehta|raha)\b	sexual	2	hi	regex
+\bkya\s+(?:figure|body|maal|item)\b|\b(?:camera|cam)\s+(?:ke\s+)?(?:paas|nazdeek|close|pass)\s+aao\b|\bnazdeek\s+aao\b	sexual	2	hi	regex
+\b(?:sexy|hot)\b.{0,25}\b(?:raat|night)\b.{0,15}\b(?:call|dm|aao|come|mil)\b|\b(?:tu|tum|aap|u|you)\s+(?:r\s+|are\s+|ho\s+)?(?:so\s+|very\s+|bahut\s+)?(?:hot|sexy)\b.{0,30}\b(?:come|aao|room|tonight|night|raat|dm|call)\b	sexual	2	hi	regex
+\b(?:chodne|chodna|chodunga|chodenge)\s+(?:layak|ke\s+layak|wali|waali|hai)\b	sexual	2	hi	regex
+
+# Round 2c
+\bek\s+raat\s+(?:mere|mujhe)\s+(?:naam|nam|saath|ke\s+naam)\b	sexual	2	hi	regex
+\bkitne\s+(?:paise|rupay\w*|ka)\s+(?:loge|logi|lega|legi|lagega|lagegi)\b	sexual	2	hi	regex
+\b(?:wanna|want\s+to|let'?s)\s+(?:have\s+fun|hang\s+out|hook\s*up|get\s+naughty|get\s+lucky)\b.{0,20}\b(?:tonight|night|alone|private|dm)\b|\bhave\s+fun\s+tonight\b	sexual	2	en	regex
+\b(?:come|aa|aao)\s+(?:on\s+)?(?:cam|camera|video)\b.{0,25}\b(?:show|dikha|nude|naked|bare|kapde|everything)\b|\bshow\s+(?:me\s+)?(?:everything|it\s+all)\b	sexual	2	en	regex
+\b(?:chaati|chhati|chati|seena|sina|jaangh|jangh|stanon|naabhi|chuchi|chuchiyan|pussy|dick|cock|vagina|penis|nipples?)\b.{0,20}\b(?:dikha|dikhao|dikhana|dikhado|show|bata|dikhaa)\w*|\b(?:dikha|dikhao|dikhana|dikhado|show)\s+(?:na\s+)?(?:apni\s+|ur\s+|your\s+|teri\s+)?(?:chaati|chhati|chati|seena|sina|jaangh|jangh|stanon|naabhi|chuchi|pussy|dick|cock|vagina|penis|nipples?)\b	sexual	2	hi	regex
+\b(?:body|chest|boobs?|cleavage|thighs?|legs?|figure|gaand|gand|bra|panty|butt|ass)\b.{0,20}\b(?:dikha|dikhao|dikhana|dikhado|show)\w*	sexual	2	hi	regex
+\b(?:sab|sabkuch|saare\s+kapde)\s+(?:kuch\s+)?(?:utaar|utar|nikal|hata)\w*	sexual	2	hi	regex
+\b(?:pakad|pakadke|pakad\s+ke)\b.{0,20}\bzabardasti\b|\bzabardasti\s+(?:kar|karunga|karenge|karni|karna)\b	sexual	3	hi	regex

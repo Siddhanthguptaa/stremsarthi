@@ -13,11 +13,18 @@ T3.3: spoken-PII rules. Captions come in T5.3 (see `docs/specs/audio.md`).
 | `stt/local.py` | faster-whisper int8 CPU fallback (adapted from PrivaStream, Apache-2.0) |
 | `orchestrator/` | `build(config, bus)` AudioHost; `pipeline.py` (segments to MuteSpan + mouth MaskRequest), `race.py`, `mute.py`, `window.py`, `failsafe.py` |
 | `pii/` | number words (`data/number_words.yaml`), rules, UPI, address, Groq fallback (`llm.py`), `build_detector` |
+| `captions/` | T5.3: `redact.py` (mask muted words with ▮▮▮), `translate.py` (Sarvam, IndicTrans2 demo-only adapter, passthrough, breaker and budget chain), `timing.py`, `service.py` (`audio.captions:build`) |
 | `testing.py` | virtual-time loop, scripted STT, synthetic timelines for tests |
 | `models.py` | pinned/verified model downloads into `models/weights/audio/` (gitignored) |
 | `spikes/stt_spike.py` | latency and capability spike, writes `spikes/REPORT.md` |
 
 Licences: `stt/` and `pii/LICENSE-privastream-Apache-2.0` (PrivaStream), `licenses/silero-vad-MIT.txt` (Silero VAD).
+
+## Deciding early (Gate 3)
+A span must be ready before its samples leave the delay buffer, so the rules do not wait for a cue or a whole number:
+3+ digits spoken one by one (not counting, no `sau`), spelt-out letters and `<name> at <handle>` ids are muted as
+soon as they are heard; a lost or mis-heard digit is bridged; the carry continues digits, letters and the handle
+into the next segment. Cue and address vocabulary is data (`pii/data/number_words.yaml`), not code.
 
 ## Run
 ```

@@ -64,7 +64,12 @@ def origin() -> str:
 @pytest.fixture
 def settings_factory() -> Callable[..., ApiSettings]:
     def make(**overrides: object) -> ApiSettings:
-        base: dict[str, object] = {"secret_key": SECRET, "bus_backend": "inprocess"}
+        base: dict[str, object] = {
+            "secret_key": SECRET,
+            "bus_backend": "inprocess",
+            "session_spawn": False,  # tests never start child processes
+            "sessions_dir": "",  # and never write to the home directory
+        }
         base.update(overrides)
         return ApiSettings(_env_file=None, **base)  # type: ignore[call-arg]
 

@@ -293,8 +293,13 @@ class HeartbeatAudioHost(FakeAudioHost):
     def __init__(self, bus: Any, period_s: float = 1.0) -> None:
         super().__init__()
         self._bus, self._period = bus, period_s
+        self._last_pts: float | None = None  # newest chunk pts_end seen, like the real host's beat
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+
+    def feed(self, chunk: AudioChunk) -> None:
+        super().feed(chunk)
+        self._last_pts = float(chunk.pts_end)
 
     def start(self) -> None:
         super().start()
@@ -305,7 +310,7 @@ class HeartbeatAudioHost(FakeAudioHost):
         seq = 0
         while not self._stop.is_set():
             now = time.monotonic()
-            self._bus.publish(Topic.TIMING, StageTiming("audio_heartbeat", seq, None, now, now))
+            self._bus.publish(Topic.TIMING, StageTiming("audio_heartbeat", seq, self._last_pts, now, now))
             seq += 1
             self._stop.wait(self._period)
 

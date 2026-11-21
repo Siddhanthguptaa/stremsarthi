@@ -38,10 +38,13 @@ from contracts import (
 from vision.ocr.layout import as_array, side_lengths, to_quad
 from vision.ocr.multi import install_indic, read_ocr
 from vision.ocr.normalize import normalise_text
+from vision.shapes import degraded
 
 from .games import find_game_fields, has_game_context
 from .otp import banner_quad, find_otps, phone_screen_quad, text_rect
 from .templates import GameTemplate, TemplateHit, TemplateMatcher, load_templates
+from .unsure import CONF as UNSURE_CONF
+from .unsure import find_banner_shapes, relaxed_hits, relaxed_matcher
 
 log = logging.getLogger("vision.screens")
 
@@ -49,6 +52,9 @@ CATEGORIES = frozenset({Category.OTP_SCREEN, Category.GAME_ID, Category.ROOM_CRE
 GAME_CATEGORIES = (Category.GAME_ID, Category.ROOM_CREDENTIAL)
 MAX_BOXES = 150  # paragraph grouping is quadratic: cap on boxes
 CONF_TEMPLATE, CONF_BOTH = 0.7, 0.95
+# T7.5: the banner-shape fallback (``unsure.py``) is ON by default (0 false masks on the negative sets, see docs/STATUS.md);
+# the relaxed-template fallback is OFF (no recall gain, false masks)
+SHAPE_FALLBACK_DEFAULT = True  # the banner-shape fallback; the relaxed-template one is separate and OFF
 
 
 def _rect_quad(x1: float, y1: float, x2: float, y2: float) -> np.ndarray:
@@ -81,6 +87,9 @@ class ScreensDetector:
         self._matcher = TemplateMatcher([])
         self._screen_mask = True
         self._screen_min_boxes = 5
+        self._shape_fallback = SHAPE_FALLBACK_DEFAULT
+        self._fb_banner, self._fb_template = True, False
+        self._relaxed = TemplateMatcher([])
 
     # ------------------------------------------------------------------ plugin interface
     def configure(self, cfg: DetectorConfig, res: Resources) -> None:
@@ -93,7 +102,16 @@ class ScreensDetector:
         self._matcher = TemplateMatcher(list(templates) if not isinstance(templates, list) else templates)
         self._screen_mask = bool(params.get("screen_mask", True))
         self._screen_min_boxes = int(params.get("screen_min_boxes", 5))
+        self._shape_fallback = bool(params.get("shape_fallback", SHAPE_FALLBACK_DEFAULT))
+        self._fb_banner = bool(params.get("banner_fallback", True))
+        self._fb_template = bool(params.get("template_fallback", False))
+        self._relaxed = relaxed_matcher(self._matcher.templates)
         install_indic(res)  # no-op for a fake OCR provider; idempotent
+
+    def set_shape_fallback(self, on: bool, *, banner: bool = True, template: bool = True) -> None:
+        """Switch the banner-shape and relaxed-template fallbacks (each needs ``mask_when_unsure`` for its category)."""
+        self._shape_fallback = bool(on)
+        self._fb_banner, self._fb_template = bool(banner), bool(template)
 
     def warmup(self) -> None:
         warm = getattr(self._res, "warm_ocr", None)
@@ -149,6 +167,58 @@ class ScreensDetector:
             out += self._otp(frame, boxes, texts, confs, heights)
         if want_games:
             out += self._games(frame, boxes, texts, confs, heights, template_hits, want_games)
+        if self._shape_fallback and degraded(frame.image):
+            late = ctx.deadline is not None and self._res.clock() > ctx.deadline
+            if not late:
+                out += self._unsure_shapes(
+                    frame, boxes, texts, confs, template_hits, want_otp, want_games, out
+                )
+        return out
+
+    # ------------------------------------------------------------------ mask-when-unsure fallbacks
+    def _unsure_shapes(
+        self,
+        frame: Frame,
+        boxes: list[np.ndarray],
+        texts: list[str],
+        confs: list[float],
+        strict: list[TemplateHit],
+        want_otp: bool,
+        want_games: set[Category],
+        found: list[Detection],
+    ) -> list[Detection]:
+        out: list[Detection] = []
+        taken = [np.array(d.quad.pts, np.float32) for d in found]
+
+        def fresh(pts: np.ndarray) -> bool:
+            return all(_iou(_bbox(pts), _bbox(t)) < 0.3 for t in taken)
+
+        if want_otp and self._fb_banner and self._unsure(Category.OTP_SCREEN):
+            for pts, bands in find_banner_shapes(frame.image, boxes, texts, confs):
+                if fresh(pts):
+                    out.append(
+                        self._detection(
+                            frame,
+                            Category.OTP_SCREEN,
+                            pts,
+                            UNSURE_CONF,
+                            {"reason": "banner_shape_unsure", "shape": "banner", "bands": bands},
+                        )
+                    )
+        wanted = {c for c in want_games if self._unsure(c)}
+        if wanted and self._fb_template:
+            for hit in relaxed_hits(self._relaxed, strict, frame.image, boxes, texts, confs):
+                for cat, quad in hit.regions:
+                    if cat in wanted and fresh(quad):
+                        out.append(
+                            self._detection(
+                                frame,
+                                cat,
+                                quad,
+                                UNSURE_CONF,
+                                {"reason": "template_unsure", "source": "template_relaxed", "game": hit.game},
+                            )
+                        )
         return out
 
     # ------------------------------------------------------------------ OTP screens

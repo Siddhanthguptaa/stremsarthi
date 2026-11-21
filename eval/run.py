@@ -6,10 +6,12 @@
     python -m eval.run gen-specimen --seed 1234 --n 5
     python -m eval.run gate-report --phase phase0 --results .tmp/gate/results.json
     python -m eval.run microbench ...             # callable latency (p50/p95/p99 JSON)
+    python -m eval.run redteam-audio|redteam-chat [--record-only ...]   # T7.2 red-team suites (eval/redteam/)
     python -m eval.run phase1 --leg main --engine real|ref|ref-broken [--gpu]   # one gate-1 leg (see eval/phase1.py)
     python -m eval.run phase1-report --dir D --results R.json   # eval/reports/<date>-phase1.md from the legs in D
     python -m eval.run phase2 --leg preflight|offline|rescore|perf --data D --out O   # one gate-2 leg (eval/phase2/)
     python -m eval.run phase2-report --dir O --results R.json   # eval/reports/<date>-phase2.md from the legs in O
+    python -m eval.run redteam-video [--quick] [--attacks A ...] [--selftest]   # T7.1 video red team (eval/redteam/video/)
 
 Exit codes: 0 pass, 1 a criterion failed, 2 environment error (nothing measured).
 """
@@ -158,7 +160,7 @@ def cmd_phase1_report(a: argparse.Namespace) -> int:
 
 def cmd_phase2(a: argparse.Namespace) -> int:
     from .phase2 import offline
-    from .phase2.rows import COVER_MIN, LEVELS
+    from .phase2.rows import COVER_MIN, GATE_LEVELS
 
     out = Path(a.out) if a.out else _run_dir("phase2")
     data = Path(a.data)
@@ -178,7 +180,7 @@ def cmd_phase2(a: argparse.Namespace) -> int:
         )
         return rc
     if a.leg == "dataset-check":
-        ok, why = offline.dataset_matches(data, a.seed, a.n, a.clips)
+        ok, why = offline.dataset_matches(data, a.seed, a.n, a.clips, a.face_clips, a.face_clip_seconds)
         print(f"dataset {data}: {why}")
         return EXIT_OK if ok else EXIT_FAIL
     if a.leg in ("offline", "rescore"):
@@ -186,15 +188,20 @@ def cmd_phase2(a: argparse.Namespace) -> int:
             data=data,
             out=out,
             cover_min=a.cover_min if a.cover_min is not None else COVER_MIN,
-            gate_levels=tuple(a.gate_levels.split(",")) if a.gate_levels else LEVELS,
+            gate_levels=tuple(a.gate_levels.split(",")) if a.gate_levels else GATE_LEVELS,
             gate_sources=tuple(a.gate_sources.split(",")),
             min_n=a.min_n,
             min_windows=a.min_windows,
             ocr_budget_ms=a.ocr_budget_ms,
             fast_still_runs=a.fast_still_runs,
+            warmup_s=a.warmup_s,
+            steady_s=a.steady_s,
+            latency_per_bucket=a.latency_per_bucket,
             buckets=set(a.buckets) if a.buckets else None,
             max_per_bucket=a.max_per_bucket,
             faces_async=a.faces_async,
+            seeded_defect=a.seeded_defect,
+            no_clips=a.no_clips,
         )
         return offline.rescore(opts) if a.leg == "rescore" else offline.run_offline(opts)
     from .phase2 import perf
@@ -308,11 +315,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--seed", type=int, default=1234, help="dataset-check: expected generator seed")
     sp.add_argument("--n", type=int, default=40, help="dataset-check: expected images per bucket")
     sp.add_argument("--clips", type=int, default=4, help="dataset-check: expected clips per clip bucket")
+    sp.add_argument(
+        "--face-clips", type=int, default=None, help="dataset-check: expected face clips (None = --clips)"
+    )
+    sp.add_argument(
+        "--face-clip-seconds", type=float, default=None, help="dataset-check: expected face clip length (s)"
+    )
     sp.add_argument("--engine", choices=["real", "ref", "ref-broken"], default="real", help="perf leg chain")
     sp.add_argument("--gpu", action="store_true", help="perf leg with gpu.enabled=true (run under flock)")
     sp.add_argument("--seconds", type=float, default=120.0, help="perf leg length")
     sp.add_argument(
-        "--gate-levels", default=None, help="comma list of clean,light,heavy the checks use (default all)"
+        "--gate-levels",
+        default=None,
+        help="comma list of clean,light,heavy the checks use (default clean,light: D-48, heavy is a reported stress level)",
     )
     sp.add_argument("--gate-sources", default="img,clip", help="img,clip: which sets the recall checks use")
     sp.add_argument(
@@ -321,9 +336,40 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--min-n", type=int, default=20, help="fewer visible target frames than this is NOT RUN")
     sp.add_argument("--min-windows", type=int, default=20, help="fewer flicker windows than this is NOT RUN")
     sp.add_argument(
-        "--ocr-budget-ms", type=int, default=5000, help="lift the wall-clock OCR budget for repeatable recall"
+        "--ocr-budget-ms",
+        type=int,
+        default=5000,
+        help="lift the wall-clock OCR budget for the RECALL pass only (latency is judged at the production budget)",
     )
-    sp.add_argument("--fast-still-runs", type=int, default=4, help="fast-lane runs per still image")
+    sp.add_argument(
+        "--fast-still-runs",
+        type=int,
+        default=None,
+        help="fast-lane runs per still (default: vision.face_vote_min + 2, read from the config)",
+    )
+    sp.add_argument(
+        "--warmup-s",
+        type=float,
+        default=1.0,
+        help="allowlisted faces on clips: scored from N s after the track appears",
+    )
+    sp.add_argument(
+        "--steady-s", type=float, default=2.0, help="the 'steady' view of the same row (N s after)"
+    )
+    sp.add_argument(
+        "--latency-per-bucket",
+        type=int,
+        default=5,
+        help="stills per bucket re-run at the production OCR budget for the latency pass (0 = skip)",
+    )
+    sp.add_argument(
+        "--no-clips", action="store_true", help="score the stills only (subset and acceptance runs)"
+    )
+    sp.add_argument(
+        "--seeded-defect",
+        default=None,
+        help="KIND:DETECTOR (blind|crash|absent) breaks a detector on purpose",
+    )
     sp.add_argument("--buckets", nargs="*", default=None, help="only these dataset buckets")
     sp.add_argument("--max-per-bucket", type=int, default=None, help="at most N images and clips per bucket")
     sp.add_argument("--faces-async", action="store_true", help="let the face detector embed asynchronously")
@@ -350,6 +396,22 @@ def main(argv: list[str] | None = None) -> int:
         argv and argv[0] == "gen-video"
     ):  # options are forwarded untouched (argparse REMAINDER drops a leading --opt)
         return cmd_gen_video(argparse.Namespace(rest=argv[1:]))
+    if (
+        argv and argv[0] == "phase4"
+    ):  # gate-4 legs (eval/phase4.py), e.g. `phase4 --heldout`: options forwarded untouched
+        from . import phase4
+
+        return phase4.main(argv[1:])
+    if argv and argv[0] in ("redteam-audio", "redteam-chat"):  # options are forwarded untouched
+        from .redteam import cli as redteam_cli
+
+        return (redteam_cli.audio_main if argv[0] == "redteam-audio" else redteam_cli.chat_main)(argv[1:])
+    if (
+        argv and argv[0] == "redteam-video"
+    ):  # T7.1 video red team (eval/redteam/video/): options forwarded untouched
+        from .redteam.video import cli as redteam_video
+
+        return redteam_video.main(argv[1:])
     p = build_parser()
     a = p.parse_args(argv)
     if a.selftest and a.cmd is None:

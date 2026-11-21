@@ -46,6 +46,11 @@ class SessionRecord:
     destinations: dict[str, bool]
     stop_requested: bool = False
     seen_live: bool = False
+    finish_pending: bool = False  # the stop task is closing the record: not "ended" until it is done
+    finished: bool = False  # the orchestrator has stopped the children and the report is built
+    engine_exited: bool = False  # the engine child died on its own
+    ingest: dict[str, str] = field(default_factory=dict, repr=False)  # publisher URLs: never logged
+    ingest_login: tuple[str, str] | None = field(default=None, repr=False)  # (user, password)
 
 
 @dataclass(slots=True)
@@ -53,8 +58,15 @@ class SessionManager:
     start_timeout_s: float = 30.0
     record: SessionRecord | None = field(default=None)
 
-    def start(self, delay_seconds: float, profile: str, destinations: dict[str, bool]) -> SessionRecord:
+    def start(
+        self,
+        delay_seconds: float,
+        profile: str,
+        destinations: dict[str, bool],
+        ingest: dict[str, str] | None = None,
+    ) -> SessionRecord:
         self.record = SessionRecord(
+            ingest=dict(ingest or {}),
             session_id=secrets.token_urlsafe(9),
             started_at=datetime.now(UTC).isoformat(timespec="seconds"),
             started_mono=time.monotonic(),
@@ -68,6 +80,22 @@ class SessionManager:
         if self.record is not None:
             self.record.stop_requested = True
 
+    def discard(self) -> None:
+        """Forget a session that never got going (the engine could not be started)."""
+        self.record = None
+
+    def begin_finish(self) -> None:
+        if self.record is not None:
+            self.record.finish_pending = True
+
+    def finish(self) -> None:
+        if self.record is not None:
+            self.record.finished = True
+
+    def mark_engine_exit(self) -> None:
+        if self.record is not None and not self.record.stop_requested:
+            self.record.engine_exited = True
+
     def state(self, engine: EngineStatus | None) -> SessionState:
         rec = self.record
         mapped = _ENGINE_TO_STATE.get(engine.state) if engine is not None else None
@@ -79,6 +107,12 @@ class SessionManager:
             return mapped
         if mapped == "live":
             rec.seen_live = True
+        if rec.finished:
+            return "ended"
+        if rec.finish_pending:
+            return "stopping"  # the report is not stored yet
+        if rec.engine_exited and not rec.stop_requested:
+            return "engine_lost" if rec.seen_live else "failed"
         if rec.stop_requested:
             if mapped in ("live", "waiting_ingest", "stopping"):
                 return "stopping"

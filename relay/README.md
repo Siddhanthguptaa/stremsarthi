@@ -12,6 +12,8 @@ Spec: `docs/specs/relay.md`.
 | `destinations.py` | YouTube, Twitch, `mediamtx_tap`: per-destination thread, queue, FLV muxer, backoff, `egress_write` timing, `AUTO_EGRESS` hold only when ALL are down |
 | `muxer.py` | `ProcessMuxer`: the libav RTMP connect runs in a killable worker process (PyAV holds the GIL in `avio_open`, which would freeze the engine and deadlock the in-process TLS forwarder). `AvFlvMuxer` is the worker's FLV muxer |
 | `tls_forwarder.py` | One verified-TLS loopback forwarder per destination (system CAs, pinned host; `cafile` for tests) |
+| `srt.py` | T6.4: SRT latency presets (`lan` 120, `4g` 400 ms), passphrase rules, `validate_exposure` (non-loopback bind needs login + passphrase), tuning warnings |
+| `pairing.py` | T6.4: `build_pairing()` -> Moblin `moblin://?` import URL and generic SRT/RTMP URLs; never logs; `repr` hides secrets |
 | `security.py`, `sink.py`, `runtime.py` | Bind rules and credentials; `EgressFrameSink` and `NullFrameSink`; `build(config, bus) -> RelayEndpoints` |
 
 Keys: `YOUTUBE_STREAM_KEY` / `TWITCH_STREAM_KEY` in `.env` (`SecretStr`, never logged; logs carry fixed codes
@@ -30,5 +32,9 @@ MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /home/siddhanth/strem
 
 Integration tests need `.tmp/tools/mediamtx-v1.21.4/mediamtx` and `ffmpeg`/`ffprobe`. They use free ports,
 a test CA made in the test (local RTMPS sink) and synthetic frames; no real YouTube is contacted.
+
+Phone on 4G: `relay.srt_latency_ms: 400`, `relay.ingest_bind_host: 0.0.0.0` (on purpose; WSL2 mirrored networking needs an admin step on
+Windows), then `RelaySource.pairing(<LAN IP>)`. A stall over `ingest_hold_after_s` asserts `HoldCommand(AUTO_TRANSPORT)`; the first two
+frames after it release it. Impairment run: `bash scripts/netem_4g.sh run` as root (UDP port scoped `tc netem`).
 
 Licence: parts are adapted from IRL Shield (MIT); see `LICENSE` here and `docs/THIRD_PARTY.md`.

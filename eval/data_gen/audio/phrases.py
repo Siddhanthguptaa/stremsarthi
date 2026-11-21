@@ -23,7 +23,12 @@ def toks(s: str) -> list[Tok]:
 
 # --- cues: kind -> lang -> list of phrases (lexicon-style) -------------------------------------------------------
 _PHONE = {
-    "hi_latn": ["mera number hai", "mera whatsapp number", "mobile number note karo", "call karna is number par"],
+    "hi_latn": [
+        "mera number hai",
+        "mera whatsapp number",
+        "mobile number note karo",
+        "call karna is number par",
+    ],
     "hi_deva": ["मेरा|mera नंबर|number है|hai", "व्हाट्सएप|whatsapp नंबर|number", "कॉल|call करना|karna"],
     "en": ["my number is", "whatsapp me on", "call me on", "my phone number is"],
     "kn": ["ನನ್ನ|nanna ನಂಬರ್|number", "ಕಾಲ್|call ಮಾಡಿ|maadi"],
@@ -123,10 +128,26 @@ FILLER_DEVA = [
     "कल|kal का|ka स्ट्रीम|stream थोड़ा|thoda लेट|late होगा|hoga",
 ]
 FILLER_REGIONAL = {
-    "kn": ["ಇವತ್ತು|ivattu ಮ್ಯಾಚ್|match ಶುರು|shuru ಮಾಡೋಣ|maadona", "ಎಲ್ಲರಿಗೂ|ellarigu ನಮಸ್ಕಾರ|namaskara", "ಚಾಟ್|chat ನೋಡ್ತೀನಿ|nodteeni ಒಂದು|ondu ನಿಮಿಷ|nimisha"],
-    "ta": ["இன்னைக்கு|innaikku மேட்ச்|match ஆரம்பிக்கலாம்|aarambikkalam", "எல்லாருக்கும்|ellarukkum வணக்கம்|vanakkam", "சாட்|chat பாக்கறேன்|paakkaren ஒரு|oru நிமிஷம்|nimisham"],
-    "te": ["ఈరోజు|eeroju మ్యాచ్|match మొదలుపెడదాం|modalupedadam", "అందరికీ|andariki నమస్కారం|namaskaram", "చాట్|chat చూస్తా|choosta ఒక|oka నిమిషం|nimisham"],
-    "bn": ["আজ|aaj ম্যাচ|match শুরু|shuru করি|kori", "সবাইকে|sobaike নমস্কার|nomoskar", "চ্যাট|chat দেখছি|dekhchi এক|ek মিনিট|minute"],
+    "kn": [
+        "ಇವತ್ತು|ivattu ಮ್ಯಾಚ್|match ಶುರು|shuru ಮಾಡೋಣ|maadona",
+        "ಎಲ್ಲರಿಗೂ|ellarigu ನಮಸ್ಕಾರ|namaskara",
+        "ಚಾಟ್|chat ನೋಡ್ತೀನಿ|nodteeni ಒಂದು|ondu ನಿಮಿಷ|nimisha",
+    ],
+    "ta": [
+        "இன்னைக்கு|innaikku மேட்ச்|match ஆரம்பிக்கலாம்|aarambikkalam",
+        "எல்லாருக்கும்|ellarukkum வணக்கம்|vanakkam",
+        "சாட்|chat பாக்கறேன்|paakkaren ஒரு|oru நிமிஷம்|nimisham",
+    ],
+    "te": [
+        "ఈరోజు|eeroju మ్యాచ్|match మొదలుపెడదాం|modalupedadam",
+        "అందరికీ|andariki నమస్కారం|namaskaram",
+        "చాట్|chat చూస్తా|choosta ఒక|oka నిమిషం|nimisham",
+    ],
+    "bn": [
+        "আজ|aaj ম্যাচ|match শুরু|shuru করি|kori",
+        "সবাইকে|sobaike নমস্কার|nomoskar",
+        "চ্যাট|chat দেখছি|dekhchi এক|ek মিনিট|minute",
+    ],
 }
 # --- number-bearing distractors (never PII): hard negatives for over-muting ---------------------------------------
 DISTRACTORS_LATIN = [
@@ -156,6 +177,11 @@ LANDMARKS = ["city mall", "metro station", "water tank", "bus stand", "post offi
 CITIES = ["pune", "indore", "mysuru", "chennai", "hyderabad", "kolkata", "jaipur", "nagpur"]
 ADDRESS_WORDS = {
     "hi_latn": {"flat": "flat number", "sector": "sector", "near": "near", "pin": "pincode"},
-    "hi_deva": {"flat": "फ्लैट|flat नंबर|number", "sector": "सेक्टर|sector", "near": "के|ke पास|paas", "pin": "पिनकोड|pincode"},
+    "hi_deva": {
+        "flat": "फ्लैट|flat नंबर|number",
+        "sector": "सेक्टर|sector",
+        "near": "के|ke पास|paas",
+        "pin": "पिनकोड|pincode",
+    },
     "en": {"flat": "house number", "sector": "sector", "near": "near", "pin": "pin code"},
 }

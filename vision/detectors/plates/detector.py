@@ -35,6 +35,7 @@ from contracts import (
     Device,
     Frame,
     Lane,
+    OcrResult,
     Quad,
     Resources,
 )
@@ -49,8 +50,11 @@ from vision.ocr.layout import (
     union_quad,
 )
 from vision.ocr.normalize import normalise_text
+from vision.shapes import degraded, read_inside
 
 from .formats import PlateMatch, alnum, match_plate
+from .unsure import CONF as UNSURE_CONF
+from .unsure import find_plate_shapes
 
 log = logging.getLogger("vision.plates")
 
@@ -66,6 +70,13 @@ PAD_ALONG, PAD_ACROSS = 0.55, 0.45  # growth of the text union to the plate, in 
 MAX_PLATE_AREA = 0.25  # a plate larger than this share of the frame is not a plate
 CONTOUR_MIN_GROWTH, CONTOUR_MAX_GROWTH = 1.3, 6.0  # contour area / grown text area
 VehicleGate = Callable[[np.ndarray, np.ndarray], bool]
+# the shape fallback (``unsure.py``) is OFF by default until T7.5 measurements say otherwise: see docs/STATUS.md
+SHAPE_FALLBACK_DEFAULT = False
+
+
+def _overlap(a: np.ndarray, b: np.ndarray) -> float:
+    inter, _ = cv2.intersectConvexConvex(a.astype(np.float32), b.astype(np.float32))
+    return float(inter) / max(1.0, min(poly_area(a), poly_area(b)))
 
 
 @dataclass(slots=True)
@@ -94,13 +105,19 @@ class PlatesDetector:
         self._cfg: DetectorConfig | None = None
         self._gate: VehicleGate | None = None
         self._refine = True
+        self._shape_fallback = SHAPE_FALLBACK_DEFAULT
 
     # ------------------------------------------------------------------ plugin interface
     def configure(self, cfg: DetectorConfig, res: Resources) -> None:
         self._cfg, self._res = cfg, res
+        self._shape_fallback = bool(cfg.params.get("shape_fallback", SHAPE_FALLBACK_DEFAULT))
         gate = cfg.params.get("vehicle_gate")
         self._gate = gate if callable(gate) else None
         self._refine = bool(cfg.params.get("refine_quad", True))
+
+    def set_shape_fallback(self, on: bool) -> None:
+        """Switch the plate-shape fallback (only ever active with ``mask_when_unsure`` on for plates)."""
+        self._shape_fallback = bool(on)
 
     def warmup(self) -> None:
         warm = getattr(self._res, "warm_ocr", None)
@@ -118,6 +135,42 @@ class PlatesDetector:
         if conf is None or not conf.enabled:
             return []
         ocr = self._res.ocr(frame)  # raises when OCR is unavailable: the lane run fails (PROTECT)
+        out = self._read_plates(frame, ocr)
+        if self._shape_fallback and conf.mask_when_unsure and degraded(frame.image):
+            late = ctx.deadline is not None and self._res.clock() > ctx.deadline
+            if not late:
+                out += self._shape_plates(frame, [d.quad for d in out], ocr)
+        return out
+
+    def _shape_plates(self, frame: Frame, covered: list[Quad], ocr: OcrResult) -> list[Detection]:
+        """Plate-shaped rectangles with character texture that no OCR reading explains (``shape.py``)."""
+        assert self._res is not None
+        out: list[Detection] = []
+        taken = [np.array(q.pts, np.float32) for q in covered]
+        boxes = [as_array(q) for q in ocr.boxes]
+        texts = [normalise_text(t).strip() for t in ocr.texts]
+        confs = [float(c) for c in ocr.confs]
+        for pts, layout, peaks in find_plate_shapes(frame.image):
+            if any(_overlap(pts, t) > 0.3 for t in taken):
+                continue
+            if read_inside(pts, boxes, texts, confs) >= 1:  # a confident reading that is no plate: not unsure
+                continue
+            quad: Quad = to_quad(pts).clamped()
+            out.append(
+                Detection(
+                    detector=self.id,
+                    category=Category.PLATE,
+                    quad=quad,
+                    confidence=UNSURE_CONF,
+                    frame_seq=frame.seq,
+                    pts=frame.pts,
+                    completed_at=self._res.clock(),
+                    extra={"reason": "plate_shape_unsure", "layout": layout, "strokes": peaks},
+                )
+            )
+        return out
+
+    def _read_plates(self, frame: Frame, ocr: OcrResult) -> list[Detection]:
         if not ocr.boxes:
             return []
         boxes = [as_array(q) for q in ocr.boxes]

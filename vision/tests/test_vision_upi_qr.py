@@ -181,6 +181,93 @@ def test_undecodable_qr_is_masked_when_unsure_and_ignored_otherwise() -> None:
         assert _run(strict, sc.image) == [], "undecodable codes are only masked with mask_when_unsure"
 
 
+def _qr_frame(text: str, seed: int, frac: float = 0.0, module_px: float = 5.0) -> np.ndarray:
+    """A QR of ``text`` at (300, 200), with ``frac`` of its data modules flipped (finders intact)."""
+    rng = np.random.default_rng(seed)
+    mods = qr_matrix(text, ec="L").copy()
+    n = mods.shape[0]
+    keep = np.zeros((n, n), bool)
+    keep[:9, :9] = keep[:9, -9:] = keep[-9:, :9] = True
+    if frac:
+        mods = np.where((rng.random((n, n)) < frac) & ~keep, ~mods, mods)
+    side = int(round((n + 2 * QUIET) * module_px))
+    image = np.full((H, W, 3), 140, np.uint8)
+    image[200 : 200 + side, 300 : 300 + side] = _patch(mods, side)[..., None]
+    return image
+
+
+def _run_at(det, image: np.ndarray, pts: float):
+    return det.detect(
+        Frame(int(pts * 30), pts, 0.0, image), DetectContext(lane=Lane.FAST, categories={}, stride=3)
+    )
+
+
+def test_undecodable_run_on_a_readable_non_payment_code_is_not_masked() -> None:
+    """Root cause of 23 % false masks on a website QR clip: one run in which the code did not decode was masked
+    as ``qr_undecodable`` and the planner held that mask for 2 s. A code that decoded as a non-payment moments
+    ago is the same code."""
+    det = _detector(_config(mask_when_unsure=True))
+    text = "https://example.org/specimen/abcd"
+    good, bad = _qr_frame(text, 0), _qr_frame(text, 3, 0.10)
+    assert _run_at(det, good, 0.0) == []
+    undecodable = _run_at(_detector(_config(mask_when_unsure=True)), bad, 0.0)
+    assert len(undecodable) == 1 and undecodable[0].extra["reason"] == "qr_undecodable", (
+        "the corrupted code is undecodable on its own"
+    )
+    assert _run_at(det, bad, 0.1) == [], "same place, 0.1 s after a clean read: the same code"
+    again = _run_at(det, bad, 0.2)
+    assert len(again) == 1, "one undecodable run is let through per clean read, the next one is masked"
+    assert _run_at(det, good, 0.3) == [], "a clean read re-arms the memory"
+    assert _run_at(det, bad, 0.4) == []
+    late = _run_at(det, bad, 0.4 + 1.0)
+    assert len(late) == 1 and late[0].extra["reason"] == "qr_undecodable", "the memory expires"
+
+
+def test_payment_qr_replacing_a_website_qr_stays_masked_within_two_runs_even_undecodable() -> None:
+    det = _detector(_config(mask_when_unsure=True))
+    assert _run_at(det, _qr_frame("https://example.org/specimen/abcd", 0), 0.0) == []
+    pay_bad = _qr_frame("upi://pay?pa=zz-specimen-1@specimen", 5, 0.10)  # same spot, same size, undecodable
+    masked = [bool(_run_at(det, pay_bad, 0.1 * k)) for k in (1, 2, 3, 4, 5)]
+    assert masked[1:] == [True] * 4, f"masked from the second run on: {masked}"
+    assert not _run_at(det, np.full((H, W, 3), 140, np.uint8), 0.7)
+
+
+def test_resized_or_moved_candidate_is_not_trusted_as_the_website_code() -> None:
+    det = _detector(_config(mask_when_unsure=True))
+    text = "https://example.org/specimen/abcd"
+    assert _run_at(det, _qr_frame(text, 0), 0.0) == []
+    bigger = _qr_frame(text, 3, 0.10, module_px=6.5)  # same corner, about 70 % more area
+    assert len(_run_at(det, bigger, 0.1)) == 1, "a clearly larger box at the same spot is masked at once"
+    det2 = _detector(_config(mask_when_unsure=True))
+    assert _run_at(det2, _qr_frame(text, 0), 0.0) == []
+    shifted = np.full((H, W, 3), 140, np.uint8)
+    shifted[230:430, 300:500] = _qr_frame(text, 3, 0.10)[200:400, 300:500]  # moved down by 30 px
+    assert len(_run_at(det2, shifted, 0.1)) == 1, "a moved box is masked at once"
+
+
+def test_undecodable_sighting_never_refreshes_the_benign_memory() -> None:
+    det = _detector(_config(mask_when_unsure=True))
+    text = "https://example.org/specimen/abcd"
+    bad = _qr_frame(text, 3, 0.10)
+    assert _run_at(det, _qr_frame(text, 0), 0.0) == []
+    assert _run_at(det, bad, 0.3) == [], "within the TTL of the clean read"
+    assert len(_run_at(det, bad, 0.6)) == 1, "the undecodable run at 0.3 did not extend the memory"
+    assert len(_run_at(det, bad, 0.7)) == 1
+
+
+def test_undecodable_code_elsewhere_or_after_a_payment_is_still_masked() -> None:
+    det = _detector(_config(mask_when_unsure=True))
+    other = _qr_frame("https://example.org/specimen/abcd", 0)
+    assert _run_at(det, other, 0.0) == []
+    far = np.full((H, W, 3), 140, np.uint8)
+    far[400:600, 700:900] = _qr_frame("https://example.org/specimen/abcd", 4, 0.10)[200:400, 300:500]
+    assert len(_run_at(det, far, 0.1)) == 1, "an undecodable code in another place is masked"
+    pay = _qr_frame("upi://pay?pa=zz-specimen-1@specimen", 0)
+    assert len(_run_at(det, pay, 0.2)) == 1
+    pay_bad = _qr_frame("upi://pay?pa=zz-specimen-1@specimen", 5, 0.10)
+    assert len(_run_at(det, pay_bad, 0.3)) == 1, "a payment code that stops decoding stays masked"
+
+
 def test_stray_finder_lookalike_is_not_masked_as_a_qr() -> None:
     """Nested squares (a logo, a target) must not trigger the undecodable path."""
     det = _detector(_config(mask_when_unsure=True))

@@ -47,11 +47,13 @@ def test_minimum_span_is_0_3s():
     assert p.pts_end - p.pts_start == pytest.approx(0.3)
 
 
-def test_trailing_number_word_at_segment_end_extends_by_0_5s_and_sets_the_carry_anchor():
+def test_trailing_number_word_at_segment_end_extends_and_sets_the_carry_anchor():
     ws = [w("mera", 1.0, 1.3), w("nau", 1.4, 1.8)]
     (p,) = SpanPlanner().plan([pii(1.4, 1.8)], window(ws), {}, newest_end=1.85)
     assert (
-        p.tail_extended and p.pts_end == pytest.approx(1.8 + 0.2 + 0.5) and p.anchor_t1 == pytest.approx(1.8)
+        p.tail_extended
+        and p.pts_end == pytest.approx(1.8 + 0.2 + SpanPlanner().tail_ext_s)
+        and p.anchor_t1 == pytest.approx(1.8)
     )
     (q,) = SpanPlanner().plan([pii(1.4, 1.8)], window(ws), {}, newest_end=5.0)  # not at the segment end
     assert not q.tail_extended and q.pts_end == pytest.approx(2.0)

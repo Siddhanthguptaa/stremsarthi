@@ -8,7 +8,9 @@ Record kinds (``k``):
 * ``m``  one mask quad: ``inside`` = share of the mask inside the ground-truth regions that justify its category,
          ``iou`` = best box IoU with a single justifying target, ``jt`` = how many such regions the frame has
          (0 = a stray mask: the frame holds nothing of that category)
-* ``n``  one frame of a hard-negative bucket: ``masks`` = masks of the detector under test, ``any`` = all masks
+* ``n``  one frame of a hard-negative bucket: ``masks`` = masks of the detector under test, ``any`` = all masks,
+         ``bycat`` = the detector-under-test masks counted per mask category (so a bucket can be scored on the
+         categories that count as false there: ``neg_text`` is read on PII categories only, signboards are by design)
 
 All records carry ``src`` (img|clip), ``item``, ``bucket``, ``level``, ``frame`` and ``t``.
 """
@@ -149,9 +151,14 @@ def score_frame(
             )  # fmt: skip
     detector = NEGATIVE_BUCKETS.get(bucket)
     if detector is not None:
+        bycat: dict[str, int] = {}
+        for m in masks:
+            if m.detector == detector:
+                bycat[m.category] = bycat.get(m.category, 0) + 1
         out.append(
             {
                 "k": "n", **base,
+                "bycat": bycat,
                 "masks": sum(1 for m in masks if m.detector == detector),
                 "any": len(masks),
                 "protect": protect,

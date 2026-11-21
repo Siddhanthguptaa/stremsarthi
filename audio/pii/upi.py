@@ -5,21 +5,26 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 
 from audio.pii.merge import Cand, is_ambiguous
-from audio.pii.numbers import Tok, Vocab
+from audio.pii.numbers import Tok, Vocab, digit_value, is_letter_token
 from contracts.enums import Category
 
-NAME_MAX_TOKENS = 8
+NAME_MAX_TOKENS = 24  # a spelt-out id is long: letters and digits one by one
+NAME_MAX_WORDS = 3  # ordinary words (the name itself) before the spelt part
 NAME_GAP_S = 0.6
 HANDLE_GAP_S = 0.8
+# Words people say between the parts of an id ("rahul dot sharma"): part of the name, not a stop.
+JOINERS = frozenset({"dot", "underscore", "dash", "hyphen", "point", "डॉट", "अंडरस्कोर", "डैश"})
 # Words that are also bank or app names: "meet me at sbi" is not a UPI id, so these need a name before "at".
-SHARED_HANDLES = frozenset({"sbi", "upi", "paytm", "icici", "hdfc", "hdfcbank", "axisbank"})
+SHARED_HANDLES = frozenset(
+    {"sbi", "upi", "paytm", "icici", "hdfc", "hdfcbank", "axisbank", "airtel", "jio", "kotak"}
+)
 
 
 def _match(toks: Sequence[Tok], i: int, phrases: tuple[tuple[str, ...], ...]) -> int:
     """Length of the longest phrase of ``phrases`` starting at ``i`` (0 if none)."""
     for ph in phrases:
         n = len(ph)
-        if i + n <= len(toks) and all(toks[i + k].text == ph[k] for k in range(n)):
+        if i + n <= len(toks) and all(ph[k] == "*" or toks[i + k].text == ph[k] for k in range(n)):
             if all(toks[i + k + 1].t0 - toks[i + k].t1 < HANDLE_GAP_S for k in range(n - 1)):
                 return n
     return 0
@@ -42,21 +47,33 @@ def _handle(toks: Sequence[Tok], j: int, vocab: Vocab) -> tuple[int, bool] | Non
     return None
 
 
+def _id_like(t: Tok, vocab: Vocab) -> bool:
+    return is_letter_token(t) or t.text in JOINERS or digit_value(t.text, vocab) is not None
+
+
 def find_upi(toks: Sequence[Tok], vocab: Vocab, cue_active_at: Callable[[float], bool]) -> list[Cand]:
     out: list[Cand] = []
     i = 0
     while i < len(toks):
         strong = _match(toks, i, vocab.at_strong)
-        n_mark = strong or _match(toks, i, vocab.at_weak)
+        partial = 0 if strong else _match(toks, i, vocab.at_partial)
+        fuzzy = 0 if strong or partial else _match(toks, i, vocab.at_fuzzy)
+        n_mark = strong or partial or fuzzy or _match(toks, i, vocab.at_weak)
         if not n_mark:
             i += 1
             continue
         j = i + n_mark
-        # name: up to 8 tokens before the marker, stopping at a pause or a filler word
-        a = i
+        # name: letters and digits spoken one by one, plus up to three ordinary words, back to a pause or a stop word
+        a, words, spelt = i, 0, 0
         while a > 0 and i - a < NAME_MAX_TOKENS:
             prev = toks[a - 1]
             if toks[a].t0 - prev.t1 >= NAME_GAP_S or prev.text in vocab.name_stop:
+                break
+            if _id_like(prev, vocab):
+                spelt += 1
+            elif words < NAME_MAX_WORDS and prev.text.isalpha():
+                words += 1
+            else:
                 break
             a -= 1
         has_name = a < i
@@ -67,12 +84,18 @@ def find_upi(toks: Sequence[Tok], vocab: Vocab, cue_active_at: Callable[[float],
         if h is not None:
             last = j + h[0] - 1
             first_handle = toks[j].text
-            if not strong and not cue and first_handle in SHARED_HANDLES and not has_name:
+            if not strong and not partial and not cue and first_handle in SHARED_HANDLES and not spelt:
+                i += 1
+                continue
+            if (partial or fuzzy) and not (cue or has_name):
                 i += 1
                 continue
             conf = 0.9
         else:
-            if not (strong or cue) or j >= len(toks):
+            if partial or (fuzzy and spelt < 2) or not (strong or fuzzy or cue) or j >= len(toks):
+                i += 1
+                continue
+            if not (has_name or cue):
                 i += 1
                 continue
             nxt = toks[j]
@@ -83,7 +106,7 @@ def find_upi(toks: Sequence[Tok], vocab: Vocab, cue_active_at: Callable[[float],
                 i += 1
                 continue
             last = j
-            conf = 0.6
+            conf = 0.75 if (strong or fuzzy) and has_name else 0.6
         if cue:
             conf = min(1.0, conf + 0.15)
         first = a if has_name else i

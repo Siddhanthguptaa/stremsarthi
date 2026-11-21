@@ -6,7 +6,11 @@
 * ``link_text`` NFKC with zero-width characters removed, case kept: for URL / UPI / phone regexes,
 * ``text``      the lexicon view: NFKC, lowercase, zero-width and Latin combining marks removed,
                 homoglyphs and leet mapped, letter runs collapsed, single-letter separators joined,
-* ``roman``     a rough Latin transliteration of the Devanagari part (empty when there is none).
+* ``roman``     a rough Latin transliteration of the Devanagari part (empty when there is none),
+* ``glued``     the lexicon view with in-word ``_ . - '`` separators removed (``ch_akke``), empty when equal.
+
+Links never reach the lexicon views (a domain such as ``bbc.com`` is not a word), and ``link_text`` has the
+usual link and UPI-ID obfuscation undone (``hxxp``, ``[.]``, ``(at)``, ``at the rate``).
 
 Nothing here logs or stores text.
 """
@@ -16,6 +20,8 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass
+
+from .links import blank_urls, refang
 
 # Zero-width / bidi / soft-hyphen characters (spec: U+200B-200F, U+2060, U+FEFF) plus bidi controls.
 _ZERO_WIDTH = re.compile("[​-‏⁠﻿­‪-‮⁦-⁩͏]")
@@ -42,6 +48,34 @@ _SEPS = r"[\s.\-_*|/,+]{1,2}"
 _SINGLES = re.compile(rf"(?<![a-z0-9])[a-z](?:{_SEPS}[a-z](?![a-z0-9]))+(?![a-z0-9])")
 _SEP_STRIP = re.compile(_SEPS)
 _SPACES = re.compile(r"\s+")
+
+
+_VOWEL_DIGRAPHS = (("oo", "u"), ("ee", "i"), ("uu", "u"), ("ii", "i"))
+_H_AFTER = re.compile(r"(?<=[bcdgjk])h")
+_FINAL_VOWEL = re.compile(r"[aeio]$")
+
+
+def fold_token(token: str) -> str:
+    """Phonetic key of a Latin Hinglish word, so spelling variants meet (``chootiya``/``chutiya``/``chutia``).
+
+    Non-ASCII tokens are returned as they are. Applied to lexicon terms and message tokens alike.
+    """
+    if not token.isascii():
+        return token
+    t = token
+    for a, b in _VOWEL_DIGRAPHS:
+        if a in t:
+            t = t.replace(a, b)
+    t = squeeze(t)
+    if "h" in t:
+        t = _H_AFTER.sub("", t)
+    for a, b in (("ph", "f"), ("ck", "k"), ("q", "k"), ("w", "v"), ("z", "j"), ("y", "i")):
+        if a in t:
+            t = t.replace(a, b)
+    t = squeeze(t)
+    if len(t) >= 5:
+        t = _FINAL_VOWEL.sub("a", t)
+    return t
 
 
 def squeeze(token: str) -> str:
@@ -192,11 +226,15 @@ class Normalized:
     link_text: str
     text: str
     roman: str
+    glued: str = ""
+    fanged: bool = (
+        False  # the link view differs from the text as written: link or UPI-ID obfuscation was undone
+    )
 
 
 def link_view(text: str) -> str:
-    """Case-preserving NFKC view without zero-width characters (for URL and UPI regexes)."""
-    return _ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text))
+    """Case-preserving NFKC view without zero-width characters (for URL and UPI regexes), links refanged."""
+    return refang(_ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text)))
 
 
 def lexicon_view(text: str) -> str:
@@ -211,8 +249,15 @@ def lexicon_view(text: str) -> str:
     return t
 
 
+_INWORD = re.compile(r"(?<=[a-z])[_.\-'`·•](?=[a-z])")
+
+
 def normalize(text: str) -> Normalized:
     link = link_view(text)
-    lex = lexicon_view(text)
+    fanged = link != _ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text))
+    lex = lexicon_view(blank_urls(link))
     roman = transliterate_devanagari(lex) if has_devanagari(lex) else ""
-    return Normalized(raw=text, link_text=link, text=lex, roman=roman)
+    glued = _INWORD.sub("", lex) if any(c in lex for c in "_.-'`·•") else ""
+    return Normalized(
+        raw=text, link_text=link, text=lex, roman=roman, glued=glued if glued != lex else "", fanged=fanged
+    )

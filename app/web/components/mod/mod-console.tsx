@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Keyboard, WifiOff } from "lucide-react"
 
 import { ApiRequestError } from "@/lib/api"
 import { categoryKey } from "@/lib/format"
@@ -19,11 +20,13 @@ import {
   type TimeoutPreset,
   visibleItems,
 } from "@/lib/mod-state"
+import { modText } from "@/lib/screen-text"
 import type { WireTopic, WhoAmI } from "@/lib/wire"
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { ConnectionBanner } from "@/components/shell/connection-banner"
 import { useLanguage } from "@/components/shell/language-provider"
 import { useRealtime } from "@/components/streamer/use-realtime"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
 import { toast } from "@/components/ui/use-toast"
 import { Filters } from "@/components/mod/filters"
@@ -46,8 +49,9 @@ type Access = "checking" | "moderator" | "other" | "failed"
 
 function RoleGate() {
   const { api } = useAuth()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [access, setAccess] = React.useState<Access>("checking")
+  const [attempt, setAttempt] = React.useState(0)
 
   React.useEffect(() => {
     let live = true
@@ -60,7 +64,7 @@ function RoleGate() {
     return () => {
       live = false
     }
-  }, [api])
+  }, [api, attempt])
 
   if (access === "moderator") return <Console />
   if (access === "checking") return <p role="status">{t("mod.role.checking")}</p>
@@ -70,7 +74,20 @@ function RoleGate() {
         <h1 className="text-2xl font-bold leading-tight">{t("mod.role.title")}</h1>
         <CardDescription>{access === "failed" ? t("mod.role.failed") : t("mod.role.body")}</CardDescription>
       </CardHeader>
-      <CardContent />
+      <CardContent>
+        {access === "failed" ? (
+          <Button
+            type="button"
+            className="min-h-11"
+            onClick={() => {
+              setAccess("checking")
+              setAttempt((n) => n + 1)
+            }}
+          >
+            {modText(lang, "modx.retry")}
+          </Button>
+        ) : null}
+      </CardContent>
     </Card>
   )
 }
@@ -82,6 +99,8 @@ function Console() {
   const [state, dispatch] = React.useReducer(modReducer, initialModState)
   const [filters, setFilters] = React.useState<ModFilters>(NO_FILTERS)
   const [preset, setPreset] = React.useState<TimeoutPreset>(600)
+  // True after an action could not reach the API; cleared by the next one that does.
+  const [apiDown, setApiDown] = React.useState(false)
   // The selected message and where it sat in the list: when it leaves, the neighbour at that place is selected.
   const [selection, setSelection] = React.useState<{ key: string | null; index: number }>({ key: null, index: 0 })
 
@@ -115,6 +134,11 @@ function Console() {
   const act = React.useCallback(
     (entry: QueueEntry, action: ModActionKind) => {
       if (entry.busy) return
+      // The buttons are disabled for the streamer's and moderators' own messages; the keys must not get round that.
+      if (entry.staff && (action === "delete" || action === "timeout")) {
+        toast({ variant: "destructive", title: t("mod.err.title"), description: modText(lang, "modx.staffKey") })
+        return
+      }
       dispatch({ type: "busy", key: entry.key, action })
       setTimeout(() => dispatch({ type: "busy-clear", key: entry.key, action }), BUSY_MS)
       api
@@ -124,14 +148,16 @@ function Console() {
           action,
           ...(action === "timeout" ? { timeout_seconds: preset } : {}),
         })
+        .then(() => setApiDown(false))
         .catch((err: unknown) => {
           dispatch({ type: "busy-clear", key: entry.key })
+          setApiDown(err instanceof ApiRequestError && err.isNetwork)
           const code = err instanceof ApiRequestError ? (err.isNetwork ? "network" : err.code) : "generic"
           const key = `mod.err.${code}` as I18nKey
           toast({ variant: "destructive", title: t("mod.err.title"), description: t(translateKey(key)) })
         })
     },
-    [api, preset, t],
+    [api, preset, t, lang],
   )
 
   // Keyboard: J/K move, A/D/T/X act on the selected message.
@@ -151,7 +177,9 @@ function Console() {
         const index = Math.min(list.length - 1, Math.max(0, at + (a.delta ?? 1)))
         const next = list[index]
         setSelection({ key: next.key, index })
-        document.querySelector(`[data-key="${CSS.escape(next.key)}"]`)?.scrollIntoView?.({ block: "nearest" })
+        const node = document.querySelector<HTMLElement>(`[data-key="${CSS.escape(next.key)}"]`)
+        node?.scrollIntoView?.({ block: "nearest" })
+        node?.focus({ preventScroll: true }) // so a screen reader reads the message that is now selected
       } else if (a.action) {
         run(list[at], a.action)
       }
@@ -174,16 +202,30 @@ function Console() {
         <p className="text-muted-foreground">{t("page.mod.desc")}</p>
       </header>
 
+      {apiDown ? (
+        <p role="alert" className="flex items-start gap-2 rounded-md border border-destructive bg-card p-3 text-sm font-medium" data-testid="mod-api-down">
+          <WifiOff aria-hidden className="mt-0.5 size-5 shrink-0 text-destructive" />
+          {modText(lang, "modx.apiDown")}
+        </p>
+      ) : null}
       <ConnectionBanner state={connection} apiDown={false} />
+      {connection === "reconnecting" ? (
+        <p className="text-sm text-muted-foreground" data-testid="mod-stale">
+          {modText(lang, "modx.stale")}
+        </p>
+      ) : null}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium" data-testid="mod-counts">
+      <div
+        className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-b bg-background/95 px-4 py-2 text-sm font-medium backdrop-blur"
+        data-testid="mod-counts"
+      >
         <span>{t("mod.pending").replace("{n}", String(state.items.length))}</span>
         <span className="text-muted-foreground">{t("mod.hiddenTotal").replace("{n}", String(state.hiddenCount))}</span>
       </div>
 
       <Filters filters={filters} categories={categories} onChange={setFilters} />
 
-      <div role="group" aria-label={t("mod.timeoutLength")} className="flex flex-wrap items-center gap-2">
+      <div role="group" aria-label={t("mod.timeoutLength")} className="flex flex-wrap items-center gap-2" title={modText(lang, "modx.timeoutHint")}>
         <span className="text-sm font-medium">{t("mod.timeoutLength")}</span>
         {TIMEOUT_PRESETS.map((p) => (
           <button
@@ -206,7 +248,11 @@ function Console() {
         lang={lang}
         onSelect={select}
         onAct={act}
+        onClearFilters={() => setFilters(NO_FILTERS)}
       />
+      <p role="status" className="sr-only">
+        {selected ? modText(lang, "modx.selected", { n: Math.max(1, visible.findIndex((e) => e.key === selected) + 1), total: visible.length }) : ""}
+      </p>
 
       <section aria-labelledby="recent-heading" className="space-y-2">
         <h2 id="recent-heading" className="text-lg font-semibold">
@@ -230,7 +276,34 @@ function Console() {
       </section>
 
       <p className="text-xs text-muted-foreground">{t("mod.privacy")}</p>
-      <p className="text-xs text-muted-foreground">{t("mod.keys")}</p>
+      <details className="rounded-lg border bg-card text-sm" data-testid="mod-shortcuts">
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 font-medium">
+          <Keyboard aria-hidden className="size-4" />
+          {modText(lang, "modx.keys.toggle")}
+        </summary>
+        <div className="space-y-2 border-t px-3 py-2">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+            {(
+              [
+                ["J / K", "modx.keys.move"],
+                ["A", "modx.keys.approve"],
+                ["D", "modx.keys.delete"],
+                ["T", "modx.keys.timeout"],
+                ["X", "modx.keys.dismiss"],
+              ] as const
+            ).map(([k, label]) => (
+              <React.Fragment key={k}>
+                <dt>
+                  <kbd className="rounded border px-1.5 font-mono text-xs">{k}</kbd>
+                </dt>
+                <dd>{modText(lang, label)}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+          <p className="text-xs text-muted-foreground">{modText(lang, "modx.keys.help")}</p>
+          <p className="sr-only">{t("mod.keys")}</p>
+        </div>
+      </details>
     </div>
   )
 }

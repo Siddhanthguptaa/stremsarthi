@@ -29,28 +29,51 @@ def evaluate(res: dict[str, Any]) -> list[rep.Check]:
     leg = res.get("leg")
     out: list[rep.Check] = []
     if leg == "data":
-        out.append(rep.Check("data: problems found", float(len(res.get("problems", []))), "==", 0.0, note="; ".join(res.get("problems", []))))
+        out.append(
+            rep.Check(
+                "data: problems found",
+                float(len(res.get("problems", []))),
+                "==",
+                0.0,
+                note="; ".join(res.get("problems", [])),
+            )
+        )
     elif leg == "main":
         out += [
             rep.Check("mute coverage, PII words (duration-weighted)", res["pii"]["dur_coverage"], ">=", 0.90),
             rep.Check("mute coverage, spoken digit words", res["digits"]["dur_coverage"], ">=", 0.95),
             rep.Check("over-mute of non-PII speech", res["over_mute"], "<=", 0.15),
             rep.Check("audio pipeline latency p95", res["audio_latency_s"]["p95"], "<=", 3.3, "s"),
-            rep.Check("mouth blur on muted frames with an allowlisted face", res["mouth_blur"]["rate"], ">=", 0.95),
+            rep.Check(
+                "mouth blur on muted frames with an allowlisted face", res["mouth_blur"]["rate"], ">=", 0.95
+            ),
         ]
     elif leg == "api_down":
         out += [
             rep.Check("API down: PII words muted (fail-safe)", res["pii"]["dur_coverage"], ">=", 1.0),
-            rep.Check("API down: all voiced speech muted", res["all_speech"]["dur_coverage"], ">=", 0.99, note="plan: 100 %; 1 % slack for VAD onset slivers"),
+            rep.Check(
+                "API down: all voiced speech muted",
+                res["all_speech"]["dur_coverage"],
+                ">=",
+                0.99,
+                note="plan: 100 %; 1 % slack for VAD onset slivers",
+            ),
         ]
     elif leg == "local_only":
-        out.append(rep.Check("API down, local recogniser: PII words muted", res["pii"]["dur_coverage"], ">=", 0.70))
+        out.append(
+            rep.Check("API down, local recogniser: PII words muted", res["pii"]["dur_coverage"], ">=", 0.70)
+        )
     return out
 
 
 def _group_table(title: str, groups: dict[str, Any]) -> rep.Table:
-    rows = [[k, v["n"], v["word_recall"], v["dur_coverage"], f"{v['ci'][0]:.3f}-{v['ci'][1]:.3f}"] for k, v in groups.items()]
-    return rep.Table(title, ["group", "PII words", "word recall", "duration coverage", "95% CI (words)"], rows)
+    rows = [
+        [k, v["n"], v["word_recall"], v["dur_coverage"], f"{v['ci'][0]:.3f}-{v['ci'][1]:.3f}"]
+        for k, v in groups.items()
+    ]
+    return rep.Table(
+        title, ["group", "PII words", "word recall", "duration coverage", "95% CI (words)"], rows
+    )
 
 
 def build_report(out_dir: Path, results: Path | None, phase: str, report_dir: Path | None) -> int:
@@ -84,26 +107,44 @@ def build_report(out_dir: Path, results: Path | None, phase: str, report_dir: Pa
             _group_table("Mute coverage by background noise", main["by"]["noise"]),
         ]
         lat = main["audio_latency_s"]
-        rows = [["audio pipeline (segment start to span ready)", lat["n"], lat["p50"], lat["p95"], lat["max"]]]
+        rows = [
+            ["audio pipeline (segment start to span ready)", lat["n"], lat["p50"], lat["p95"], lat["max"]]
+        ]
         rows += [[f"stage {k}", v["n"], v["p50"], v["p95"], v["max"]] for k, v in main["stage_s"].items()]
-        r.tables.append(rep.Table("Latency (virtual time, modelled STT latency)", ["stage", "n", "p50 s", "p95 s", "max s"], rows))
+        r.tables.append(
+            rep.Table(
+                "Latency (virtual time, modelled STT latency)",
+                ["stage", "n", "p50 s", "p95 s", "max s"],
+                rows,
+            )
+        )
         r.tables.append(
             rep.Table(
                 "Other numbers (main leg)",
                 ["metric", "value"],
                 [
                     ["clips / audio seconds", f"{main['n_clips']} / {main['audio_s']}"],
-                    ["digit sequences fully muted", f"{main['digit_sequences']['complete']} / {main['digit_sequences']['total']}"],
+                    [
+                        "digit sequences fully muted",
+                        f"{main['digit_sequences']['complete']} / {main['digit_sequences']['total']}",
+                    ],
                     ["hard-negative number phrases muted", main["hard_negative_mute"]],
                     ["late or partly late spans", main["late_or_partly_late_spans"]],
                     ["leaked seconds inside the pipeline", main["leaked_seconds_in_pipeline"]],
-                    ["pipeline compute seconds per audio second (VAD+PII, CPU)", main["compute_s_per_audio_s"]],
+                    [
+                        "pipeline compute seconds per audio second (VAD+PII, CPU)",
+                        main["compute_s_per_audio_s"],
+                    ],
                     ["pipeline stats", json.dumps(main["pipeline_stats"], sort_keys=True)],
                 ],
             )
         )
         r.tables.append(
-            rep.Table("Clips with the most missed PII seconds (ids only)", ["clip", "missed PII s"], [[w["clip"], w["missed_pii_s"]] for w in main["worst_clips"][:15]])
+            rep.Table(
+                "Clips with the most missed PII seconds (ids only)",
+                ["clip", "missed PII s"],
+                [[w["clip"], w["missed_pii_s"]] for w in main["worst_clips"][:15]],
+            )
         )
     for name in ("api_down", "local_only", "perfect"):
         d = legs.get(name)
@@ -123,7 +164,13 @@ def build_report(out_dir: Path, results: Path | None, phase: str, report_dir: Pa
             )
     if results and results.exists():
         steps = json.loads(results.read_text(encoding="utf-8"))["steps"]
-        r.tables.append(rep.Table("Gate steps", ["step", "raw exit", "gate exit", "seconds"], [[s["name"], s["rc"], s["mapped_rc"], s["seconds"]] for s in steps]))
+        r.tables.append(
+            rep.Table(
+                "Gate steps",
+                ["step", "raw exit", "gate exit", "seconds"],
+                [[s["name"], s["rc"], s["mapped_rc"], s["seconds"]] for s in steps],
+            )
+        )
         r.header["commands"] = [s["command"] for s in steps]
     r.notes = NOTES
     md, js = rep.write_report(r, report_dir or ROOT / "eval" / "reports")

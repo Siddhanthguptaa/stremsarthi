@@ -26,7 +26,7 @@ def test_manifest_entries_are_pinned_and_licensed() -> None:
         assert a["license"] in {"MIT", "Apache-2.0"}, key
         assert a["license_source"].startswith("https://") and a["source"].startswith("https://"), key
         assert (MODELS / a["license_file"]).is_file(), key
-        assert a["bytes"] > 0 and a["task"] in {"det", "rec", "face_det", "face_rec"}
+        assert a["bytes"] > 0 and a["task"] in {"det", "rec", "face_det", "face_rec", "audio_event"}
         if key.startswith(("yunet", "sface")):
             assert "/raw/" in a["url"] and re.search(r"/[0-9a-f]{40}/", a["url"]), "must pin a commit"
 

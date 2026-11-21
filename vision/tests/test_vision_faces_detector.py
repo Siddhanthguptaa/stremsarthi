@@ -469,3 +469,55 @@ def test_detections_carry_codes_only_and_logs_have_no_embeddings(caplog: pytest.
         assert not isinstance(d.extra["reason"], (list, tuple, np.ndarray))
     text = "\n".join(r.getMessage() for r in caplog.records)
     assert "[" not in text and "array" not in text.lower()
+
+
+# --------------------------------------------------------------------------- source clock restart
+def _frame_at(rig: Rig, pts: float, seq: int) -> list:
+    frame = Frame(seq, pts, 0.0, rig.image)
+    ctx = DetectContext(lane=Lane.FAST, categories=rig.cfg.categories, stride=3)
+    return rig.det.detect(frame, ctx)
+
+
+def test_a_restarted_source_clock_drops_the_votes_of_the_old_scene() -> None:
+    """The frames of a new still (or a looped clip) start at pts 0 again. A stranger standing where the
+    enrolled person was must NOT inherit that person's votes (a false allow), and the enrolled person in the new
+    scene must not inherit a stranger's misses either."""
+    rig = Rig()
+    rig.backend.scene = [("alice", LEFT)]
+    for i in range(10):
+        dets = _frame_at(rig, i * 0.1, i * 3)
+    assert dets[0].allow  # alice is verified at LEFT
+    rig.backend.scene = [("bob", LEFT)]  # the clock restarts, a stranger now sits in the same place
+    first = _frame_at(rig, 0.0, 0)
+    assert not first[0].allow, "a stranger in the old position inherited the previous scene's votes"
+    for i in range(1, 12):
+        (d,) = _frame_at(rig, i * 0.1, i * 3)
+        assert not d.allow
+    rig.close()
+
+
+def test_the_enrolled_face_is_verified_again_after_a_clock_restart_and_not_hampered_by_old_misses() -> None:
+    rig = Rig()
+    rig.backend.scene = [("bob", LEFT)]
+    for i in range(10):
+        _frame_at(rig, i * 0.1, i * 3)  # a stranger collects misses on this track
+    rig.backend.scene = [("alice", LEFT)]
+    allowed_at = None
+    for i in range(10):
+        (d,) = _frame_at(rig, i * 0.1, i * 3)  # clock restarted
+        if d.allow:
+            allowed_at = i
+            break
+    assert allowed_at is not None and allowed_at <= 6, "needs about 5 fresh matching samples, not more"
+    rig.close()
+
+
+def test_a_small_timestamp_jitter_is_not_a_clock_restart() -> None:
+    rig = Rig()
+    rig.backend.scene = [("alice", LEFT)]
+    for i in range(10):
+        dets = _frame_at(rig, i * 0.1, i * 3)
+    assert dets[0].allow
+    dets = _frame_at(rig, 0.93, 30)  # 30 ms older than the newest frame: jitter, not a restart
+    assert dets[0].allow
+    rig.close()

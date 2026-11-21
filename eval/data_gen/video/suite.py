@@ -39,7 +39,7 @@ from ..common import fonts, identifiers, specimen
 from ..common.seeds import np_rng, py_rng
 from . import clips as clips_mod
 from . import faces as faces_mod
-from . import games, idcards, plates, screens, signboards, textpii
+from . import games, idcards, plates, scenes, screens, signboards, textpii
 from .augment import apply_effects, level_for, sample_params
 from .compose import (
     CANVAS,
@@ -54,7 +54,7 @@ from .compose import (
 )
 from .qr import render_qr_poster
 
-GENERATOR_VERSION = "specimen-video-1.1"
+GENERATOR_VERSION = "specimen-video-1.2"  # 1.2: neg_scene bucket, longer face clips (other buckets unchanged)
 DEFAULT_N = 40
 DEFAULT_FACES_CACHE = "eval/data/generated/faces/src"
 
@@ -255,6 +255,14 @@ def _specs() -> dict[str, Spec]:
             backdrops=("desk", "wood", "cloth", "wall"),
         ),  # fmt: skip
         Spec(
+            "neg_scene",
+            "negative",
+            lambda r, i, c: scenes.render_neg_scene(r, i),
+            (0.55, 1.0),
+            mode="screen",
+            backdrops=("dark_room", "desk"),
+        ),  # fmt: skip
+        Spec(
             "neg_game",
             "negative",
             lambda r, i, c: games.render_lobby(r, ("bgmi", "freefire")[i % 2], with_credentials=False),
@@ -410,10 +418,13 @@ def build_suite(
     fetch: bool = True,
     clips_per_bucket: int = 0,
     clip_seconds: float = clips_mod.DEFAULT_SECONDS,
+    clip_overrides: dict[str, tuple[int, float]] | None = None,
 ) -> dict[str, Any]:
     """Generate the suite. With `out_dir=None` nothing is written (used by determinism tests).
 
     `clips_per_bucket` > 0 also renders 30 fps clips (``clips.py``) for the buckets in ``CLIP_BUCKETS``.
+    `clip_overrides` maps a clip bucket to ``(clips, seconds)`` when it needs more or longer clips than the rest
+    (the face buckets: the allowlisted-face metric needs a warm-up of about a second plus settled frames).
     """
     t0 = time.monotonic()
     wanted = tuple(buckets) if buckets else BUCKETS
@@ -441,10 +452,11 @@ def build_suite(
     ]
     workers = workers if workers is not None else min(6, os.cpu_count() or 1)
     clip_buckets = [b for b in wanted if b in clips_mod.CLIP_BUCKETS] if clips_per_bucket > 0 else []
+    ov = clip_overrides or {}
     clip_tasks = [
-        (b, i, seed, str(out_dir) if out_dir else None, faces_cache, clip_seconds)
+        (b, i, seed, str(out_dir) if out_dir else None, faces_cache, ov.get(b, (0, clip_seconds))[1])
         for b in clip_buckets
-        for i in range(clips_per_bucket)
+        for i in range(ov.get(b, (clips_per_bucket, 0.0))[0])
     ]
     if clip_tasks and out_dir is not None and clips_mod.ffmpeg_path() is None:
         raise EnvError("ffmpeg not found on PATH: clips cannot be encoded")
@@ -474,6 +486,10 @@ def build_suite(
             "per_bucket": clips_per_bucket,
             "items": clip_items,
         }
+        if ov:  # only buckets whose clip count or length differs from the rest
+            manifest["clips"]["by_bucket"] = {
+                b: {"clips": n, "seconds": sec} for b, (n, sec) in sorted(ov.items()) if b in clip_buckets
+            }
     if any(SPECS[b].needs_faces for b in wanted):
         manifest["enroll_sets"] = build_enroll_sets(out_dir, seed, faces_cache)
         manifest["face_sources"] = [
@@ -497,4 +513,65 @@ def build_suite(
         if attr.exists():
             (out_dir / "ATTRIBUTION.md").write_text(attr.read_text(encoding="utf-8"), encoding="utf-8")
     manifest["_seconds"] = round(time.monotonic() - t0, 1)  # not part of the hash or the file
+    return manifest
+
+
+# ---- in-place refresh ----------------------------------------------------------------------------------------
+def refresh_dataset(
+    out_dir: Path,
+    image_buckets: tuple[str, ...] = (),
+    clip_overrides: dict[str, tuple[int, float]] | None = None,
+    faces_cache: str = DEFAULT_FACES_CACHE,
+    fetch: bool = True,
+    workers: int | None = None,
+) -> dict[str, Any]:
+    """Re-render only some buckets of an existing dataset and patch its manifest, leaving every other file untouched.
+
+    ``image_buckets``: buckets whose stills are (re)rendered (a new bucket is added). ``clip_overrides``: clip buckets
+    re-rendered with ``(clips, seconds)``. Items are rendered from the same ``(seed, bucket, index)`` derivation as a
+    full run, so the result equals a full regeneration; the manifest hash and ``generator_version`` are updated.
+    """
+    path = out_dir / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    seed, n = int(manifest["seed"]), int(manifest["n_per_bucket"])
+    ov = dict(clip_overrides or {})
+    unknown = [b for b in (*image_buckets, *ov) if b not in SPECS]
+    if unknown:
+        raise ValueError(f"unknown buckets {unknown}")
+    if any(SPECS[b].needs_raqm for b in image_buckets) and not fonts.raqm_available():
+        raise EnvError("Pillow was built without libraqm")
+    fonts.ensure_fonts()
+    if any(SPECS[b].needs_faces for b in (*image_buckets, *ov)):
+        problems = (
+            faces_mod.fetch_sources(Path(faces_cache))
+            if fetch
+            else faces_mod.cache_problems(Path(faces_cache))
+        )
+        if problems:
+            raise EnvError("face portraits unavailable: " + "; ".join(problems[:3]))
+    workers = workers if workers is not None else min(6, os.cpu_count() or 1)
+    tasks = [(b, i, seed, str(out_dir), faces_cache) for b in image_buckets for i in range(n)]
+    clip_tasks = [
+        (b, i, seed, str(out_dir), faces_cache, sec) for b, (count, sec) in ov.items() for i in range(count)
+    ]
+    with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("fork")) as ex:
+        items = list(ex.map(_task, tasks, chunksize=4)) if tasks else []
+        clip_items = list(ex.map(clips_mod.clip_task, clip_tasks, chunksize=1)) if clip_tasks else []
+    order = {b: k for k, b in enumerate(BUCKETS)}
+    if items:
+        keep = [it for it in manifest["items"] if it["bucket"] not in image_buckets]
+        manifest["items"] = sorted(keep + items, key=lambda it: (order[it["bucket"]], it["id"]))
+        for b in image_buckets:
+            manifest["buckets"][b] = {"group": SPECS[b].group, "count": n}
+    if clip_items:
+        clips = manifest["clips"]
+        keep_c = [c for c in clips["items"] if c["bucket"] not in ov]
+        clips["items"] = sorted(keep_c + clip_items, key=lambda c: (order[c["bucket"]], c["id"]))
+        by = dict(clips.get("by_bucket") or {})
+        by.update({b: {"clips": cnt, "seconds": sec} for b, (cnt, sec) in ov.items()})
+        clips["by_bucket"] = dict(sorted(by.items()))
+    manifest["generator_version"] = GENERATOR_VERSION
+    manifest.pop("manifest_sha256", None)
+    manifest["manifest_sha256"] = manifest_hash({k: v for k, v in manifest.items() if k != "name"})
+    path.write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return manifest

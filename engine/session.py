@@ -38,6 +38,7 @@ from contracts import (
     AllowlistUpdate,
     AudioChunk,
     AudioHost,
+    CaptionEvent,
     Category,
     Config,
     ConfigChange,
@@ -57,8 +58,10 @@ from contracts import (
 )
 
 from .audio_mute import RATE, MuteBook
+from .audio_tee import AudioTee
+from .captions import CaptionRenderer
 from .compositor import Composed, Compositor
-from .control import HOLD
+from .control import HOLD, LIVE
 from .deadline import DeadlineEngine, FrameDecision
 from .publishers import SafetyPublisher, StatusPublisher
 from .timing import TimingLog
@@ -71,7 +74,10 @@ RESYNC_SAMPLES = RATE // 50  # 20 ms: audio and video clocks further apart than 
 # second while it is healthy. Without one for ``audio_watchdog_s`` the audio is unchecked and goes out muted.
 AUDIO_HEARTBEAT_STAGE = "audio_heartbeat"
 AUDIO_WATCHDOG_S = 3.0  # default silence tolerated between heartbeats
-AUDIO_GRACE_S = 10.0  # default startup grace before the first heartbeat (the host loads its models)
+AUDIO_GRACE_S = 10.0  # requested startup grace before the first heartbeat (clamped to delay - 0.5 s)
+# The heartbeat's pts is the newest audio pts the host has seen. A beat whose pts lags the newest ingested
+# audio pts by more than this is a stuck loop (or a spoof) and counts as no beat at all.
+AUDIO_HEARTBEAT_LAG_S = 2.0
 
 
 class AudioRing:
@@ -163,11 +169,13 @@ class Session:
         bus: Any = None,
         engine: DeadlineEngine | None = None,
         compositor: Compositor | None = None,
+        captions: CaptionRenderer | None = None,
         clock: Callable[[], float] = time.monotonic,
         session_id: str | None = None,
         tick_s: float = 0.004,
         audio_watchdog_s: float | None = None,
         audio_grace_s: float | None = None,
+        audio_heartbeat_lag_s: float | None = None,
     ) -> None:
         self.config = config
         self.source, self.sink = source, sink
@@ -180,6 +188,7 @@ class Session:
         lanes = lane_host.active_lanes if lane_host is not None else ()
         self.engine = engine or DeadlineEngine.from_config(config, lanes)
         self.compositor = compositor or Compositor(config)
+        self.captions = captions or CaptionRenderer(config, self.compositor.width, self.compositor.height)
         self.mutes = MuteBook()
         self.mute_ms: deque[float] = deque(maxlen=4096)  # ring read + mute application, per emitted frame
         self._mute_window: tuple[float, float] | None = None
@@ -187,6 +196,7 @@ class Session:
         self.ring = AudioRing(delay + 3.0)
         self._down = Downsampler()
         self._audio_seq = 0
+        self._taps: tuple[AudioTee, ...] = ()
         self._acursor: float | None = None  # next output sample (float: fps need not divide 48 kHz)
         self._cursor_reset = False  # set by ingest threads, applied by the tick thread
         self.safety = SafetyPublisher(bus, self.session_id, fps=self.fps) if bus is not None else None
@@ -204,13 +214,37 @@ class Session:
         grace = audio_grace_s
         if grace is None:
             grace = getattr(config.engine, "audio_grace_s", AUDIO_GRACE_S)
-        self.audio_grace_s = max(0.0, float(grace))
+        # The startup grace is clamped like the timeout: audio ingested at t is emitted at t + delay, so a
+        # grace longer than delay - 0.5 s would let unchecked audio out before the watchdog could mute it.
+        self.audio_grace_s = max(0.0, min(float(grace), delay - 0.5))
+        lag = audio_heartbeat_lag_s
+        if lag is None:
+            lag = getattr(config.engine, "audio_heartbeat_lag_s", AUDIO_HEARTBEAT_LAG_S)
+        self.audio_heartbeat_lag_s = max(0.0, float(lag))
+        if self.audio_watchdog_s and abs(self.audio_grace_s - float(grace)) > 1e-9:
+            log.warning(
+                "audio startup grace %.1f s is longer than delay - 0.5 s: using %.1f s",
+                float(grace),
+                self.audio_grace_s,
+            )
+        log.info(
+            "audio watchdog: heartbeat timeout %.1f s, startup grace %.1f s, heartbeat lag margin %.1f s",
+            self.audio_watchdog_s,
+            self.audio_grace_s,
+            self.audio_heartbeat_lag_s,
+        )
         self._wd_lock = threading.Lock()
         self._wd_start: float | None = None  # when the audio path started (first block or first tick)
         self._wd_last_beat: float | None = None  # engine clock at the last heartbeat
         self._wd_beat_index = -1  # newest ring sample when that heartbeat arrived
         self._wd_first_index: int | None = None  # first sample ingested (nothing was ever checked before it)
         self._wd_stale_from = 0
+        # Audio is emitted muted unless a heartbeat has vouched (by its pts) for the samples: _checked_until is
+        # the newest accepted beat pts. No beat yet, or a stuck host whose pts stopped, means muted output.
+        self._checked_until = float("-inf")
+        self._newest_ingest_pts: float | None = None
+        self._first_ingest_pts: float | None = None
+        self.audio_beats_rejected = 0
         self.audio_heartbeats = 0
         self._audio_stale = False
         self._audio_stale_since: float | None = None
@@ -228,9 +262,11 @@ class Session:
             "sink_errors": 0, "lane_errors": 0, "audio_errors": 0, "audio_resyncs": 0,
             "rejected_requests": 0, "compose_errors": 0, "config_ignored": 0,
             "late_spans": 0, "tardy_spans": 0, "audio_watchdog": 0,
+            "caption_frames": 0, "caption_errors": 0, "audio_unvouched": 0,
         }  # fmt: skip
         self.emit_lag: deque[float] = deque(maxlen=4096)
         self.compose_ms: deque[float] = deque(maxlen=4096)
+        self.caption_ms: deque[float] = deque(maxlen=4096)  # burn-in time, only for frames that drew one
         self.finished = threading.Event()
         self._stop = threading.Event()
         self._threads: list[threading.Thread] = []
@@ -250,6 +286,7 @@ class Session:
             on(Topic.MUTE_SPAN, self.on_mute),
             on(Topic.TIMING, self._on_timing_event),
             on(Topic.MASK_REQUEST, self.on_mask_request),
+            on(Topic.CAPTION, self.on_caption),
             on(Topic.ALLOWLIST, self._on_allowlist),
             on(Topic.SESSION, self._on_session_command),
         ]
@@ -262,15 +299,28 @@ class Session:
 
     def _on_timing_event(self, timing: StageTiming) -> None:
         if timing.stage == AUDIO_HEARTBEAT_STAGE:
-            self.audio_heartbeat()
+            self.audio_heartbeat(pts=timing.pts)
 
-    def audio_heartbeat(self, now: float | None = None) -> None:
-        """The audio host is alive (arrival is stamped on the engine clock, not the event's own time)."""
+    def audio_heartbeat(self, now: float | None = None, pts: float | None = None) -> bool:
+        """The audio host says it is alive and has seen audio up to ``pts``. Arrival is stamped on the engine
+        clock. A beat whose pts lags the newest ingested audio by more than ``audio_heartbeat_lag_s`` (no pts
+        counts as the start of the audio) proves nothing: it is ignored, as if it had not come. True if accepted."""
         now = self.clock() if now is None else now
         with self._wd_lock:
+            newest = self._newest_ingest_pts
+            seen = pts if pts is not None else self._first_ingest_pts
+            if newest is not None and seen is not None and newest - seen > self.audio_heartbeat_lag_s:
+                self.audio_beats_rejected += 1
+                return False
             self._wd_last_beat = now
-            self._wd_beat_index = self.ring.latest
+            if pts is not None:
+                self._wd_beat_index = min(self.ring.latest, round(pts * RATE))
+                self._checked_until = max(self._checked_until, float(pts))
+            else:  # nothing the host has seen yet: none of the ingested samples is vouched for
+                first = self._wd_first_index
+                self._wd_beat_index = (first - 1) if first is not None else self.ring.latest
             self.audio_heartbeats += 1
+        return True
 
     def _check_audio_watchdog(self, now: float) -> None:
         """Fail-safe for a dead or silent audio module. With no heartbeat for ``audio_watchdog_s`` (or none
@@ -367,17 +417,25 @@ class Session:
                 log.warning("lane host submit failed: %s", type(exc).__name__)
         return True
 
+    def _reset_audio_clock(self) -> None:
+        with self._wd_lock:
+            self._checked_until = float("-inf")
+            self._newest_ingest_pts = self._first_ingest_pts = None
+            self._wd_beat_index = -1
+
     def _on_reset(self, seq: int) -> None:
         """The PTS clock restarted: sequence-keyed and sample-keyed state from the old clock is void."""
         self._highwater = seq
         self._arrivals.clear()
         self._arrival_order.clear()
         self.compositor.presenter.reset()
+        self.captions.clear()
         if self._generation is None:  # the source does not label audio generations: clear here
             self.ring.clear()
             self._down.reset()
         self.mutes.clear()
         self._cursor_reset = True
+        self._reset_audio_clock()
 
     def on_audio(self, index: int, pcm: Any, generation: Any = None) -> None:
         """Feed one 48 kHz block tagged with its absolute sample index; tap 16 kHz to the audio host."""
@@ -389,10 +447,21 @@ class Session:
                 self.mutes.clear()
                 self._cursor_reset = True
             self._generation = generation
+            self._reset_audio_clock()
         self.ring.write(int(index), samples)
-        if self.audio_host is None:
+        if self.audio_host is not None:
+            with self._wd_lock:
+                if self._wd_start is None:
+                    self._wd_start = self.clock()  # the grace runs from the first audio, not the first tick
+                if self._first_ingest_pts is None:
+                    self._first_ingest_pts = int(index) / RATE
+                self._newest_ingest_pts = max(
+                    self._newest_ingest_pts or 0.0, (int(index) + len(samples)) / RATE
+                )
+        host, taps = self.audio_host, self._taps
+        if host is None and not taps:
             return
-        if self._wd_first_index is None:
+        if host is not None and self._wd_first_index is None:
             self._wd_first_index = int(index)
         try:
             chunk = AudioChunk(
@@ -403,10 +472,24 @@ class Session:
                 arrival=self.clock(),
             )
             self._audio_seq += 1
-            self.audio_host.feed(chunk)
+            if host is not None:
+                host.feed(chunk)
         except Exception as exc:  # the audio path must never stall ingest
             self.counts["audio_errors"] += 1
             log.warning("audio host feed failed: %s", type(exc).__name__)
+            # this block was never (fully) handed to the checker: it goes out as hard silence, exactly this block
+            self.mutes.add_silence(int(index), int(index) + len(samples))
+            return
+        if taps and not self._audio_stale:  # unchecked audio is not handed to optional services
+            for tap in taps:  # a bounded queue put each: never blocks, never raises
+                tap.offer(chunk)
+
+    def add_audio_tap(self, name: str, feed: Callable[[Any], Any]) -> AudioTee:
+        """Also hand every 16 kHz ``AudioChunk`` to ``feed`` (an optional service, e.g. the music guard)
+        on its own thread. Closed by ``stop``; nothing is fed after that."""
+        tap = AudioTee(name, feed)
+        self._taps = (*self._taps, tap)
+        return tap
 
     # ------------------------------------------------------------------ commands from the bus
 
@@ -449,7 +532,17 @@ class Session:
             if value not in ("silence", "bleep"):
                 raise ValueError("unknown mute mode")
             self.mutes.mode_override = str(value)  # takes effect for audio not yet emitted
-        # captions.enabled arrives with T5.4; other keys belong to other modules
+        elif self.captions.apply_config_key(key, value):
+            pass  # captions.enabled / captions.max_chars_per_line
+        # other keys belong to other modules
+
+    def on_caption(self, event: CaptionEvent) -> None:
+        """Queue a caption for burn-in at its PTS (the text is never logged, published or counted by content)."""
+        try:
+            self.captions.add(event)
+        except Exception as exc:  # captions are cosmetic: they must never disturb ingest or the clock
+            self.counts["caption_errors"] += 1
+            log.warning("caption add failed: %s", type(exc).__name__)
 
     def on_mute(self, span: MuteSpan, now: float | None = None) -> None:
         """Accept a ``MuteSpan`` (docs/specs/engine.md 5.6) and report it (codes only, never audio or text)."""
@@ -569,6 +662,7 @@ class Session:
             # a hold arrived while painting: slate this frame instead (hold re-check, docs 5.3)
             decision = self.engine.recheck(decision)
             composed = self._compose(decision)
+        composed = self._burn_captions(decision, composed)
         composed_at = time.monotonic()
         audio = self._audio_slice(decision, composed)
         written_from = time.monotonic()
@@ -589,6 +683,33 @@ class Session:
             return Composed(
                 self.compositor.presenter.store.get("FAILURE").copy(), "slate", HOLD, "FAILURE", 0, 0.0, False
             )
+
+    def _burn_captions(self, decision: FrameDecision, composed: Composed) -> Composed:
+        """Last compositing step, after every mask. Only a frame that really goes out as video (painted
+        LIVE output, never a slate, a PROTECT fill or a hold) gets a caption, and none while the audio is
+        unchecked (the text comes from audio that has not been vetted)."""
+        if (
+            not self.captions.enabled
+            or composed.state != LIVE
+            or composed.kind not in ("frame", "solid")
+            or self._audio_stale
+        ):
+            return composed
+        began = time.monotonic()
+        try:
+            image = composed.image if composed.image.flags.writeable else composed.image.copy()
+            drawn = self.captions.render(image, decision.pts)
+        except Exception as exc:  # never let a caption bug stop or unmask a frame
+            self.counts["caption_errors"] += 1
+            log.warning("caption render failed: %s", type(exc).__name__)
+            return composed
+        if drawn:
+            composed.image = image
+            ended = time.monotonic()
+            self.counts["caption_frames"] += 1
+            self.caption_ms.append((ended - began) * 1000.0)
+            self._publish_timing("caption", decision.seq, decision.pts, began, ended)
+        return composed
 
     def _audio_slice(self, decision: FrameDecision, composed: Composed) -> np.ndarray:
         per_frame = RATE / self.fps
@@ -612,6 +733,12 @@ class Session:
         self.mutes.apply(pcm, first)  # also marks [first, first + n) as emitted (late-span test)
         if self._audio_stale:  # the audio module is silent: nothing it has not checked goes out
             pcm[:] = 0
+        elif (
+            self.audio_host is not None and self.audio_watchdog_s and (first + n) / RATE > self._checked_until
+        ):
+            # no accepted heartbeat has vouched for these samples yet (host not started, or its pts is stuck)
+            pcm[:] = 0
+            self.counts["audio_unvouched"] += 1
         self._mute_window = (began, time.monotonic())
         self.mute_ms.append((self._mute_window[1] - began) * 1000.0)
         return pcm
@@ -726,6 +853,9 @@ class Session:
         for unsubscribe in self._unsubscribe:
             unsubscribe()
         self._unsubscribe = []
+        taps, self._taps = self._taps, ()
+        for tap in taps:
+            tap.close()
         self.timing_log.close()
         self.engine.close()
 

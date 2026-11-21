@@ -13,9 +13,24 @@ from typing import Any
 import numpy as np
 
 from ..harness import metrics
-from .rows import ALL_ROWS, ALLOWED_MAX_COVER, COVER_MIN, LANE_BUDGET_MS, LEVELS, MASK_JUSTIFIED_BY, Row
+from .rows import (
+    ALL_ROWS,
+    ALLOWED_MAX_COVER,
+    COVER_MIN,
+    GATE_LEVELS,
+    LANE_BUDGET_MS,
+    LEVELS,
+    MASK_JUSTIFIED_BY,
+    NEGATIVE_COUNT_CATEGORIES,
+    NEGATIVE_INFO_CATEGORIES,
+    Row,
+)
 
 SRCS = ("img", "clip")
+WARMUP_SETTLED_S = 1.0  # allowlisted faces on clips: scored from 1.0 s after the track first appears
+WARMUP_STEADY_S = (
+    2.0  # ... and the steady view, from 2.0 s (past the 0.5 to 1.4 s vote accrual measured on the faces)
+)
 
 
 # ---------------------------------------------------------------- one recall block
@@ -78,25 +93,76 @@ def missed_items(recs: Sequence[dict[str, Any]], row: Row, cover_min: float) -> 
     return sorted({f"{r['item']}" for r in recs if not success(r, row, cover_min)})
 
 
+def warmup_age(recs: Sequence[dict[str, Any]]) -> dict[int, float]:
+    """Seconds since each record's track (item, target index) first appeared visible, per record index (same order)."""
+    first: dict[tuple[str, int], float] = {}
+    for r in recs:
+        k = (r["item"], r["j"])
+        if k not in first or r["t"] < first[k]:
+            first[k] = r["t"]
+    return {i: round(r["t"] - first[(r["item"], r["j"])], 4) for i, r in enumerate(recs)}
+
+
+def warmup_split(
+    recs: Sequence[dict[str, Any]], settled_s: float, steady_s: float
+) -> dict[str, list[dict[str, Any]]]:
+    """The three views of an allowlisted-face clip row: ``settled`` (>= settled_s after the track first appeared),
+    ``steady`` (>= steady_s after) and ``all`` (every frame). The detector masks an allowlisted face on purpose while
+    identity votes accrue (spec 5.5: a false allow is a privacy leak), so ``settled`` is the gate row."""
+    age = warmup_age(recs)
+    eps = 1e-6
+    return {
+        "settled": [r for i, r in enumerate(recs) if age[i] + eps >= settled_s],
+        "steady": [r for i, r in enumerate(recs) if age[i] + eps >= steady_s],
+        "all": list(recs),
+    }
+
+
 def row_stats(
     records: Sequence[dict[str, Any]],
     row: Row,
     cover_min: float = COVER_MIN,
-    gate_levels: Iterable[str] = LEVELS,
+    gate_levels: Iterable[str] = GATE_LEVELS,
+    warmup_s: float = WARMUP_SETTLED_S,
+    steady_s: float = WARMUP_STEADY_S,
 ) -> dict[str, Any]:
     sel = select(records, row)
     gl = set(gate_levels)
     out: dict[str, Any] = {"key": row.key, "title": row.title, "target": row.target, "kind": row.kind}
     for src in SRCS:
         rs = [r for r in sel if r["src"] == src]
-        gated = [r for r in rs if r["level"] in gl]
+        warm = row.kind == "face_allowed" and src == "clip"
+        views = warmup_split(rs, warmup_s, steady_s) if warm else {}
+        if warm:  # the warm-up rule: the gate row, the level table and the missed ids use the settled frames
+            rs_gate_base = views["settled"]
+        else:
+            rs_gate_base = rs
+        gated = [r for r in rs_gate_base if r["level"] in gl]
         out[src] = {
             "all": block(rs, row, cover_min),
             "gate": block(gated, row, cover_min),
-            "levels": by_level(rs, row, cover_min),
+            "levels": by_level(rs_gate_base, row, cover_min),
             "attrs": by_attr(rs, row, cover_min) if src == "img" else {},
             "missed": missed_items(gated, row, cover_min)[:60],
         }
+        if warm:
+            out[src]["warmup"] = {
+                "rule": (
+                    f"settled = frames >= {warmup_s:g} s after the track first appears (the gate row); steady = frames "
+                    f">= {steady_s:g} s after; all = every visible frame. The detector masks an allowlisted face "
+                    "while identity votes accrue (spec 5.5), on purpose."
+                ),
+                "settled_s": warmup_s,
+                "steady_s": steady_s,
+                **{
+                    name: {
+                        "all_levels": block(v, row, cover_min),
+                        "gate": block([r for r in v if r["level"] in gl], row, cover_min),
+                        "levels": by_level(v, row, cover_min),
+                    }
+                    for name, v in views.items()
+                },
+            }
     return out
 
 
@@ -159,18 +225,41 @@ def distractor_stats(records: Iterable[dict[str, Any]], masked_at: float = 0.5) 
     }
 
 
+def _count_in(rec: dict[str, Any], cats: tuple[str, ...]) -> int:
+    """Masks of the detector under test in ``rec`` whose category is in ``cats`` (records from before ``bycat``
+    existed fall back to all masks of the detector)."""
+    bycat = rec.get("bycat")
+    if bycat is None:
+        return int(rec["masks"])
+    return sum(int(bycat.get(c, 0)) for c in cats)
+
+
 def negative_stats(records: Iterable[dict[str, Any]]) -> dict[str, Any]:
-    b: dict[str, dict[str, int]] = defaultdict(lambda: {"n": 0, "false": 0, "any": 0, "protect": 0})
+    """Per bucket and source: frames with a false mask. ``false`` counts the masks of the detector under test, except
+    where ``NEGATIVE_COUNT_CATEGORIES`` restricts the bucket to the categories that count as false there (neg_text:
+    PII categories only). ``info`` counts the ``NEGATIVE_INFO_CATEGORIES`` masks (signboards) separately."""
+    b: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {"n": 0, "false": 0, "any": 0, "protect": 0, "info": 0}
+    )
     for r in records:
         if r["k"] != "n":
             continue
-        for key in (r["bucket"] + "/" + r["src"],):
-            d = b[key]
-            d["n"] += 1
-            d["false"] += 1 if r["masks"] > 0 else 0
-            d["any"] += 1 if r["any"] > 0 else 0
-            d["protect"] += 1 if r.get("protect") else 0
-    return {k: v | {"rate": (v["false"] / v["n"]) if v["n"] else None} for k, v in sorted(b.items())}
+        d = b[r["bucket"] + "/" + r["src"]]
+        counted = NEGATIVE_COUNT_CATEGORIES.get(r["bucket"])
+        d["n"] += 1
+        d["false"] += 1 if (_count_in(r, counted) if counted else r["masks"]) > 0 else 0
+        d["any"] += 1 if r["any"] > 0 else 0
+        d["protect"] += 1 if r.get("protect") else 0
+        info = NEGATIVE_INFO_CATEGORIES.get(r["bucket"])
+        if info:
+            d["info"] += 1 if _count_in(r, info) > 0 else 0
+            d["info_cats"] = list(info)
+        if counted:
+            d["counted_cats"] = list(counted)
+    return {
+        k: v | {"rate": (v["false"] / v["n"]) if v["n"] else None, "info_rate": (v["info"] / v["n"]) if v["n"] else None}
+        for k, v in sorted(b.items())
+    }  # fmt: skip
 
 
 # ---------------------------------------------------------------- flicker

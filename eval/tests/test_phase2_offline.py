@@ -414,7 +414,7 @@ def test_gate_levels_scope_is_noted_and_applied():
     recs = [trec(f"c{i}", "plate", 1.0, "clean") for i in range(25)] + [
         trec(f"h{i}", "plate", 0.0, "heavy") for i in range(25)
     ]
-    _m, all_checks, _ = measure(recs)
+    _m, all_checks, _ = measure(recs, gate_levels=("clean", "light", "heavy"))
     _m, clean_checks, _ = measure(recs, gate_levels=("clean",))
     assert not by_name(all_checks)["Number plate recall [stills]"].passed
     cc = by_name(clean_checks)["Number plate recall [stills]"]

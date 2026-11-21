@@ -29,6 +29,9 @@ class Cand:
     n_digits: int = 0
     cue_active: bool = False
     ambiguous: bool = False
+    provisional: bool = (
+        False  # a fail-safe guess from the shape of the speech (digit run, spelt id), not a cue
+    )
 
     def overlaps(self, other: Cand) -> bool:
         return self.tok0 <= other.tok1 and other.tok0 <= self.tok1
@@ -40,7 +43,7 @@ def is_ambiguous(confidence: float) -> bool:
 
 def passes_luhn(digits: str) -> bool:
     """Luhn checksum of a 13-19 digit string (card numbers); repeated-digit strings fail."""
-    if not 13 <= len(digits) <= 19 or len(set(digits)) == 1:
+    if not digits.isdigit() or not 13 <= len(digits) <= 19 or len(set(digits)) == 1:
         return False
     total = 0
     for idx, ch in enumerate(reversed(digits)):
@@ -75,6 +78,7 @@ def merge_candidates(cands: Iterable[Cand]) -> list[Cand]:
                 max(m.n_digits, c.n_digits),
                 m.cue_active or c.cue_active,
                 m.ambiguous and c.ambiguous,
+                m.provisional and c.provisional,
             )
         else:
             out.append(c)
