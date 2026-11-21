@@ -3780,13 +3780,13 @@
   },
   "header": {
     "cases_run": 46,
-    "command": "python -m eval.run redteam-video --quick",
+    "command": "python -m eval.run redteam-video --rescore --quick",
     "date": "2026-11-21",
     "detectors": "cards=ok, faces=ok, plates=ok, screens=ok, text=ok, upi_qr=ok",
     "exposed_in_frame": 0.25,
     "exposed_side": 16.0,
     "frames_scored": 727,
-    "git_rev": "178ffa40184e",
+    "git_rev": "0aaadeddab5e",
     "hardware": {
       "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
       "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
@@ -3799,6 +3799,7 @@
     "selection": "quick "
   },
   "limits": [
+    "Text attacks (fonts, mixed script, split lines, separators) all show 0 leaks. The leaking frames of other attacks show the text detector emitting `signboard` masks over every text box, which is consistent with the dev profile masking all text rather than recognising PII; these attacks therefore mostly measure that blanket rule, and will start to matter when it is narrowed (not isolated in this run).",
     "Faces are scored by the coverage proxy only (no output-side face check); `face_turned` is a frontal portrait foreshortened by yaw, not a true profile view (no profile images are available).",
     "The read-back is OCR (RapidOCR PP-OCR, Latin/Chinese model) and zxing; it under-reads Indic digits and stylised fonts, so for those attacks the proxy leak is the stronger signal and `src-unreadable` is expected.",
     "Frame drops model a dropped frame as a lane run that does not happen on that capture slot; the engine's own sequencing under real drops is covered by the Phase 1/7 stream tests, not here.",
@@ -3873,6 +3874,41 @@
       }
     },
     {
+      "attack": "enter_leave_card",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2425
+        ],
+        "k": 0,
+        "n": 12,
+        "rate": 0.0
+      },
+      "group": "enter_leave",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.3047,
+          0.6181
+        ],
+        "k": 16,
+        "n": 35,
+        "rate": 0.45714285714285713
+      },
+      "n": 35,
+      "param": "fast",
+      "repro": "/tmp/ss_redteam_video/repro/enter_leave_card.fast.s1234/f004",
+      "worst": {
+        "case": "enter_leave_card.fast.s1234",
+        "cat": "pan",
+        "cov": 0.1472,
+        "frame": 9,
+        "j": 0,
+        "ro": "src_readable",
+        "tag": ""
+      }
+    },
+    {
       "attack": "motion_pan_card",
       "confirmed": {
         "ci": [
@@ -3884,7 +3920,7 @@
         "rate": 0.0
       },
       "group": "motion",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.8865,
@@ -3919,7 +3955,7 @@
         "rate": 0.0
       },
       "group": "motion",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.8865,
@@ -3954,7 +3990,7 @@
         "rate": 0.0
       },
       "group": "enter_leave",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.7961,
@@ -3989,7 +4025,7 @@
         "rate": 0.0
       },
       "group": "enter_leave",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.7928,
@@ -4013,41 +4049,6 @@
       }
     },
     {
-      "attack": "enter_leave_card",
-      "confirmed": {
-        "ci": [
-          0.0,
-          0.2425
-        ],
-        "k": 0,
-        "n": 12,
-        "rate": 0.0
-      },
-      "group": "enter_leave",
-      "kind": "proxy_readable",
-      "leak": {
-        "ci": [
-          0.3047,
-          0.6181
-        ],
-        "k": 16,
-        "n": 35,
-        "rate": 0.45714285714285713
-      },
-      "n": 35,
-      "param": "fast",
-      "repro": "/tmp/ss_redteam_video/repro/enter_leave_card.fast.s1234/f004",
-      "worst": {
-        "case": "enter_leave_card.fast.s1234",
-        "cat": "pan",
-        "cov": 0.2753,
-        "frame": 4,
-        "j": 0,
-        "ro": null,
-        "tag": ""
-      }
-    },
-    {
       "attack": "flash_qr",
       "confirmed": {
         "ci": [
@@ -4059,7 +4060,7 @@
         "rate": 0.0
       },
       "group": "flash",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.0301,
@@ -4094,7 +4095,7 @@
         "rate": 0.0
       },
       "group": "motion",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.0346,
@@ -4129,7 +4130,7 @@
         "rate": 0.0
       },
       "group": "scene_cut",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.0092,
@@ -4164,7 +4165,7 @@
         "rate": 0.0
       },
       "group": "scene_cut",
-      "kind": "proxy_readable",
+      "kind": "proxy_unchecked",
       "leak": {
         "ci": [
           0.0029,
@@ -4188,7 +4189,7 @@
       }
     }
   ],
-  "regressions": null,
+  "regressions": [],
   "seeded": [],
   "skipped": {}
 }

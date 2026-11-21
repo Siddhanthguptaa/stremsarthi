@@ -203,17 +203,23 @@ def test_rate_math_and_ranking_put_confirmed_leaks_first() -> None:
     recs = (
         [_rec("x", "weak", proxy=True, ro="src_unreadable")] * 5
         + [_rec("y", "readable", proxy=True, ro="src_readable")] * 5
+        + [_rec("u", "unchecked", proxy=True)] * 5
         + [_rec("z", "confirmed", proxy=True, ro="confirmed")] * 2
         + [_rec("z", "confirmed", proxy=False, ro="clean")] * 8
         + [_rec("ok", "fine", proxy=False, ro="clean")] * 10
     )
     s = score.summarise(recs)
-    assert s["frames"]["k"] == 12 and s["frames"]["n"] == 30
+    assert s["frames"]["k"] == 17 and s["frames"]["n"] == 35
     ranked = score.rank_misses(recs)
-    assert [m["attack"] for m in ranked] == ["z", "y", "x"]
-    assert [m["kind"] for m in ranked] == ["confirmed", "proxy_readable", "proxy_unreadable"]
+    assert [m["attack"] for m in ranked] == ["z", "y", "u", "x"]
+    assert [m["kind"] for m in ranked] == [
+        "confirmed",
+        "proxy_readable",
+        "proxy_unchecked",
+        "proxy_unreadable",
+    ]
     assert all(m["attack"] != "ok" for m in ranked)
-    assert score.by_group(recs)["g"]["frames"]["n"] == 30
+    assert score.by_group(recs)["g"]["frames"]["n"] == 35
 
 
 def test_regression_check_flags_more_than_five_points() -> None:

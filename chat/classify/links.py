@@ -151,12 +151,36 @@ _AT_SPACED = re.compile(
 )
 
 
+_PCT = re.compile(r"%([2-7][0-9a-fA-F])")
+_COMMA_DOT = re.compile(
+    r"(?<=[A-Za-z0-9])[,。｡](?=(?:ly|gl|cc|com|xyz|top|link|app|site|online|club|live|win|fun|info)(?![A-Za-z0-9]))",
+    re.IGNORECASE,
+)
+_DOT_SPACE = re.compile(rf"(?<=[A-Za-z0-9])\.\s+(?=(?:{_TLD_ALT})(?![A-Za-z0-9]))", re.IGNORECASE)
+_TLD_SLASH = re.compile(rf"(\.(?:{_TLD_ALT}))\s+/\s+", re.IGNORECASE)
+_SLASH_WORD = re.compile(r"\s+slash\s+", re.IGNORECASE)
+
+
+def _unpercent(m: re.Match[str]) -> str:
+    ch = chr(int(m.group(1), 16))
+    return ch if ch.isalnum() or ch in "-._~:/?=&@" else m.group(0)
+
+
 def refang(text: str) -> str:
     """Undo common link / UPI-ID obfuscation. Idempotent; text without such marks is returned unchanged."""
     if not text:
         return text
     t = text
+    if "%" in t:
+        t = _PCT.sub(_unpercent, t)
+    if "," in t or "。" in t or "｡" in t:
+        t = _COMMA_DOT.sub(".", t)
     low = t.lower()
+    if "slash" in low and ("dot" in low or "." in t):
+        t = _SLASH_WORD.sub("/", t)
+    if ". " in t:
+        t = _DOT_SPACE.sub(".", t)
+        t = _TLD_SLASH.sub(r"\1/", t)
     if "x" in low and ("hxx" in low or "h*" in low):
         t = _SCHEME_FANG.sub(lambda m: f"http{m.group(1)}://", t)
     if ":" in t and "/" in t:
@@ -222,6 +246,7 @@ _SLICE = 600
 _STEP = 400
 
 
+@lru_cache(maxsize=64)
 def find_links(text: str) -> list[Link]:
     """Links in ``text`` (already refanged), found slice by slice so hostile input stays linear in its length."""
     if len(text) <= _SLICE:
@@ -235,7 +260,9 @@ def find_links(text: str) -> list[Link]:
                 continue
             seen.add(begin)
             out.append(
-                Link(ln.host, ln.path, ln.domain, ln.tld, ln.has_scheme, ln.is_ip, (begin, ln.span[1] + start))
+                Link(
+                    ln.host, ln.path, ln.domain, ln.tld, ln.has_scheme, ln.is_ip, (begin, ln.span[1] + start)
+                )
             )
         if len(out) >= 50:
             break

@@ -45,6 +45,8 @@ def _table() -> dict[int, str]:
     pairs.update(cyr)
     pairs.update(greek)
     pairs.update(small_caps)
+    pairs["。"] = "."
+    pairs["｡"] = "."
     for i in range(26):  # regional indicator symbols
         pairs[chr(0x1F1E6 + i)] = chr(ord("a") + i)
     for base in (0x660, 0x6F0, 0x966, 0x9E6, 0xA66, 0xAE6, 0xB66, 0xBE6, 0xC66, 0xCE6, 0xD66):

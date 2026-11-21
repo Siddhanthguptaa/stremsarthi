@@ -1,10 +1,10 @@
 # Video red team (2026-11-21)
 
-- git rev: `178ffa40184e`  profile: `dev`  seed: 1234  hardware: {'cpu': '13th Gen Intel(R) Core(TM) i5-13450HX', 'gpu': 'NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86'}
+- git rev: `0aaadeddab5e`  profile: `dev`  seed: 1234  hardware: {'cpu': '13th Gen Intel(R) Core(TM) i5-13450HX', 'gpu': 'NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86'}
 - selection: quick   cases run: 46  exposed-target frames scored: 727
 - detectors: cards=ok, faces=ok, plates=ok, screens=ok, text=ok, upi_qr=ok
 - read-back: zxing-cpp (QR) + RapidOCR (text)
-- command: `python -m eval.run redteam-video --quick`
+- command: `python -m eval.run redteam-video --rescore --quick`
 
 ## How to read this
 
@@ -69,20 +69,20 @@ Each case is an adversarial SPECIMEN clip. Every delivered frame with an exposed
 
 ## Ranked misses (worst first)
 
-`confirmed` = target recoverable from the output frame. `proxy_readable` = uncovered and readable in the input. `proxy_unreadable` = uncovered but not OCR-readable even unmasked.
+`confirmed` = target recoverable from the output frame. `proxy_readable` = uncovered and readable in the unmasked input. `proxy_unchecked` = uncovered, no read-back ran on the leaking frames. `proxy_unreadable` = uncovered but not OCR/decode-readable even unmasked (blur, distance); a person may still read it.
 
 | # | attack[param] | kind | leak | confirmed | worst frame | repro (in / out / meta) |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | occlusion_card[occ40_left] | confirmed | 100.0% (9/9) CI 70%-100% | 33.3% (1/3) CI 6%-79% | f0 aadhaar cov=0.495 | /tmp/ss_redteam_video/repro/occlusion_card.occ40_left.s1234/f000 |
-| 2 | motion_pan_card[v50] | proxy_readable | 100.0% (30/30) CI 89%-100% | 0.0% (0/10) CI 0%-28% | f1 pan cov=0.0 | /tmp/ss_redteam_video/repro/motion_pan_card.v50.s1234/f001 |
-| 3 | motion_pan_qr[v50] | proxy_readable | 100.0% (30/30) CI 89%-100% | 0.0% (0/10) CI 0%-28% | f1 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/motion_pan_qr.v50.s1234/f001 |
-| 4 | enter_leave_card[edge_hold35] | proxy_readable | 100.0% (15/15) CI 80%-100% | 0.0% (0/5) CI 0%-43% | f1 aadhaar cov=0.8359 | /tmp/ss_redteam_video/repro/enter_leave_card.edge_hold35.s1234/f001 |
-| 5 | enter_leave_qr[fast] | proxy_readable | 93.5% (29/31) CI 79%-98% | 0.0% (0/11) CI 0%-26% | f4 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/enter_leave_qr.fast.s1234/f004 |
-| 6 | enter_leave_card[fast] | proxy_readable | 45.7% (16/35) CI 30%-62% | 0.0% (0/12) CI 0%-24% | f4 pan cov=0.2753 | /tmp/ss_redteam_video/repro/enter_leave_card.fast.s1234/f004 |
-| 7 | flash_qr[f6] | proxy_readable | 16.7% (1/6) CI 3%-56% | 0.0% (0/2) CI 0%-66% | f22 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/flash_qr.f6.s1234/f022 |
-| 8 | motion_shake_card[amp40] | proxy_readable | 10.0% (3/30) CI 3%-26% | 0.0% (0/10) CI 0%-28% | f1 pan cov=0.8735 | /tmp/ss_redteam_video/repro/motion_shake_card.amp40.s1234/f001 |
-| 9 | scene_cut_card[every10] | proxy_readable | 3.3% (2/60) CI 1%-11% | 0.0% (0/20) CI 0%-16% | f10 aadhaar cov=0.3771 | /tmp/ss_redteam_video/repro/scene_cut_card.every10.s1234/f010 |
-| 10 | scene_cut_qr[every10] | proxy_readable | 1.7% (1/60) CI 0%-9% | 0.0% (0/20) CI 0%-16% | f10 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/scene_cut_qr.every10.s1234/f010 |
+| 2 | enter_leave_card[fast] | proxy_readable | 45.7% (16/35) CI 30%-62% | 0.0% (0/12) CI 0%-24% | f9 pan cov=0.1472 | /tmp/ss_redteam_video/repro/enter_leave_card.fast.s1234/f004 |
+| 3 | motion_pan_card[v50] | proxy_unchecked | 100.0% (30/30) CI 89%-100% | 0.0% (0/10) CI 0%-28% | f1 pan cov=0.0 | /tmp/ss_redteam_video/repro/motion_pan_card.v50.s1234/f001 |
+| 4 | motion_pan_qr[v50] | proxy_unchecked | 100.0% (30/30) CI 89%-100% | 0.0% (0/10) CI 0%-28% | f1 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/motion_pan_qr.v50.s1234/f001 |
+| 5 | enter_leave_card[edge_hold35] | proxy_unchecked | 100.0% (15/15) CI 80%-100% | 0.0% (0/5) CI 0%-43% | f1 aadhaar cov=0.8359 | /tmp/ss_redteam_video/repro/enter_leave_card.edge_hold35.s1234/f001 |
+| 6 | enter_leave_qr[fast] | proxy_unchecked | 93.5% (29/31) CI 79%-98% | 0.0% (0/11) CI 0%-26% | f4 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/enter_leave_qr.fast.s1234/f004 |
+| 7 | flash_qr[f6] | proxy_unchecked | 16.7% (1/6) CI 3%-56% | 0.0% (0/2) CI 0%-66% | f22 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/flash_qr.f6.s1234/f022 |
+| 8 | motion_shake_card[amp40] | proxy_unchecked | 10.0% (3/30) CI 3%-26% | 0.0% (0/10) CI 0%-28% | f1 pan cov=0.8735 | /tmp/ss_redteam_video/repro/motion_shake_card.amp40.s1234/f001 |
+| 9 | scene_cut_card[every10] | proxy_unchecked | 3.3% (2/60) CI 1%-11% | 0.0% (0/20) CI 0%-16% | f10 aadhaar cov=0.3771 | /tmp/ss_redteam_video/repro/scene_cut_card.every10.s1234/f010 |
+| 10 | scene_cut_qr[every10] | proxy_unchecked | 1.7% (1/60) CI 0%-9% | 0.0% (0/20) CI 0%-16% | f10 upi_qr cov=0.0 | /tmp/ss_redteam_video/repro/scene_cut_qr.every10.s1234/f010 |
 
 ## Per parameter
 
@@ -156,6 +156,7 @@ Each case is an adversarial SPECIMEN clip. Every delivered frame with an exposed
 
 ## Not run / limits
 
+- Text attacks (fonts, mixed script, split lines, separators) all show 0 leaks. The leaking frames of other attacks show the text detector emitting `signboard` masks over every text box, which is consistent with the dev profile masking all text rather than recognising PII; these attacks therefore mostly measure that blanket rule, and will start to matter when it is narrowed (not isolated in this run).
 - Faces are scored by the coverage proxy only (no output-side face check); `face_turned` is a frontal portrait foreshortened by yaw, not a true profile view (no profile images are available).
 - The read-back is OCR (RapidOCR PP-OCR, Latin/Chinese model) and zxing; it under-reads Indic digits and stylised fonts, so for those attacks the proxy leak is the stronger signal and `src-unreadable` is expected.
 - Frame drops model a dropped frame as a lane run that does not happen on that capture slot; the engine's own sequencing under real drops is covered by the Phase 1/7 stream tests, not here.
@@ -193,3 +194,7 @@ Each case is an adversarial SPECIMEN clip. Every delivered frame with an exposed
 - `scene_cut_card` (scene_cut): hard cut to a new backdrop, card and pose; tags cut+0..cut+5 are the frames right after the cut
 - `scene_cut_qr` (scene_cut): parameter grid: every10
 - `frame_drops` (frame_drops): dropped frames never reach the detectors; slots drops exactly the frames the fast lane would run on
+
+## Regression vs baseline
+
+none

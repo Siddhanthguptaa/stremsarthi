@@ -57,3 +57,47 @@ def test_disabled_guard_is_inert_and_start_takes_no_arguments() -> None:
         svc.feed(c)
     svc.close()
     assert bus.of(Topic.RISK) == []
+
+
+class _Flaky:
+    backend = "flaky"
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def score(self, samples: np.ndarray) -> np.ndarray:
+        self.calls += 1
+        if self.calls <= 3:
+            raise RuntimeError("onnx boom")
+        return _Fixed().score(samples)
+
+
+def test_scorer_exception_does_not_stop_worker(caplog) -> None:
+    import logging
+
+    bus = InProcessBus()
+    svc = build(Config(), bus)
+    svc.guard = MusicGuard(Config().guard, scorer=_Flaky(), wall_clock=lambda: "t")
+    with caplog.at_level(logging.WARNING, logger="guard.music.service"):
+        svc.start()
+        for c in _chunks(synth_song(103, 24.0)):
+            svc.feed(c)
+            time.sleep(0.02)
+        deadline = time.time() + 15
+        while time.time() < deadline and not bus.of(Topic.RISK):
+            time.sleep(0.1)
+        svc.close()
+    assert bus.of(Topic.RISK), "later chunks still produce signals after scorer errors"
+    assert svc.stats["errors"] == {"RuntimeError": 3}
+    assert sum("guard-music worker error" in r.message for r in caplog.records) == 1  # logged once per class
+
+
+def test_repeated_feed_failures_log_once_and_count(caplog) -> None:
+    import logging
+
+    svc = build(Config(), InProcessBus())
+    with caplog.at_level(logging.WARNING, logger="guard.music.engine"):
+        for _ in range(200):
+            svc.feed(object())  # no .pcm: fails every time
+    assert svc.stats["feed_errors"] == 200
+    assert sum("music feed failed" in r.message for r in caplog.records) == 1

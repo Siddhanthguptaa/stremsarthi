@@ -302,3 +302,80 @@ def test_no_text_in_outputs_or_logs(caplog: pytest.LogCaptureFixture) -> None:
     dumped = " ".join(repr(e) + str(dataclasses.asdict(e)) for _, e in out if dataclasses.is_dataclass(e))
     assert "madarchod" not in dumped and "bhenchod" not in dumped
     assert all("chod" not in r.getMessage() for r in caplog.records)
+
+
+# ----------------------------------------------------------------------------- failure containment
+def test_bad_event_is_contained_logged_once_and_later_signals_still_work(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    svc = RiskService(GuardConfig(), None)
+    real = svc.sources.from_event
+    calls = {"n": 0}
+
+    def flaky(topic, event):
+        calls["n"] += 1
+        if calls["n"] <= 3:
+            raise ValueError("secret-transcript-text")
+        return real(topic, event)
+
+    svc.sources.from_event = flaky  # type: ignore[method-assign]
+    for _ in range(3):
+        assert svc.handle(Topic.TRANSCRIPT, tr([("chutiya", 0.0, 0.5)]), now=1.0) == []
+    assert svc.error_counts == {"ValueError": 3}
+    msgs = [r.getMessage() for r in caplog.records if r.name == "guard.risk"]
+    assert len(msgs) == 1 and "ValueError" in msgs[0] and "secret-transcript-text" not in msgs[0]
+    assert svc._own == []  # nothing half-registered
+    out = svc.handle(Topic.TRANSCRIPT, tr([("bhosdike", 5.0, 5.5)]), now=5.5)
+    assert any(t is Topic.RISK_METER for t, _ in out)
+
+
+def test_failing_tick_does_not_stop_later_meter_updates() -> None:
+    svc = RiskService(GuardConfig(), None)
+    real = svc.agg.tick
+    state = {"fail": True}
+
+    def flaky(now):
+        if state["fail"]:
+            raise RuntimeError("boom")
+        return real(now)
+
+    svc.agg.tick = flaky  # type: ignore[method-assign]
+    assert svc.tick(0.0) == [] and svc.tick(0.5) == []
+    assert svc.error_counts == {"RuntimeError": 2}
+    state["fail"] = False
+    assert [t for t, _ in svc.tick(1.0)] == [Topic.RISK_METER]
+
+
+@pytest.mark.asyncio
+async def test_run_loop_survives_bad_event_and_failing_tick() -> None:
+    bus = InProcessBus()
+    svc = RiskService(GuardConfig(meter_hz=10.0), bus)
+    real_from, real_tick = svc.sources.from_event, svc.agg.tick
+    seen = {"ev": 0, "tk": 0}
+
+    def bad_from(topic, event):
+        seen["ev"] += 1
+        if seen["ev"] == 1:
+            raise ValueError("x")
+        return real_from(topic, event)
+
+    def bad_tick(now):
+        seen["tk"] += 1
+        if seen["tk"] <= 2:
+            raise RuntimeError("y")
+        return real_tick(now)
+
+    svc.sources.from_event = bad_from  # type: ignore[method-assign]
+    svc.agg.tick = bad_tick  # type: ignore[method-assign]
+    stop = asyncio.Event()
+    task = asyncio.create_task(svc.run(stop))
+    await asyncio.sleep(0.05)
+    bus.publish(Topic.TRANSCRIPT, tr([("chutiya", 0.0, 0.5)]))  # fails
+    bus.publish(Topic.TRANSCRIPT, tr([("bhosdike", 3.0, 3.5)]))  # must still be processed
+    await asyncio.sleep(0.4)
+    stop.set()
+    bus.publish(Topic.RISK, fp(0.0))
+    await asyncio.wait_for(task, 2.0)
+    assert svc.error_counts.get("ValueError") == 1 and svc.error_counts.get("RuntimeError") == 2
+    assert any(m.level != "green" for m in bus.of(Topic.RISK_METER))

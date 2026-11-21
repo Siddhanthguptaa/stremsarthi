@@ -68,13 +68,34 @@ class RiskService:
         self.agg = RiskAggregator(cfg, wall_ts_fn=lambda t: wall_ts_fn(t), session_id=session_id)
         self._own: list[RiskSignal] = []
         self._seq = 0
+        self.error_counts: dict[str, int] = {}
+
+    def _contain(self, where: str, exc: Exception) -> None:
+        """Count the failure; log the exception class name only, once per distinct class (never the
+        message or args, which could carry transcript text)."""
+        name = type(exc).__name__
+        first = name not in self.error_counts
+        self.error_counts[name] = self.error_counts.get(name, 0) + 1
+        if first:
+            log.warning(
+                "guard.risk %s failed: %s (further %s errors are counted, not logged)", where, name, name
+            )
 
     def _emit(self, update: Update, out: list[tuple[Topic, object]]) -> None:
         out.append((Topic.RISK_METER, update.meter))
         out.extend((Topic.SAFETY_EVENT, w) for w in update.warnings)
 
     def handle(self, topic: Topic, event: object, now: float | None = None) -> list[tuple[Topic, object]]:
-        """Process one bus event. Returns the events to publish (also published when a bus is set)."""
+        """Process one bus event. Returns the events to publish (also published when a bus is set).
+        A failure is contained and counted: nothing is published for that event and the service
+        keeps running."""
+        try:
+            return self._handle(topic, event, now)
+        except Exception as exc:
+            self._contain("handle", exc)
+            return []
+
+    def _handle(self, topic: Topic, event: object, now: float | None) -> list[tuple[Topic, object]]:
         if not self.cfg.enabled:
             return []
         t_start = time.monotonic()
@@ -90,19 +111,25 @@ class RiskService:
         out: list[tuple[Topic, object]] = []
         if not sigs:
             return out
-        for s in sigs:
-            if topic is not Topic.RISK:
-                out.append((Topic.RISK, s))
-                self._own.append(s)
-        del self._own[:-256]
+        own = [s for s in sigs if topic is not Topic.RISK]
+        out.extend((Topic.RISK, s) for s in own)
         self._emit(self.agg.add_many(sigs, t), out)
         self._seq += 1
         if topic is Topic.TRANSCRIPT:
             out.append((Topic.TIMING, StageTiming("guard_risk", self._seq, pts, t_start, time.monotonic())))
+        self._own.extend(own)
+        del self._own[:-256]
         self._publish(out)
         return out
 
     def tick(self, now: float | None = None) -> list[tuple[Topic, object]]:
+        try:
+            return self._tick(now)
+        except Exception as exc:
+            self._contain("tick", exc)
+            return []
+
+    def _tick(self, now: float | None) -> list[tuple[Topic, object]]:
         if not self.cfg.enabled:
             return []
         upd = self.agg.tick(self.clock.now() if now is None else now)

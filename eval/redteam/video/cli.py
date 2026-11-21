@@ -25,6 +25,7 @@ DEFAULT_OUT = Path("/tmp/ss_redteam_video")
 BASELINE = ROOT / "eval" / "baselines" / "redteam_video.json"
 
 LIMITS = [
+    "Text attacks (fonts, mixed script, split lines, separators) all show 0 leaks. The leaking frames of other attacks show the text detector emitting `signboard` masks over every text box, which is consistent with the dev profile masking all text rather than recognising PII; these attacks therefore mostly measure that blanket rule, and will start to matter when it is narrowed (not isolated in this run).",
     "Faces are scored by the coverage proxy only (no output-side face check); `face_turned` is a frontal portrait foreshortened by yaw, not a true profile view (no profile images are available).",
     "The read-back is OCR (RapidOCR PP-OCR, Latin/Chinese model) and zxing; it under-reads Indic digits and stylised fonts, so for those attacks the proxy leak is the stronger signal and `src-unreadable` is expected.",
     "Frame drops model a dropped frame as a lane run that does not happen on that capture slot; the engine's own sequencing under real drops is covered by the Phase 1/7 stream tests, not here.",
@@ -48,7 +49,7 @@ class ReproKeeper:
         for r in rows:
             if not score.is_leak(r):
                 continue
-            pri = 2 if score.is_confirmed(r) else (0 if r.get("ro") == "src_unreadable" else 1)
+            pri = 3 if score.is_confirmed(r) else {"src_readable": 2, "src_unreadable": 0}.get(r.get("ro"), 1)
             if self.best is None or pri > self.best[0]:
                 self.best = (pri, k, f, masks, [r])
                 return
@@ -89,6 +90,52 @@ class ReproKeeper:
 # ---------------------------------------------------------------------------------------------- real run
 def _detector_summary(dset: Any) -> str:
     return ", ".join(f"{i}={s.state}" for i, s in sorted(dset.status.items()))
+
+
+def rescore(a: argparse.Namespace) -> int:
+    """Re-aggregate ``<out>/records.jsonl`` of an earlier run (no detectors) with the current scoring code."""
+    out_dir = Path(a.out)
+    recs_path = out_dir / "records.jsonl"
+    date = a.date or time.strftime("%Y-%m-%d")
+    prev_path = (
+        Path(a.report_dir) if a.report_dir else ROOT / "eval" / "reports"
+    ) / f"{date}-{a.report_name}.json"
+    if not recs_path.exists() or not prev_path.exists():
+        print(f"ENV ERROR: need {recs_path} and the earlier report {prev_path}")
+        return EXIT_ENV
+    records = [
+        json.loads(line) for line in recs_path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
+    prev = json.loads(prev_path.read_text(encoding="utf-8"))
+    repro = {
+        d.name: str(next(iter(sorted(d.glob("f*_input.png"))), d / "?")).removesuffix("_input.png")
+        for d in (out_dir / "repro").glob("*")
+        if d.is_dir()
+    }
+    sel = [
+        Case(c, c.split(".")[0], "", "", {}, a.seed, lambda: []) for c in sorted({r["case"] for r in records})
+    ]
+    h = prev["header"]
+
+    class _D:  # the detector summary is kept from the earlier report
+        status: dict[str, Any] = {}
+
+    res_dset = _D()
+    code = finish(
+        a,
+        sel,
+        records,
+        prev["skipped"],
+        prev["empty"],
+        prev["protect_by_attack"],
+        repro,
+        res_dset,
+        h["readback"],
+        (prev.get("seeded") or [None])[0],
+        h["seconds"],
+        h,
+    )
+    return code
 
 
 def run(a: argparse.Namespace) -> int:
@@ -192,6 +239,7 @@ def finish(
     ro_note: str,
     seeded_note: str | None,
     seconds: float,
+    prev_header: dict[str, Any] | None = None,
 ) -> int:
     per_attack = score.by_attack(records)
     per_group = score.by_group(records)
@@ -216,7 +264,7 @@ def finish(
             or "all",
             "cases_run": len(sel),
             "frames_scored": len(records),
-            "detectors": _detector_summary(dset),
+            "detectors": (prev_header or {}).get("detectors") or _detector_summary(dset),
             "readback": ro_note,
             "readback_stride": a.readback_stride,
             "command": "python -m eval.run redteam-video " + " ".join(a.argv),
@@ -317,6 +365,11 @@ def parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--list", action="store_true", help="list the cases and exit")
     p.add_argument(
+        "--rescore",
+        action="store_true",
+        help="re-aggregate <out>/records.jsonl and rewrite the report (no detectors)",
+    )
+    p.add_argument(
         "--out",
         default=str(DEFAULT_OUT),
         help="records and repro frames (scratch, default /tmp/ss_redteam_video)",
@@ -342,6 +395,8 @@ def main(argv: list[str] | None = None) -> int:
         for n, why in attacks.skipped(a.attacks).items():
             print(f"NOT RUN {n}: {why}")
         return EXIT_OK
+    if a.rescore:
+        return rescore(a)
     if a.selftest:
         ok, lines = selftest(a.seed)
         print("\n".join(lines))

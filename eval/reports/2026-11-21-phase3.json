@@ -1,4 +1,5 @@
 {
+  "banner": "",
   "baseline": null,
   "checks": [
     {
@@ -17,7 +18,7 @@
       "passed": true,
       "target": 0.9,
       "unit": "",
-      "value": 0.955646
+      "value": 0.959461
     },
     {
       "name": "mute coverage, spoken digit words",
@@ -26,7 +27,7 @@
       "passed": true,
       "target": 0.95,
       "unit": "",
-      "value": 0.986152
+      "value": 0.988048
     },
     {
       "name": "over-mute of non-PII speech",
@@ -35,7 +36,7 @@
       "passed": true,
       "target": 0.15,
       "unit": "",
-      "value": 0.126964
+      "value": 0.144273
     },
     {
       "name": "audio pipeline latency p95",
@@ -44,7 +45,7 @@
       "passed": true,
       "target": 3.3,
       "unit": "s",
-      "value": 2.4862
+      "value": 2.4875
     },
     {
       "name": "mouth blur on muted frames with an allowlisted face",
@@ -53,7 +54,7 @@
       "passed": true,
       "target": 0.95,
       "unit": "",
-      "value": 0.981963
+      "value": 0.982877
     },
     {
       "name": "API down: PII words muted (fail-safe)",
@@ -80,7 +81,7 @@
       "passed": true,
       "target": 0.7,
       "unit": "",
-      "value": 0.901524
+      "value": 0.916281
     }
   ],
   "date": "2026-11-21",
@@ -88,10 +89,10 @@
   "header": {
     "commands": [
       "(check)",
-      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg data",
-      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg main --stride 1",
-      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg api_down --stride 1",
-      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-003238 --leg local_only --stride 1"
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-093059 --leg data",
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-093059 --leg main --stride 1",
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-093059 --leg api_down --stride 1",
+      "python -m eval.phase3 --data eval/data/generated/audio --out eval/runs/phase3-20261121-093059 --leg local_only --stride 1"
     ],
     "dataset": {
       "clips": 150,
@@ -127,7 +128,7 @@
         "paraphrase": 125
       }
     },
-    "git_rev": "8a1e6e353205",
+    "git_rev": "0aaadeddab5e",
     "hardware": {
       "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
       "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
@@ -162,30 +163,30 @@
         [
           "bn",
           772,
-          0.96114,
-          0.946404,
-          "0.945-0.973"
+          0.965026,
+          0.951886,
+          "0.950-0.976"
         ],
         [
           "en",
           735,
-          0.970068,
-          0.963336,
-          "0.955-0.980"
+          0.978231,
+          0.973171,
+          "0.965-0.987"
         ],
         [
           "hi_deva",
           1250,
-          0.9688,
-          0.954107,
-          "0.958-0.977"
+          0.9696,
+          0.955791,
+          "0.959-0.978"
         ],
         [
           "hi_latn",
           1374,
-          0.969432,
-          0.959894,
-          "0.959-0.977"
+          0.974527,
+          0.964359,
+          "0.965-0.982"
         ],
         [
           "kn",
@@ -204,9 +205,9 @@
         [
           "te",
           751,
-          0.961385,
-          0.945141,
-          "0.945-0.973"
+          0.964048,
+          0.949336,
+          "0.948-0.975"
         ]
       ],
       "title": "Mute coverage by language"
@@ -223,37 +224,37 @@
         [
           "aadhaar",
           778,
-          0.975578,
-          0.974788,
-          "0.962-0.984"
+          0.98072,
+          0.978732,
+          "0.968-0.988"
         ],
         [
           "address",
           1941,
-          0.987635,
-          0.985387,
+          0.98815,
+          0.985733,
           "0.982-0.992"
         ],
         [
           "otp",
           652,
-          0.976994,
-          0.980148,
-          "0.962-0.986"
+          0.978528,
+          0.981201,
+          "0.964-0.987"
         ],
         [
           "phone",
           1339,
-          0.990291,
-          0.989044,
-          "0.984-0.994"
+          0.991038,
+          0.98954,
+          "0.984-0.995"
         ],
         [
           "upi",
           1239,
-          0.900726,
-          0.848435,
-          "0.883-0.916"
+          0.910412,
+          0.86266,
+          "0.893-0.925"
         ]
       ],
       "title": "Mute coverage by PII kind"
@@ -270,23 +271,23 @@
         [
           "lexicon",
           3927,
-          0.965368,
-          0.95509,
-          "0.959-0.971"
+          0.968424,
+          0.958593,
+          "0.963-0.974"
         ],
         [
           "none",
           602,
-          0.983389,
-          0.977427,
-          "0.970-0.991"
+          0.991694,
+          0.989286,
+          "0.981-0.996"
         ],
         [
           "paraphrase",
           1420,
-          0.966197,
-          0.948325,
-          "0.956-0.974"
+          0.967606,
+          0.949735,
+          "0.957-0.976"
         ]
       ],
       "title": "Mute coverage by cue wording"
@@ -303,16 +304,16 @@
         [
           "core",
           4286,
-          0.964069,
-          0.952228,
-          "0.958-0.969"
+          0.967102,
+          0.955709,
+          "0.961-0.972"
         ],
         [
           "hard",
           1663,
-          0.975947,
-          0.965016,
-          "0.967-0.982"
+          0.979555,
+          0.969747,
+          "0.972-0.985"
         ]
       ],
       "title": "Mute coverage by clip bucket"
@@ -329,9 +330,9 @@
         [
           "babble",
           1370,
-          0.963504,
-          0.956428,
-          "0.952-0.972"
+          0.970803,
+          0.964834,
+          "0.961-0.979"
         ],
         [
           "music",
@@ -343,16 +344,16 @@
         [
           "none",
           2413,
-          0.962288,
-          0.947458,
-          "0.954-0.969"
+          0.965603,
+          0.951926,
+          "0.958-0.972"
         ],
         [
           "pink",
           1030,
-          0.975728,
-          0.963904,
-          "0.964-0.984"
+          0.976699,
+          0.964594,
+          "0.966-0.984"
         ],
         [
           "white",
@@ -375,9 +376,9 @@
       "rows": [
         [
           "audio pipeline (segment start to span ready)",
-          2932,
-          2.1965,
-          2.4862,
+          3011,
+          2.1944,
+          2.4875,
           2.9001
         ],
         [
@@ -402,27 +403,27 @@
         ],
         [
           "digit sequences fully muted",
-          "283 / 318"
+          "286 / 318"
         ],
         [
           "hard-negative number phrases muted",
-          0.186336
+          0.220629
         ],
         [
           "late or partly late spans",
-          49
+          44
         ],
         [
           "leaked seconds inside the pipeline",
-          43.696
+          40.087
         ],
         [
           "pipeline compute seconds per audio second (VAD+PII, CPU)",
-          0.0139
+          0.011
         ],
         [
           "pipeline stats",
-          "{\"chunk_failsafe\": 0, \"dropped_chunks\": 0, \"failsafe\": 0, \"late_spans\": 50, \"segments\": 5145, \"spans\": 2945, \"stt_failed\": 0, \"verdicts\": 5068, \"voiced\": 5068}"
+          "{\"chunk_failsafe\": 0, \"dropped_chunks\": 0, \"failsafe\": 56, \"late_spans\": 45, \"segments\": 5145, \"spans\": 3022, \"stt_failed\": 0, \"thin_transcript\": 56, \"verdicts\": 5012, \"voiced\": 5068}"
         ]
       ],
       "title": "Other numbers (main leg)"
@@ -433,10 +434,6 @@
         "missed PII s"
       ],
       "rows": [
-        [
-          "a028",
-          3.33
-        ],
         [
           "a055",
           3.31
@@ -450,12 +447,8 @@
           2.79
         ],
         [
-          "a072",
-          2.65
-        ],
-        [
-          "a131",
-          2.48
+          "a028",
+          2.72
         ],
         [
           "a039",
@@ -478,10 +471,6 @@
           2.17
         ],
         [
-          "a017",
-          2.17
-        ],
-        [
           "a117",
           2.14
         ],
@@ -492,6 +481,18 @@
         [
           "a148",
           2.02
+        ],
+        [
+          "a037",
+          1.83
+        ],
+        [
+          "a131",
+          1.82
+        ],
+        [
+          "a104",
+          1.81
         ]
       ],
       "title": "Clips with the most missed PII seconds (ids only)"
@@ -533,15 +534,15 @@
       "rows": [
         [
           "PII words muted (duration)",
-          0.901524
+          0.916281
         ],
         [
           "all voiced speech muted (duration)",
-          0.585269
+          0.603286
         ],
         [
           "over-mute",
-          0.10527
+          0.133685
         ],
         [
           "audio latency p95 s",
@@ -549,7 +550,7 @@
         ],
         [
           "fail-safe segments",
-          0
+          88
         ]
       ],
       "title": "Leg local_only (150 clips)"
@@ -572,25 +573,25 @@
           "data check",
           0,
           0,
-          3.7
+          3.1
         ],
         [
           "main (APIs up)",
           0,
           0,
-          126.3
+          102.9
         ],
         [
           "API down: fail-safe",
           0,
           0,
-          119.1
+          91.4
         ],
         [
           "API down: local recogniser",
           0,
           0,
-          127.3
+          103.7
         ]
       ],
       "title": "Gate steps"

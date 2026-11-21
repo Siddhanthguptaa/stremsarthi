@@ -65,9 +65,10 @@ def by_group(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
 
 
 def rank_misses(records: Sequence[dict[str, Any]], top: int = 20) -> list[dict[str, Any]]:
-    """Real misses, worst first: a read-back-confirmed leak outranks a proxy-only leak; within each, by rate.
-    Cases whose only leaks are ``src_unreadable`` (the attack made the target illegible even unmasked) are kept at
-    the bottom, flagged, because OCR is weaker than a person and they still mean the detector did not mask."""
+    """Real misses, worst first. Kinds, in order: ``confirmed`` (recoverable from the output frame), ``proxy_readable``
+    (uncovered and readable in the unmasked input), ``proxy_unchecked`` (uncovered, no read-back ran on the leaking
+    frames), ``proxy_unreadable`` (uncovered but not recoverable even unmasked: kept last, flagged, because OCR is weaker
+    than a person and the detector still did not mask). Within a kind, by confirmed rate then leak rate."""
     out = []
     for (attack, param), rs in group_by(records, "attack", "param").items():
         leaks = [r for r in rs if is_leak(r)]
@@ -75,7 +76,18 @@ def rank_misses(records: Sequence[dict[str, Any]], top: int = 20) -> list[dict[s
             continue
         conf = [r for r in rs if is_confirmed(r)]
         checked = [r for r in rs if "ro" in r]
-        worst = (conf or [r for r in leaks if r.get("ro") != "src_unreadable"] or leaks)[0]
+        readable = [r for r in leaks if r.get("ro") == "src_readable"]
+        unchecked = [r for r in leaks if "ro" not in r]
+        worst = (conf or readable or unchecked or leaks)[0]
+        kind = (
+            "confirmed"
+            if conf
+            else "proxy_readable"
+            if readable
+            else "proxy_unchecked"
+            if unchecked
+            else "proxy_unreadable"
+        )
         out.append(
             {
                 "attack": attack,
@@ -84,17 +96,11 @@ def rank_misses(records: Sequence[dict[str, Any]], top: int = 20) -> list[dict[s
                 "n": len(rs),
                 "leak": rate(len(leaks), len(rs)),
                 "confirmed": rate(len(conf), len(checked)),
-                "kind": "confirmed"
-                if conf
-                else (
-                    "proxy_readable"
-                    if any(r.get("ro") in (None, "src_readable") for r in leaks)
-                    else "proxy_unreadable"
-                ),
+                "kind": kind,
                 "worst": {k: worst.get(k) for k in ("case", "frame", "j", "cat", "cov", "ro", "tag")},
             }
         )
-    order = {"confirmed": 0, "proxy_readable": 1, "proxy_unreadable": 2}
+    order = {"confirmed": 0, "proxy_readable": 1, "proxy_unchecked": 2, "proxy_unreadable": 3}
     out.sort(key=lambda m: (order[m["kind"]], -(m["confirmed"]["rate"] or 0.0), -m["leak"]["rate"], -m["n"]))
     return out[:top]
 

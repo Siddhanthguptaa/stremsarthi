@@ -271,6 +271,102 @@ def find_card_quad(
     return CardQuad(_clamp(order_quad(pts), w, h), "padded", _aspect(pts))
 
 
+PARTIAL_ASPECT = (0.7, ASPECT_MIN)  # a card with a part hidden: the visible region is squarer than ID-1
+ID1_ASPECT = 1.58  # the card's own long/short ratio, used to infer the hidden part
+FLUSH_PX = 10.0  # an OCR box this close to a side of the visible region is cut by it
+
+
+def _cut_sides(visible: np.ndarray, u: np.ndarray, boxes: list[np.ndarray]) -> tuple[bool, bool]:
+    """(lo, hi): whether text is flush against the visible region's low / high end along ``u``.
+
+    Text laid out inside a real card edge keeps a margin; text cut by an occluder runs right up to the
+    occluder's edge. Counting the boxes that touch each end tells which end is the hidden one."""
+    contour = visible.reshape(-1, 1, 2).astype(np.float32)
+    proj = visible @ u
+    lo_e, hi_e = float(proj.min()), float(proj.max())
+    lo_n = hi_n = 0
+    for b in boxes:
+        c = b.mean(axis=0)
+        if cv2.pointPolygonTest(contour, (float(c[0]), float(c[1])), False) < 0:
+            continue
+        pb = b @ u
+        lo_n += int(float(pb.min()) - lo_e <= FLUSH_PX)
+        hi_n += int(hi_e - float(pb.max()) <= FLUSH_PX)
+    return lo_n >= 2 and lo_n > hi_n, hi_n >= 2 and hi_n > lo_n
+
+
+def find_partial_card_quad(
+    image: np.ndarray, number_box: np.ndarray, text_boxes: list[np.ndarray], *, half_number: bool = False
+) -> CardQuad | None:
+    """The whole card quad inferred from a card that is partly hidden (a hand, a phone, another window).
+
+    Finds the convex region around the number whose aspect is squarer than ID-1 (so the plain search
+    refuses it), works out which end is cut from the text that runs flush against it (both ends when
+    undecided) and grows that end until the quad reaches the ID-1 aspect. ``half_number`` says the visible
+    number is 8 of 12 digits: the hidden digits and the visible side's margin then give a second estimate,
+    and the larger growth wins. Returns None when no visible card-like region holds the number."""
+    h, w = image.shape[:2]
+    num_long, _ = side_lengths(number_box)
+    num_area = max(poly_area(number_box), 1.0)
+    tol = max(3.0, 0.12 * num_long)  # the number's label box may overhang a clipped region
+    roi = _roi_around(number_box, (h, w), 1.9 * num_long)
+    best: np.ndarray | None = None
+    for q in _dedupe(card_candidates(image, roi, MIN_AREA_FACTOR * num_area)):
+        area = poly_area(q)
+        on_border = bool((q <= 2).any() or (q[:, 0] >= w - 2).any() or (q[:, 1] >= h - 2).any())
+        if (
+            on_border
+            or not (PARTIAL_ASPECT[0] <= _aspect(q) <= PARTIAL_ASPECT[1])
+            or area < MIN_AREA_FACTOR * num_area
+            or area > min(MAX_AREA_FACTOR * num_area, 0.5 * h * w)
+            or not _is_convex(q)
+            or not _contains(q, number_box, tol)
+            or edge_contrast(image, q) < MIN_EDGE_CONTRAST
+        ):
+            continue
+        if best is None or area > poly_area(best):
+            best = q
+    if best is None:
+        return None
+    # the card's horizontal axis follows the number's baseline
+    e = number_box[1] - number_box[0]
+    ang = float(np.arctan2(e[1], e[0])) if np.linalg.norm(e) > 0 else 0.0
+    u = np.array([np.cos(ang), np.sin(ang)], np.float32)
+    v = np.array([-np.sin(ang), np.cos(ang)], np.float32)
+    u_pr, v_pr = best @ u, best @ v
+    u0, u1 = float(u_pr.min()), float(u_pr.max())
+    v0, v1 = float(v_pr.min()), float(v_pr.max())
+    # the colour map can miss a header band: text inside the region says how tall the card really is
+    contour = best.reshape(-1, 1, 2).astype(np.float32)
+    for b in text_boxes:
+        c = b.mean(axis=0)
+        if cv2.pointPolygonTest(contour, (float(c[0]), float(c[1])), False) >= 0:
+            pb = b @ v
+            v0, v1 = min(v0, float(pb.min())), max(v1, float(pb.max()))
+    pad_v = 0.10 * (v1 - v0)
+    v0, v1 = v0 - pad_v, v1 + pad_v
+    width, height = u1 - u0, v1 - v0
+    need = ID1_ASPECT * height - width
+    if need <= 0:
+        return None
+    lo, hi = _cut_sides(best, u, text_boxes)
+    grow_lo, grow_hi = (lo, hi) if (lo or hi) else (True, True)
+    new_u0 = u0 - need if grow_lo else u0
+    new_u1 = u1 + need if grow_hi else u1
+    if half_number and (lo != hi):
+        nu = number_box @ u
+        n0, n1 = float(nu.min()), float(nu.max())
+        hidden = 0.5 * (n1 - n0)  # 4 of 12 digits are hidden
+        if lo:
+            new_u0 = min(new_u0, n0 - hidden - max(0.0, u1 - n1))
+        else:
+            new_u1 = max(new_u1, n1 + hidden + max(0.0, n0 - u0))
+    pts = np.array(
+        [new_u0 * u + v0 * v, new_u1 * u + v0 * v, new_u1 * u + v1 * v, new_u0 * u + v1 * v], np.float32
+    )  # (u, v) is orthonormal, so the coordinates map straight back
+    return CardQuad(_clamp(order_quad(pts), w, h), "partial", _aspect(pts))
+
+
 def _clamp(pts: np.ndarray, w: int, h: int) -> np.ndarray:
     out = pts.copy()
     out[:, 0] = np.clip(out[:, 0], 0, w)
@@ -288,6 +384,92 @@ def _straddling(quad: np.ndarray, boxes: list[np.ndarray]) -> bool:
     return False
 
 
+_LIKE_SCALE = 0.5
+
+
+def region_candidates(image: np.ndarray) -> list[np.ndarray]:
+    """Card-like convex regions of the whole frame at half resolution, in the HALF-resolution frame.
+
+    The expensive part of ``find_card_like`` and ``find_edge_card``: compute once, pass to both."""
+    h, w = image.shape[:2]
+    small = cv2.resize(image, None, fx=_LIKE_SCALE, fy=_LIKE_SCALE, interpolation=cv2.INTER_AREA)
+    min_area = 0.02 * h * w * _LIKE_SCALE * _LIKE_SCALE
+    return _dedupe(card_candidates(small, (0, 0, small.shape[1], small.shape[0]), min_area))
+
+
+def find_edge_card(
+    image: np.ndarray,
+    text_boxes: list[np.ndarray],
+    *,
+    candidates: list[np.ndarray] | None = None,
+    min_boxes: int = 1,
+    max_fill: float = 0.42,
+) -> list[np.ndarray]:
+    """Whole-card quads for a card that is entering or leaving through ONE frame side.
+
+    A card cut by the frame edge is a card-like region glued to exactly one frame side, holding text and with
+    a real border on its other three sides. The part outside the frame is inferred from the ID-1 aspect and
+    the quad is returned extended beyond the frame (the caller clamps it for display, the planner keeps
+    the overshoot so the mask stays on the card as it slides). Never a quad on two sides, a screen filling
+    the frame or a page of text."""
+    h, w = image.shape[:2]
+    cands = region_candidates(image) if candidates is None else candidates
+    centres = np.array([b.mean(axis=0) for b in text_boxes], np.float32) if text_boxes else None
+    out: list[np.ndarray] = []
+    if centres is None:
+        return out
+    for q_small in cands:
+        q = q_small / _LIKE_SCALE
+        sides = {
+            "left": bool((q[:, 0] <= 4).any()),
+            "right": bool((q[:, 0] >= w - 4).any()),
+            "top": bool((q[:, 1] <= 4).any()),
+            "bottom": bool((q[:, 1] >= h - 4).any()),
+        }
+        touching = [k for k, v in sides.items() if v]
+        if len(touching) != 1 or touching[0] in ("top", "bottom"):
+            continue  # only horizontal entries/exits: a card is landscape on a landscape stream
+        side = touching[0]
+        x0, x1 = float(q[:, 0].min()), float(q[:, 0].max())
+        y0, y1 = float(q[:, 1].min()), float(q[:, 1].max())
+        height, depth = y1 - y0, x1 - x0
+        if (
+            not (0.16 * h <= height <= 0.8 * h)
+            or depth < 0.12 * height
+            or depth >= ID1_ASPECT * height * 0.97
+        ):
+            continue
+        if edge_contrast(image, q) < 0.4:
+            continue
+        contour = q.reshape(-1, 1, 2).astype(np.float32)
+        inside = [
+            i
+            for i, c in enumerate(centres)
+            if cv2.pointPolygonTest(contour, (float(c[0]), float(c[1])), False) >= 0
+        ]
+        fill = sum(poly_area(text_boxes[i]) for i in inside) / max(poly_area(q), 1.0)
+        wide = q.copy()  # text running off the frame side is not "across the border"
+        if side == "right":
+            wide[wide[:, 0] >= w - 4, 0] += 24.0
+        else:
+            wide[wide[:, 0] <= 4, 0] -= 24.0
+        if len(inside) < min_boxes or fill > max_fill or _straddling(wide, text_boxes):
+            continue
+        reach = ID1_ASPECT * height - depth  # how far the card runs on beyond the frame
+        pad = 0.03 * height
+        if side == "right":
+            nx0, nx1 = x0 - pad, x1 + reach
+        else:
+            nx0, nx1 = x0 - reach, x1 + pad
+        out.append(np.array([[nx0, y0 - pad], [nx1, y0 - pad], [nx1, y1 + pad], [nx0, y1 + pad]], np.float32))
+    out.sort(key=poly_area, reverse=True)  # one quad per card: the inner cream-only region is a duplicate
+    kept: list[np.ndarray] = []
+    for q in out:
+        if all(quad_overlap(q, k) < 0.6 for k in kept):
+            kept.append(q)
+    return kept
+
+
 def find_card_like(
     image: np.ndarray,
     text_boxes: list[np.ndarray],
@@ -295,6 +477,7 @@ def find_card_like(
     min_boxes: int = 4,
     max_area_frac: float = 0.35,
     max_fill: float = 0.42,
+    candidates: list[np.ndarray] | None = None,
 ) -> list[tuple[np.ndarray, int]]:
     """ID-1 quads (aspect 1.4-1.7) that hold at least ``min_boxes`` OCR boxes, with their box counts.
 
@@ -306,12 +489,10 @@ def find_card_like(
     h, w = image.shape[:2]
     if len(text_boxes) < min_boxes:
         return []
-    scale = 0.5
-    small = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-    min_area = 0.02 * h * w * scale * scale
+    scale = _LIKE_SCALE
     centres = np.array([b.mean(axis=0) for b in text_boxes], np.float32)
     found: list[tuple[np.ndarray, int]] = []
-    for q_small in _dedupe(card_candidates(small, (0, 0, small.shape[1], small.shape[0]), min_area)):
+    for q_small in region_candidates(image) if candidates is None else candidates:
         q = q_small / scale
         if not (LIKE_ASPECT_MIN <= _aspect(q) <= LIKE_ASPECT_MAX) or poly_area(q) > max_area_frac * h * w:
             continue

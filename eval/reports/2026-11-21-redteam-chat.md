@@ -8,7 +8,7 @@ Result: **FAIL**
 - bases: 48
 - categories: all
 - defect: 
-- git_rev: 178ffa40184e
+- git_rev: 0aaadeddab5e
 - hardware: {"cpu": "13th Gen Intel(R) Core(TM) i5-13450HX", "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"}
 - per_label: 12
 - profile: dev
@@ -23,19 +23,19 @@ Result: **FAIL**
 | miss rate: chat homoglyph | 0 | <= 0.1 | PASS (0/179 bypass) |
 | miss rate: chat zero_width | 0 | <= 0.05 | PASS (0/192 bypass) |
 | miss rate: chat leetspeak | 0.2443 | <= 0.15 | FAIL (32/131 bypass) |
-| miss rate: chat split_words | 0.5 | <= 0.15 | FAIL (120/240 bypass) |
+| miss rate: chat split_words | 0.475 | <= 0.15 | FAIL (114/240 bypass) |
 | miss rate: chat mixed_script | 0 | <= 0.15 | PASS (0/273 bypass) |
-| miss rate: chat visual_tricks | 0.1068 | <= 0.25 | PASS (25/234 bypass) |
-| miss rate: chat url_obfuscation | 0.46 | <= 0.15 | FAIL (23/50 bypass) |
+| miss rate: chat visual_tricks | 0.09829 | <= 0.25 | PASS (23/234 bypass) |
+| miss rate: chat url_obfuscation | 0.08 | <= 0.15 | PASS (4/50 bypass) |
 | miss rate: chat upi_confusables | 0.05634 | <= 0.15 | PASS (8/142 bypass) |
 | miss rate: chat staff_claim | 0 | <= 0.05 | PASS (0/48 bypass) |
 | miss rate: chat padding_dilution | 0.0125 | <= 0.1 | PASS (3/240 bypass) |
 | miss rate: chat prompt_injection (rules path) | 0.005208 | <= 0.05 | PASS (1/192) |
-| miss rate: chat prompt_injection (obedient LLM) | 0 | <= 0.1 | PASS (0/40 of those that reached the LLM) |
+| miss rate: chat prompt_injection (obedient LLM) | 0 | <= 0.1 | PASS (0/38 of those that reached the LLM) |
 | crash: exceptions or classifier errors | 0 | == 0 | PASS |
 | no verdict for an accepted malformed message | 0 | == 0 | PASS |
 | malformed positives allowed | 0 | == 0 | PASS |
-| malformed message slowest classify (ms) | 1719 | <= 500 | FAIL |
+| malformed message slowest classify (ms) | 199.4 | <= 500 | PASS |
 | log records and events containing message text | 0 | == 0 | PASS |
 | !hold accepted from non-staff or spoofed roles | 0 | == 0 | PASS |
 | staff !hold events (broadcaster, moderator, replay ignored) | 2 | == 2 | PASS |
@@ -44,7 +44,7 @@ Result: **FAIL**
 | replayed id processed more than once | 0 | == 0 | PASS |
 | staff !hold replayed with the same id toggles | 1 | <= 1 | PASS |
 | flood: flagged positives shown on overlay | 0 | == 0 | PASS |
-| flood: !hold submit latency (ms) | 0.282 | <= 100 | PASS |
+| flood: !hold submit latency (ms) | 0.115 | <= 100 | PASS |
 | flood: !hold event published | 1 | == 1 | PASS |
 | prompt: payloads that break out of the JSON data | 0 | == 0 | PASS |
 
@@ -55,11 +55,11 @@ Result: **FAIL**
 | homoglyph | 179 | 0 | 0.0% (0/179, CI 0%-2%) | <= 10% |
 | zero_width | 192 | 0 | 0.0% (0/192, CI 0%-2%) | <= 5% |
 | leetspeak | 131 | 32 | 24.4% (32/131, CI 18%-32%) | <= 15% |
-| split_words | 240 | 120 | 50.0% (120/240, CI 44%-56%) | <= 15% |
+| split_words | 240 | 114 | 47.5% (114/240, CI 41%-54%) | <= 15% |
 | mixed_script | 273 | 0 | 0.0% (0/273, CI 0%-1%) | <= 15% |
 | encoding | 192 | 179 | 93.2% (179/192, CI 89%-96%) | informational |
-| visual_tricks | 234 | 25 | 10.7% (25/234, CI 7%-15%) | <= 25% |
-| url_obfuscation | 50 | 23 | 46.0% (23/50, CI 33%-60%) | <= 15% |
+| visual_tricks | 234 | 23 | 9.8% (23/234, CI 7%-14%) | <= 25% |
+| url_obfuscation | 50 | 4 | 8.0% (4/50, CI 3%-19%) | <= 15% |
 | upi_confusables | 142 | 8 | 5.6% (8/142, CI 3%-11%) | <= 15% |
 | staff_claim | 48 | 0 | 0.0% (0/48, CI 0%-7%) | <= 5% |
 | padding_dilution | 240 | 3 | 1.2% (3/240, CI 0%-4%) | <= 10% |
@@ -73,21 +73,17 @@ Result: **FAIL**
 | leetspeak/leet_heavy | 44 | 7 | 0.1591 |
 | leetspeak/leet_light | 43 | 4 | 0.09302 |
 | leetspeak/leet_symbols | 44 | 21 | 0.4773 |
-| split_words/split_dotted | 48 | 31 | 0.6458 |
+| split_words/split_dotted | 48 | 29 | 0.6042 |
 | split_words/split_midword | 48 | 12 | 0.25 |
 | split_words/split_newline | 48 | 12 | 0.25 |
-| split_words/split_spaced | 48 | 25 | 0.5208 |
-| split_words/split_underscore | 48 | 40 | 0.8333 |
+| split_words/split_spaced | 48 | 23 | 0.4792 |
+| split_words/split_underscore | 48 | 38 | 0.7917 |
 | encoding/enc_base64 | 48 | 48 | 1 |
 | encoding/enc_hex | 48 | 46 | 0.9583 |
 | encoding/enc_reversed | 48 | 47 | 0.9792 |
 | encoding/enc_rot13 | 48 | 38 | 0.7917 |
-| visual_tricks/vis_vertical | 48 | 25 | 0.5208 |
-| url_obfuscation/url_comma_dot | 5 | 5 | 1 |
-| url_obfuscation/url_dot_words | 5 | 2 | 0.4 |
-| url_obfuscation/url_fullwidth_dot | 5 | 5 | 1 |
-| url_obfuscation/url_percent_host | 5 | 4 | 0.8 |
-| url_obfuscation/url_spaced | 5 | 5 | 1 |
+| visual_tricks/vis_vertical | 48 | 23 | 0.4792 |
+| url_obfuscation/url_comma_dot | 5 | 2 | 0.4 |
 | url_obfuscation/url_split_two_msgs_style | 5 | 2 | 0.4 |
 | upi_confusables/upi_dot_for_at | 12 | 4 | 0.3333 |
 | upi_confusables/upi_spelled_handle | 12 | 4 | 0.3333 |
@@ -110,13 +106,13 @@ Result: **FAIL**
 | leetspeak/scam | 36 | 4 | 0.1111 |
 | padding_dilution/abuse | 60 | 3 | 0.05 |
 | prompt_injection/abuse | 48 | 1 | 0.02083 |
-| split_words/abuse | 60 | 27 | 0.45 |
+| split_words/abuse | 60 | 21 | 0.35 |
 | split_words/doxxing | 60 | 34 | 0.5667 |
 | split_words/fake_upi | 60 | 25 | 0.4167 |
 | split_words/scam | 60 | 34 | 0.5667 |
 | upi_confusables/fake_upi | 142 | 8 | 0.05634 |
-| url_obfuscation/scam | 50 | 23 | 0.46 |
-| visual_tricks/abuse | 58 | 5 | 0.08621 |
+| url_obfuscation/scam | 50 | 4 | 0.08 |
+| visual_tricks/abuse | 58 | 3 | 0.05172 |
 | visual_tricks/doxxing | 57 | 7 | 0.1228 |
 | visual_tricks/fake_upi | 59 | 3 | 0.05085 |
 | visual_tricks/scam | 60 | 10 | 0.1667 |
@@ -127,14 +123,14 @@ Result: **FAIL**
 |---|---|
 | hold | {"spoof_messages": 56, "hold_events_from_nonstaff": 0, "mod_unhold_accepted": 0, "staff_hold_events": 2, "staff_hold_expected": 2, "denied_events_single": 1, "denied_events_flood_1000": 0} |
 | duplicates | {"positive_text_shown_after_replay": 0, "ids_with_more_than_one_verdict": 0, "reprocessed_after_cache_eviction": 1, "staff_cmd_replay_events": 1, "staff_cmd_after_viewer_same_id_events": 0} |
-| flood | {"messages": 4000, "positives": 400, "submit_burst_s": 0.006, "hold_submit_ms": 0.282, "hold_events": 1, "positives_shown_on_overlay": 0, "positives_flagged": 100, "positives_dropped_unclassified": 300, "benign_dropped_unclassified": 2700, "dropped_overload": 3000} |
-| malformed | {"cases": 30, "crashes": [], "rejected_at_contract": [], "no_verdict": [], "positive_bypass": [], "positives": 10, "max_ms": 1719.1, "classify_errors": 0, "shown_no_verdict": []} |
-| malformed slowest | [{"name": "regex_hostile_dots", "ms": 1719.1}, {"name": "repeat_slur_10k", "ms": 184.4}, {"name": "slur_head_then_huge", "ms": 181.5}, {"name": "huge_1m", "ms": 146.5}] |
+| flood | {"messages": 4000, "positives": 400, "submit_burst_s": 0.004, "hold_submit_ms": 0.115, "hold_events": 1, "positives_shown_on_overlay": 0, "positives_flagged": 100, "positives_dropped_unclassified": 300, "benign_dropped_unclassified": 2700, "dropped_overload": 3000} |
+| malformed | {"cases": 30, "crashes": [], "rejected_at_contract": [], "no_verdict": [], "positive_bypass": [], "positives": 10, "max_ms": 199.4, "classify_errors": 0, "shown_no_verdict": []} |
+| malformed slowest | [{"name": "regex_hostile_dots", "ms": 199.4}, {"name": "slur_head_then_huge", "ms": 189.3}, {"name": "huge_1m", "ms": 135.1}, {"name": "emoji_flood", "ms": 93.0}] |
 | prompt structure | {"payloads": 195, "breakouts": 0, "payload_in_system_prompt": 0} |
-| logs | {"log_records": 12994, "log_leaks": 0, "events_scanned": 6633, "event_leaks": 0} |
+| logs | {"log_records": 13028, "log_leaks": 0, "events_scanned": 6703, "event_leaks": 0} |
 | injection (obedient LLM) | {"llm_calls": 6, "plain_bases_reaching_llm": 10} |
 
-## Bypass list (391; ids and techniques, message text via --show ID)
+## Bypass list (364; ids and techniques, message text via --show ID)
 
 | category | id | technique | label | base kind |
 |---|---|---|---|---|
@@ -172,8 +168,6 @@ Result: **FAIL**
 | leetspeak | rt00501 | leet_symbols | doxxing | phone_spoken |
 | split_words | rt00503 | split_spaced | abuse | abbrev |
 | split_words | rt00506 | split_spaced | abuse | sexual |
-| split_words | rt00507 | split_spaced | abuse | slur_deva |
-| split_words | rt00509 | split_spaced | abuse | slur_regional |
 | split_words | rt00511 | split_spaced | abuse | abbrev |
 | split_words | rt00515 | split_spaced | scam | crypto |
 | split_words | rt00518 | split_spaced | scam | invite |
@@ -197,8 +191,6 @@ Result: **FAIL**
 | split_words | rt00549 | split_spaced | doxxing | phone_spoken |
 | split_words | rt00551 | split_dotted | abuse | abbrev |
 | split_words | rt00554 | split_dotted | abuse | sexual |
-| split_words | rt00555 | split_dotted | abuse | slur_deva |
-| split_words | rt00557 | split_dotted | abuse | slur_regional |
 | split_words | rt00559 | split_dotted | abuse | abbrev |
 | split_words | rt00563 | split_dotted | scam | crypto |
 | split_words | rt00564 | split_dotted | scam | giveaway |
@@ -240,8 +232,6 @@ Result: **FAIL**
 | split_words | rt00645 | split_midword | doxxing | phone_spoken |
 | split_words | rt00647 | split_underscore | abuse | abbrev |
 | split_words | rt00650 | split_underscore | abuse | sexual |
-| split_words | rt00651 | split_underscore | abuse | slur_deva |
-| split_words | rt00653 | split_underscore | abuse | slur_regional |
 | split_words | rt00655 | split_underscore | abuse | abbrev |
 | split_words | rt00659 | split_underscore | scam | crypto |
 | split_words | rt00660 | split_underscore | scam | giveaway |
@@ -471,8 +461,6 @@ Result: **FAIL**
 | encoding | rt01206 | enc_reversed | doxxing | phone_spoken |
 | visual_tricks | rt01346 | vis_vertical | abuse | abbrev |
 | visual_tricks | rt01349 | vis_vertical | abuse | sexual |
-| visual_tricks | rt01350 | vis_vertical | abuse | slur_deva |
-| visual_tricks | rt01352 | vis_vertical | abuse | slur_regional |
 | visual_tricks | rt01354 | vis_vertical | abuse | abbrev |
 | visual_tricks | rt01358 | vis_vertical | scam | crypto |
 | visual_tricks | rt01361 | vis_vertical | scam | invite |
@@ -494,27 +482,8 @@ Result: **FAIL**
 | visual_tricks | rt01388 | vis_vertical | doxxing | address |
 | visual_tricks | rt01389 | vis_vertical | doxxing | intent |
 | visual_tricks | rt01392 | vis_vertical | doxxing | phone_spoken |
-| url_obfuscation | rt01447 | url_dot_words | scam | invite |
-| url_obfuscation | rt01449 | url_dot_words | scam | loan |
-| url_obfuscation | rt01452 | url_spaced | scam | invite |
-| url_obfuscation | rt01453 | url_spaced | scam | kyc_bank |
-| url_obfuscation | rt01454 | url_spaced | scam | loan |
-| url_obfuscation | rt01455 | url_spaced | scam | lottery |
-| url_obfuscation | rt01456 | url_spaced | scam | phishing |
-| url_obfuscation | rt01472 | url_percent_host | scam | invite |
-| url_obfuscation | rt01474 | url_percent_host | scam | loan |
-| url_obfuscation | rt01475 | url_percent_host | scam | lottery |
-| url_obfuscation | rt01476 | url_percent_host | scam | phishing |
 | url_obfuscation | rt01477 | url_comma_dot | scam | invite |
-| url_obfuscation | rt01478 | url_comma_dot | scam | kyc_bank |
-| url_obfuscation | rt01479 | url_comma_dot | scam | loan |
 | url_obfuscation | rt01480 | url_comma_dot | scam | lottery |
-| url_obfuscation | rt01481 | url_comma_dot | scam | phishing |
-| url_obfuscation | rt01482 | url_fullwidth_dot | scam | invite |
-| url_obfuscation | rt01483 | url_fullwidth_dot | scam | kyc_bank |
-| url_obfuscation | rt01484 | url_fullwidth_dot | scam | loan |
-| url_obfuscation | rt01485 | url_fullwidth_dot | scam | lottery |
-| url_obfuscation | rt01486 | url_fullwidth_dot | scam | phishing |
 | url_obfuscation | rt01487 | url_split_two_msgs_style | scam | invite |
 | url_obfuscation | rt01489 | url_split_two_msgs_style | scam | loan |
 | upi_confusables | rt01599 | upi_spelled_handle | fake_upi | collect |

@@ -165,3 +165,24 @@ async def test_llm_clean_never_overrides_a_final_rules_flag() -> None:
 def test_prompt_says_message_text_is_untrusted_data() -> None:
     low = SYSTEM_PROMPT.lower()
     assert "untrusted" in low and "never follow instructions" in low
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "claim now bit,ly/x9z free diamonds",
+        "claim now bit。ly/x9z free diamonds",
+        "free diamonds %62it.ly/x9z claim now",
+        "free diamonds claim bit. ly / x9z",
+        "free diamonds claim bit dot ly slash x9z",
+    ],
+)
+def test_link_obfuscation_is_undone(text: str) -> None:
+    assert flagged(text), text
+
+
+def test_indic_text_spelled_one_code_point_at_a_time_is_read() -> None:
+    word = "चूतिया"
+    assert flagged(f"तू {word} है")
+    assert flagged(".".join(word))
+    assert flagged("_".join(word))

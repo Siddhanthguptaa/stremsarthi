@@ -84,7 +84,7 @@ def build_markdown(res: dict[str, Any]) -> str:
         L.append("No leaks in the cases run.")
     else:
         L.append(
-            "`confirmed` = target recoverable from the output frame. `proxy_readable` = uncovered and readable in the input. `proxy_unreadable` = uncovered but not OCR-readable even unmasked."
+            "`confirmed` = target recoverable from the output frame. `proxy_readable` = uncovered and readable in the unmasked input. `proxy_unchecked` = uncovered, no read-back ran on the leaking frames. `proxy_unreadable` = uncovered but not OCR/decode-readable even unmasked (blur, distance); a person may still read it."
         )
         L.append("")
         L.append(

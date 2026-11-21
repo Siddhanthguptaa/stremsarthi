@@ -39,7 +39,15 @@ from vision.patterns import digit_run_hits, find_masked_aadhaar_hint, find_pan
 from vision.patterns.verhoeff import is_valid
 from vision.shapes import degraded
 
-from .quad import CardQuad, find_card_like, find_card_quad, quad_overlap
+from .quad import (
+    CardQuad,
+    find_card_like,
+    find_card_quad,
+    find_edge_card,
+    find_partial_card_quad,
+    quad_overlap,
+    region_candidates,
+)
 from .unsure import find_card_shapes
 
 log = logging.getLogger("vision.cards")
@@ -51,6 +59,7 @@ CONF_SHAPE = 0.5  # the texture-only fallback (``unsure.py``): same weight as ca
 # the shape fallback is OFF by default until T7.5 measurements say otherwise: see docs/STATUS.md
 SHAPE_FALLBACK_DEFAULT = False
 CARD_BONUS = 0.06  # a real card outline was found around the number
+_HALF_NUMBER = re.compile(r"^\d{4}[ -]?\d{4}$")  # 8 digits in two groups: a 12-digit number with 4 hidden
 _PAN_ISH = re.compile(r"^[A-Z]{4,6}[0-9]{3,5}[A-Z]?$")
 
 
@@ -62,6 +71,7 @@ class _Hit:
     reason: str
     rec_conf: float
     needs_card: bool = False  # only valid if a real card outline was found (unsure hits)
+    partial: bool = False  # a number cut by an occluder: the card is inferred from its visible part
 
 
 def _clean(text: str) -> str:
@@ -144,7 +154,12 @@ class CardsDetector:
             if hit.category is Category.AADHAAR and not want_aadhaar:
                 continue
             card = find_card_quad(image, hit.box, boxes, whole_frame=not hit.needs_card)
-            if hit.needs_card and card.method != "contour":
+            if hit.partial and card.method != "contour":
+                part = find_partial_card_quad(image, hit.box, boxes, half_number=True)
+                if part is None:
+                    continue
+                card = part
+            elif hit.needs_card and card.method != "contour":
                 continue
             detections.append((self._detection(frame, hit, card), card.pts))
 
@@ -152,11 +167,21 @@ class CardsDetector:
         late = ctx.deadline is not None and self._res.clock() > ctx.deadline
         if unsure and not masked_hint and not late:
             covered = [pts for _, pts in detections]
-            for pts, _count in find_card_like(image, boxes):
+            cands = region_candidates(image) if len(boxes) >= 1 else []
+            for pts, _count in find_card_like(image, boxes, candidates=cands):
                 if any(quad_overlap(pts, c) > 0.3 for c in covered):
                     continue
                 hit = _Hit(Category.AADHAAR, pts, CONF_CARD_LIKE, "card_like", 0.0)
                 detections.append((self._detection(frame, hit, CardQuad(pts, "card_like", 0.0)), pts))
+            # a card entering or leaving through a frame side: masked whole, beyond the frame edge
+            for pts in find_edge_card(image, boxes, candidates=cands):
+                if any(quad_overlap(pts, c) > 0.3 for c in covered):
+                    continue
+                hit = _Hit(Category.AADHAAR, pts, CONF_CARD_LIKE, "card_like", 0.0)
+                det = self._detection(frame, hit, CardQuad(pts, "card_like", 0.0))
+                det.extra["expansion"] = "edge"
+                detections.append((det, pts))
+                covered.append(pts)
         if unsure and self._shape_fallback and not masked_hint and not late and degraded(image):
             covered = [pts for _, pts in detections]
             for pts, bands in find_card_shapes(image, boxes, texts, confs):
@@ -178,14 +203,21 @@ class CardsDetector:
                 continue
             valid = False
             partial = False
+            half = False
             for cand in _digit_candidates(text):
                 runs = digit_run_hits(cand)
                 valid = valid or any(r.valid for r in runs)
                 digits = sum(c.isdigit() for c in cand)
                 partial = partial or (bool(runs) or (9 <= digits <= 16 and digit_ratio(cand) >= 0.75))
+                half = half or (_HALF_NUMBER.match(cand.strip()) is not None)
             if valid:
                 hits.append(_Hit(Category.AADHAAR, boxes[i], CONF_AADHAAR_VALID, "verhoeff_ok", confs[i]))
                 taken.add(i)
+            elif half and not partial and self._unsure_enabled(Category.AADHAAR):
+                # two 4-digit groups with the rest hidden: kept only when a card region holds them
+                hits.append(
+                    _Hit(Category.AADHAAR, boxes[i], CONF_UNSURE, "card_shape_partial", confs[i], True, True)
+                )
             elif partial and self._unsure_enabled(Category.AADHAAR):
                 hits.append(
                     _Hit(Category.AADHAAR, boxes[i], CONF_UNSURE, "card_shape_unsure", confs[i], True)
@@ -237,7 +269,7 @@ class CardsDetector:
     def _detection(self, frame: Frame, hit: _Hit, card: CardQuad) -> Detection:
         assert self._res is not None
         conf = hit.conf * (0.85 + 0.15 * hit.rec_conf) if hit.rec_conf else hit.conf
-        if card.method == "contour" and hit.reason != "card_like":
+        if card.method in ("contour", "partial") and hit.reason != "card_like":
             conf += CARD_BONUS
         elif card.method == "padded":
             conf -= 0.05

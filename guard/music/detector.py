@@ -140,6 +140,9 @@ class MusicDetector:
     def backend(self) -> str:
         return str(getattr(self.scorer, "backend", "unknown"))
 
+    def reset_buffer(self) -> None:
+        self._buf = np.zeros(0, dtype=np.float32)
+
     def feed(self, samples: np.ndarray) -> list[WindowResult]:
         self._buf = np.concatenate([self._buf, np.asarray(samples, dtype=np.float32)])
         out: list[WindowResult] = []

@@ -63,6 +63,7 @@ Deliberately **not** reused: IRL Shield `relay/archive.py`, `seal.py` (store vid
 | Silero VAD | MIT | `audio/` | none |
 | PrivaStream `src/models/audio/training/src/pii_detector.py` (Luhn check, overlap-merge idea) | Apache-2.0 | `audio/pii/merge.py`, `audio/pii/rules.py` | adapted, not copied whole; no DeBERTa, no training; licence at `audio/pii/LICENSE-privastream-Apache-2.0` |
 | faster-whisper / CTranslate2 | MIT | local STT fallback | none |
+| qrcode (python-qrcode) | BSD-3-Clause | `app/api/pairing.py` (pairing QR image), in `requirements/base.txt` | none |
 | YAMNet | Apache-2.0 | `guard/music/` | third-party ONNX conversion of Google's weights (`huggingface.co/mydubber-org/yamnet-onnx` @ fc1697c7, SHA-256 in `models/manifest.json`), unchanged, loaded only by onnxruntime; licence `models/licenses/YAMNet-Apache-2.0.txt` and `guard/music/data/` |
 | Chromaprint / pyacoustid | LGPL-2.1 / MIT | fingerprinting | dynamic use only: `libchromaprint.so.1` (v1.5.1, from the ffmpeg install in WSL) loaded through ctypes, not bundled; `fpcalc` is not installed |
 | audfprint | MIT | optional fingerprint backend | none |

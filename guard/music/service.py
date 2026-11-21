@@ -8,6 +8,7 @@ Signals carry codes only (``music``, ``fp:demo_03``): no audio, no text.
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections import deque
@@ -29,6 +30,7 @@ MIN_QUERY_S = 5.0  # no fingerprint under 5 s of music
 SCAN_EVERY_S = 2.0
 VERDICT_CACHE_S = 30.0
 MAX_QUEUE_S = 30.0
+LOG = logging.getLogger("guard.music.service")
 
 
 def _utc_now() -> str:
@@ -67,10 +69,23 @@ class MusicGuard:
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.dropped_s = 0.0
+        self.errors: dict[str, int] = {}
 
     @property
     def music_on(self) -> bool:
         return self.detector.state.on
+
+    def _record_error(self, exc: Exception) -> None:
+        name = type(exc).__name__
+        with self._lock:
+            first = name not in self.errors
+            self.errors[name] = self.errors.get(name, 0) + 1
+        if first:  # log each distinct exception class once, then only count
+            LOG.warning("guard-music worker error: %s (counted, worker keeps running)", name)
+
+    @property
+    def stats(self) -> dict[str, object]:
+        return {"errors": dict(self.errors), "dropped_s": self.dropped_s, "music_on": self.music_on}
 
     def push(self, samples: np.ndarray) -> None:
         """Non-blocking. Drops the oldest audio if the worker falls more than 30 s behind."""
@@ -152,8 +167,12 @@ class MusicGuard:
 
         def run() -> None:
             while not self._stop.is_set():
-                for s in self.poll():
-                    callback(s)
+                try:
+                    for s in self.poll():
+                        callback(s)
+                except Exception as exc:  # one scorer or bus error must not kill the worker
+                    self._record_error(exc)
+                    self.detector.reset_buffer()  # a persistent fault must not grow the buffer
                 self._stop.wait(interval_s)
 
         self._thread = threading.Thread(target=run, name="guard-music", daemon=True)

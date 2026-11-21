@@ -32,6 +32,7 @@ class MusicService:
         self.guard = guard if guard is not None else MusicGuard(config.guard)
         self._started = False
         self.published = 0
+        self.feed_errors = 0
 
     def feed(self, chunk: Any) -> None:
         """Queue one ``AudioChunk`` (int16 PCM at 16 kHz). Never blocks, never raises into the audio path."""
@@ -42,7 +43,11 @@ class MusicService:
             x = pcm.astype(np.float32) / 32768.0 if pcm.dtype.kind == "i" else pcm.astype(np.float32)
             self.guard.push(x)
         except Exception as exc:  # the audio path must never see a guard failure
-            LOG.warning("music feed failed: %s", type(exc).__name__)
+            self.feed_errors += 1
+            if self.feed_errors == 1:  # ~50 chunks/s: log the first failure only, then count
+                LOG.warning(
+                    "music feed failed: %s (further failures are counted, see stats)", type(exc).__name__
+                )
 
     def _publish(self, signal: RiskSignal) -> None:
         self.bus.publish(Topic.RISK, signal)
@@ -53,6 +58,10 @@ class MusicService:
             return
         self._started = True
         self.guard.start(self._publish)
+
+    @property
+    def stats(self) -> dict[str, object]:
+        return {"published": self.published, "feed_errors": self.feed_errors, **self.guard.stats}
 
     def close(self) -> None:
         self.guard.stop()
