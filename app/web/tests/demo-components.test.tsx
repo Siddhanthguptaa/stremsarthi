@@ -23,7 +23,7 @@ describe("PreviewPane", () => {
 
   it("shows the big label and the stream as a labelled image, never printing the token", () => {
     const { container } = renderIn(<PreviewPane kind="protected" mode="stream" src={URL_1} />)
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toContain("WHAT VIEWERS GET")
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toContain("What viewers get")
     const img = screen.getByRole("img")
     expect(img.getAttribute("src")).toBe(URL_1)
     expect(img.getAttribute("alt")).toBe("Protected output: what viewers get, with private information masked")
@@ -63,7 +63,7 @@ describe("PreviewPane", () => {
 
   it("raw preview disabled: explains why and how to enable it, with no image", () => {
     renderIn(<PreviewPane kind="raw" mode="disabled" src={null} />)
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toContain("WHAT THE STREAMER SEES")
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toContain("What the streamer sees")
     const box = screen.getByTestId("raw-disabled")
     expect(box.textContent).toContain("disabled by default for privacy")
     expect(box.textContent).toContain("DEMO_RAW_PREVIEW=1")

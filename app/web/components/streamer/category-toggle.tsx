@@ -8,7 +8,6 @@ import { type CategoryChange, needsDisableConfirm, sensitivityPercent } from "@/
 import { en, type I18nKey } from "@/lib/i18n"
 import { useLanguage } from "@/components/shell/language-provider"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -50,7 +49,7 @@ interface CategoryToggleProps {
   onChange: (category: string, change: CategoryChange) => void
 }
 
-/** One card per category: enable switch, mask style, sensitivity slider, "mask when unsure". */
+/** One channel strip per category: enable switch, mask style, sensitivity slider, "mask when unsure". */
 export function CategoryToggle({ category, settings, saving = false, onChange }: CategoryToggleProps) {
   const { t } = useLanguage()
   const label = useCategoryLabel()(category)
@@ -62,6 +61,7 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
   const off = !settings.enabled
   // Speech is muted, not masked: there is no blur/pixelate/solid choice for it.
   const isAudio = category.startsWith("spoken_")
+  const ledTone = off ? "text-muted-foreground" : isAudio ? "text-audio" : "text-video"
 
   const setEnabled = (enabled: boolean) => {
     const change: CategoryChange = { enabled }
@@ -70,13 +70,12 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
   }
 
   return (
-    <Card data-category={category} data-enabled={settings.enabled}>
-      <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 pb-3">
-        <CardTitle className="text-base leading-snug">
-          <Label htmlFor={`${id}-enabled`} className="text-base font-semibold">
-            {label}
-          </Label>
-        </CardTitle>
+    <div data-category={category} data-enabled={settings.enabled} className="module-row space-y-3 p-3">
+      <div className="flex min-h-11 items-center justify-between gap-3">
+        <Label htmlFor={`${id}-enabled`} className="flex min-w-0 items-center gap-2 font-display text-xl font-bold leading-tight">
+          <span aria-hidden className={`led ${ledTone}`} />
+          <span className="min-w-0 break-words">{label}</span>
+        </Label>
         <div className="flex shrink-0 items-center gap-2">
           {saving ? <Loader2 aria-hidden className="size-4 animate-spin motion-reduce:animate-none" /> : null}
           <span className="text-sm text-muted-foreground" aria-hidden>
@@ -89,33 +88,34 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
             aria-label={`${t("controls.protect")}: ${label}`}
           />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {category === "spoken_unverified" ? (
-          <p className="text-sm text-muted-foreground">{t("category.spoken_unverified.hint")}</p>
-        ) : null}
+      </div>
+      {category === "spoken_unverified" ? (
+        <p className="text-sm text-muted-foreground">{t("category.spoken_unverified.hint")}</p>
+      ) : null}
+
+      <div className={isAudio ? "space-y-3" : "grid gap-3 sm:grid-cols-[9rem_1fr] sm:items-end"}>
         {isAudio ? null : (
-        <div className="space-y-1.5">
-          <Label htmlFor={`${id}-style`}>{t("controls.style")}</Label>
-          <Select
-            id={`${id}-style`}
-            value={settings.style}
-            disabled={off}
-            onChange={(e) => onChange(category, { style: e.target.value as Style })}
-          >
-            {STYLES.map((style) => (
-              <option key={style} value={style}>
-                {t(STYLE_KEYS[style])}
-              </option>
-            ))}
-          </Select>
-        </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-style`}>{t("controls.style")}</Label>
+            <Select
+              id={`${id}-style`}
+              value={settings.style}
+              disabled={off}
+              onChange={(e) => onChange(category, { style: e.target.value as Style })}
+            >
+              {STYLES.map((style) => (
+                <option key={style} value={style}>
+                  {t(STYLE_KEYS[style])}
+                </option>
+              ))}
+            </Select>
+          </div>
         )}
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <Label id={`${id}-sens`}>{t("controls.sensitivity")}</Label>
-            <span className="text-sm tabular-nums text-muted-foreground">{sensitivityPercent(shownSensitivity)} %</span>
+            <span className="timecode text-lg font-semibold">{sensitivityPercent(shownSensitivity)} %</span>
           </div>
           <Slider
             thumbLabel={`${t("controls.sensitivity")}: ${label}`}
@@ -133,17 +133,17 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
           />
           <p className="text-xs text-muted-foreground">{t("controls.sensitivity.hint")}</p>
         </div>
+      </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <Label htmlFor={`${id}-unsure`}>{t(isAudio ? "controls.unsure.audio" : "controls.unsure")}</Label>
-          <Switch
-            id={`${id}-unsure`}
-            checked={settings.mask_when_unsure}
-            disabled={off}
-            onCheckedChange={(v) => onChange(category, { mask_when_unsure: v })}
-          />
-        </div>
-      </CardContent>
+      <div className="flex min-h-11 items-center justify-between gap-3 border-t pt-2">
+        <Label htmlFor={`${id}-unsure`}>{t(isAudio ? "controls.unsure.audio" : "controls.unsure")}</Label>
+        <Switch
+          id={`${id}-unsure`}
+          checked={settings.mask_when_unsure}
+          disabled={off}
+          onCheckedChange={(v) => onChange(category, { mask_when_unsure: v })}
+        />
+      </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
@@ -170,6 +170,6 @@ export function CategoryToggle({ category, settings, saving = false, onChange }:
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   )
 }

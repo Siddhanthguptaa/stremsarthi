@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { Gauge } from "lucide-react"
 
 import { categoryKey, formatPercent } from "@/lib/format"
 import { RISK_LEVELS, RISK_LEVEL_KEY, RISK_SOURCE_KEY, type RiskView } from "@/lib/risk"
@@ -17,7 +16,7 @@ const TONE: Record<RiskLevel, string> = {
 }
 
 /**
- * The strike-guard risk meter as one short card: title, level text and percent, the four-segment bar (still a
+ * The strike-guard risk meter as one desk module: the level in big type, a four-segment bar (still a
  * `role="meter"` with a text value, no animation) and the live warnings as chips (source, category, score).
  */
 export function RiskStrip({ view }: { view: RiskView }) {
@@ -28,15 +27,14 @@ export function RiskStrip({ view }: { view: RiskView }) {
   const reached = RISK_LEVELS.indexOf(view.level) + 1
 
   return (
-    <section aria-labelledby={headingId} data-testid="risk-meter" data-level={view.level} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card px-3 py-2">
-      <div className="flex items-center gap-3">
-        <Gauge aria-hidden className="size-6 shrink-0" />
-        <h2 id={headingId} className="text-sm font-semibold leading-tight">
+    <section aria-labelledby={headingId} data-testid="risk-meter" data-level={view.level} className="module space-y-3 p-4">
+      <div className="flex items-end justify-between gap-3">
+        <h2 id={headingId} className="text-xl font-bold leading-tight">
           {t("risk.title")}
         </h2>
-        <p className="text-right leading-tight">
-          <span className="block text-xl font-bold">{level}</span>
-          <span className="text-xs tabular-nums text-muted-foreground">{percent}%</span>
+        <p className="flex items-baseline gap-2 leading-none">
+          <span className="font-display text-3xl font-extrabold">{level}</span>
+          <span className="timecode text-lg text-muted-foreground">{percent}%</span>
         </p>
       </div>
       <div
@@ -46,26 +44,26 @@ export function RiskStrip({ view }: { view: RiskView }) {
         aria-valuemax={100}
         aria-valuenow={percent}
         aria-valuetext={t("risk.valueText").replace("{level}", level).replace("{percent}", `${percent}%`)}
-        className="grid w-32 shrink-0 grid-cols-4 gap-1"
+        className="grid w-full grid-cols-4 gap-1"
       >
         {RISK_LEVELS.map((name, index) => (
           <div
             key={name}
             aria-hidden
             data-filled={index < reached ? "true" : "false"}
-            className={cn("h-3 rounded-sm", index < reached ? TONE[view.level] : "bg-secondary ring-1 ring-input")}
+            className={cn("h-4 rounded-sm", index < reached ? TONE[view.level] : "bg-background/70")}
           />
         ))}
       </div>
       {view.signals.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("risk.none")}</p>
       ) : (
-        <ul aria-label={t("risk.active")} className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+        <ul aria-label={t("risk.active")} className="flex min-w-0 flex-wrap gap-1.5">
           {view.signals.map((signal) => (
-            <li key={signal.key} className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-sm">
+            <li key={signal.key} className="module-row inline-flex items-center gap-2 px-3 py-1 text-sm">
               <span className="font-medium">{t(RISK_SOURCE_KEY[signal.source])}</span>
               <span className="text-muted-foreground">{t(categoryKey(signal.category))}</span>
-              <span className="font-semibold tabular-nums">
+              <span className="timecode text-base font-semibold">
                 <span className="sr-only">{t("alerts.confidence")} </span>
                 {formatPercent(signal.score)}
               </span>

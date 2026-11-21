@@ -2,7 +2,7 @@
 
 export const enStreamer = {
   "golive.dest.title": "Where to stream",
-  "golive.dest.desc": "Stream Sarthi sends the protected stream to the places you switch on.",
+  "golive.dest.desc": "Streamify sends the protected stream to the places you switch on.",
   "golive.dest.youtube": "YouTube",
   "golive.dest.twitch": "Twitch",
   "golive.key.configured": "Key set",
@@ -49,7 +49,7 @@ export const enStreamer = {
   "golive.check.ok": "Ready",
   "golive.check.off": "Not set (a local fallback is used)",
   "golive.err.generic": "Something went wrong. Try again.",
-  "golive.err.network": "Could not reach Stream Sarthi. Check that it is running.",
+  "golive.err.network": "Could not reach Streamify. Check that it is running.",
   "golive.err.unauthorized": "Your link expired. Open the link from the terminal again.",
   "golive.err.session_active": "A stream is already running.",
   "golive.err.no_destination": "Switch on at least one destination.",
@@ -60,7 +60,7 @@ export const enStreamer = {
   "golive.loadFailed": "Could not load your setup.",
   "golive.next": "Next: add faces, choose what to hide, then watch the live screen.",
   "golive.toLive": "Open the live screen",
-  "ingest.title": "Send video to Stream Sarthi",
+  "ingest.title": "Send video to Streamify",
   "ingest.desc": "Point OBS or your phone streaming app at one of these addresses.",
   "ingest.rtmp": "RTMP address",
   "ingest.srt": "SRT address",
@@ -114,7 +114,7 @@ export const enStreamer = {
 
 export const hiStreamer: Record<keyof typeof enStreamer, string> = {
   "golive.dest.title": "कहाँ स्ट्रीम करें",
-  "golive.dest.desc": "स्ट्रीम सारथी सुरक्षित स्ट्रीम उन जगहों पर भेजता है जिन्हें आप चालू करते हैं।",
+  "golive.dest.desc": "स्ट्रीमिफ़ाई सुरक्षित स्ट्रीम उन जगहों पर भेजता है जिन्हें आप चालू करते हैं।",
   "golive.dest.youtube": "YouTube",
   "golive.dest.twitch": "Twitch",
   "golive.key.configured": "की सेट है",
@@ -161,7 +161,7 @@ export const hiStreamer: Record<keyof typeof enStreamer, string> = {
   "golive.check.ok": "तैयार",
   "golive.check.off": "सेट नहीं (लोकल विकल्प इस्तेमाल होगा)",
   "golive.err.generic": "कुछ गड़बड़ हुई। फिर कोशिश करें।",
-  "golive.err.network": "स्ट्रीम सारथी से संपर्क नहीं हो पा रहा। जाँचें कि वह चल रहा है।",
+  "golive.err.network": "स्ट्रीमिफ़ाई से संपर्क नहीं हो पा रहा। जाँचें कि वह चल रहा है।",
   "golive.err.unauthorized": "आपका लिंक पुराना हो गया। टर्मिनल का लिंक फिर खोलें।",
   "golive.err.session_active": "एक स्ट्रीम पहले से चल रही है।",
   "golive.err.no_destination": "कम से कम एक डेस्टिनेशन चालू करें।",
@@ -172,7 +172,7 @@ export const hiStreamer: Record<keyof typeof enStreamer, string> = {
   "golive.loadFailed": "सेटअप लोड नहीं हो सका।",
   "golive.next": "आगे: चेहरे जोड़ें, चुनें क्या छिपाना है, फिर लाइव स्क्रीन देखें।",
   "golive.toLive": "लाइव स्क्रीन खोलें",
-  "ingest.title": "स्ट्रीम सारथी को वीडियो भेजें",
+  "ingest.title": "स्ट्रीमिफ़ाई को वीडियो भेजें",
   "ingest.desc": "OBS या अपने फ़ोन के स्ट्रीमिंग ऐप को इनमें से किसी एक पते पर भेजें।",
   "ingest.rtmp": "RTMP पता",
   "ingest.srt": "SRT पता",

@@ -15,13 +15,14 @@ import {
   initialControlsState,
   isSaving,
 } from "@/lib/controls"
+import { setupText } from "@/lib/i18n-setup"
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
 import { CategoryToggle } from "@/components/streamer/category-toggle"
 import { HoldBar } from "@/components/streamer/hold-bar"
+import { SetupHeader, StatusLed } from "@/components/streamer/setup-header"
 import { LanguagePicker } from "@/components/streamer/language-picker"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 /** The /controls screen: needs a token, then shows the panel. */
 export function ControlsScreen() {
@@ -43,7 +44,7 @@ type ControlsApi = Pick<ApiClient, "getConfig" | "patchConfig">
 
 /** Category cards read from and written to `/api/config` (optimistic, rolled back on an error). */
 export function ControlsPanel({ api }: { api: ControlsApi }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [state, dispatch] = React.useReducer(controlsReducer, initialControlsState)
   const nextId = React.useRef(1)
 
@@ -99,15 +100,17 @@ export function ControlsPanel({ api }: { api: ControlsApi }) {
     (g) => g.keys.length > 0,
   )
 
+  const allKeys = groups.flatMap((g) => g.keys)
+  const onCount = allKeys.filter((k) => state.categories[k].enabled).length
+
   return (
-    <section className="space-y-4" aria-labelledby="controls-title">
-      <header className="space-y-1">
-        <h1 id="controls-title" className="text-2xl font-bold tracking-tight">
-          {t("page.controls.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("page.controls.desc")}</p>
-        <p className="text-sm text-muted-foreground">{t("controls.note")}</p>
-      </header>
+    <section className="space-y-6" aria-labelledby="controls-title">
+      <SetupHeader id="controls-title" title={t("page.controls.title")} description={t("page.controls.desc")}>
+        {state.status === "ready" ? (
+          <StatusLed tone="success">{setupText(lang, "setup.controls.count", { on: onCount, all: allKeys.length })}</StatusLed>
+        ) : null}
+      </SetupHeader>
+      <p className="text-sm text-muted-foreground">{t("controls.note")}</p>
 
       <div role="status" aria-live="polite" className="min-h-6 text-sm" data-testid="controls-notice">
         {state.notice?.kind === "saved" ? (
@@ -136,39 +139,40 @@ export function ControlsPanel({ api }: { api: ControlsApi }) {
       {state.status === "ready" && groups.length === 0 ? <p>{t("controls.empty")}</p> : null}
 
       {groups.length > 0 ? (
-        <Tabs defaultValue={groups[0].group}>
-          <TabsList aria-label={t("page.controls.title")}>
-            {groups.map(({ group }) => (
-              <TabsTrigger key={group} value={group}>
-                {groupLabel[group]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {groups.map(({ group, keys }) => (
-            <TabsContent key={group} value={group} className="space-y-4">
-              {group === "audio" && state.languages.length > 0 ? (
-                <LanguagePicker
-                  selected={state.languages}
-                  supported={state.supportedLanguages}
-                  saving={languagesSaving}
-                  onChange={editLanguages}
-                />
-              ) : null}
-              <ul className="grid gap-4 md:grid-cols-2">
-                {keys.map((key) => (
-                  <li key={key}>
-                    <CategoryToggle
-                      category={key}
-                      settings={state.categories[key]}
-                      saving={isSaving(state, key)}
-                      onChange={edit}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </TabsContent>
-          ))}
-        </Tabs>
+        <div className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
+          {groups.map(({ group, keys }) => {
+            const on = keys.filter((k) => state.categories[k].enabled).length
+            const tone = group === "audio" ? "text-audio" : "text-video"
+            return (
+              <div key={group} className="space-y-4">
+                <section className="module space-y-3 p-4 md:p-5" aria-labelledby={`group-${group}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 id={`group-${group}`} className="flex items-center gap-2 font-display text-2xl font-bold">
+                      <span aria-hidden className={`led ${tone}`} />
+                      {groupLabel[group]}
+                    </h2>
+                    <span className="text-sm text-muted-foreground">{setupText(lang, "setup.controls.count", { on, all: keys.length })}</span>
+                  </div>
+                  <ul className="space-y-2">
+                    {keys.map((key) => (
+                      <li key={key}>
+                        <CategoryToggle category={key} settings={state.categories[key]} saving={isSaving(state, key)} onChange={edit} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                {group === "audio" && state.languages.length > 0 ? (
+                  <LanguagePicker
+                    selected={state.languages}
+                    supported={state.supportedLanguages}
+                    saving={languagesSaving}
+                    onChange={editLanguages}
+                  />
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
       ) : null}
     </section>
   )

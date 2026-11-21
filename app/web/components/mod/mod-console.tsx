@@ -33,6 +33,7 @@ import { chatStatusCode, withCode } from "@/lib/chat-status"
 import { ChatStatusNotice } from "@/components/streamer/chat-status-notice"
 import { Filters } from "@/components/mod/filters"
 import { QueueList } from "@/components/mod/queue-list"
+import { Segmented } from "@/components/mod/segmented"
 
 const MOD_TOPICS: readonly WireTopic[] = ["chat.modqueue", "chat.verdict", "safety.event"]
 /** The API refuses a second action on a message for 10 s; the console frees the buttons after the same time. */
@@ -201,15 +202,28 @@ function Console() {
 
   const categories = React.useMemo(() => presentCategories(state.items), [state.items])
 
+  const timeoutOptions = TIMEOUT_PRESETS.map((p) => ({ value: p, label: t(`mod.t.${p}` as I18nKey) }))
+
   return (
     <div className="space-y-5">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">{t("page.mod.title")}</h1>
-        <p className="text-muted-foreground">{t("page.mod.desc")}</p>
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-4xl font-extrabold leading-[1.05] md:text-5xl">{t("page.mod.title")}</h1>
+          <p className="text-muted-foreground">{t("page.mod.desc")}</p>
+        </div>
+        <div className="flex flex-wrap gap-2" data-testid="mod-counts">
+          <span className="module flex items-center gap-2 px-4 py-2 font-display text-2xl font-bold leading-none">
+            <span aria-hidden className="led text-chat" />
+            {t("mod.pending").replace("{n}", String(state.items.length))}
+          </span>
+          <span className="module px-4 py-2 font-display text-2xl font-bold leading-none text-muted-foreground">
+            {t("mod.hiddenTotal").replace("{n}", String(state.hiddenCount))}
+          </span>
+        </div>
       </header>
 
       {apiDown ? (
-        <p role="alert" className="flex items-start gap-2 rounded-md border border-destructive bg-card p-3 text-sm font-medium" data-testid="mod-api-down">
+        <p role="alert" className="module flex items-start gap-2 border-destructive p-3 text-sm font-medium" data-testid="mod-api-down">
           <WifiOff aria-hidden className="mt-0.5 size-5 shrink-0 text-destructive" />
           {modText(lang, "modx.apiDown")}
         </p>
@@ -222,95 +236,85 @@ function Console() {
         </p>
       ) : null}
 
-      <div
-        className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-b bg-background/95 px-4 py-2 text-sm font-medium backdrop-blur"
-        data-testid="mod-counts"
-      >
-        <span>{t("mod.pending").replace("{n}", String(state.items.length))}</span>
-        <span className="text-muted-foreground">{t("mod.hiddenTotal").replace("{n}", String(state.hiddenCount))}</span>
-      </div>
-
-      <Filters filters={filters} categories={categories} onChange={setFilters} />
-
-      <div role="group" aria-label={t("mod.timeoutLength")} className="flex flex-wrap items-center gap-2" title={modText(lang, "modx.timeoutHint")}>
-        <span className="text-sm font-medium">{t("mod.timeoutLength")}</span>
-        {TIMEOUT_PRESETS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            aria-pressed={preset === p}
-            onClick={() => setPreset(p)}
-            className="min-h-11 rounded-full border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-          >
-            {t(`mod.t.${p}` as I18nKey)}
-          </button>
-        ))}
-      </div>
-
-      <QueueList
-        items={visible}
-        filtered={state.items.length > 0}
-        selectedKey={selected}
-        preset={preset}
-        lang={lang}
-        onSelect={select}
-        onAct={act}
-        onClearFilters={() => setFilters(NO_FILTERS)}
-      />
-      <p role="status" className="sr-only">
-        {selected ? modText(lang, "modx.selected", { n: Math.max(1, visible.findIndex((e) => e.key === selected) + 1), total: visible.length }) : ""}
-      </p>
-
-      <section aria-labelledby="recent-heading" className="space-y-2">
-        <h2 id="recent-heading" className="text-lg font-semibold">
-          {t("mod.recent")}
-        </h2>
-        {state.resolved.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("mod.recentNone")}</p>
-        ) : (
-          <ul className="space-y-1.5" data-testid="mod-resolved">
-            {state.resolved.map((r) => (
-              <li key={r.key} className="flex flex-wrap items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm">
-                <span className="font-medium">{t(`mod.state.${r.state}` as I18nKey)}</span>
-                <span className="text-muted-foreground">{r.categories.map((c) => t(categoryKey(c))).join(", ")}</span>
-                {r.platformResult === "failed" || r.platformResult === "unsupported" ? (
-                  <span className="text-muted-foreground">{t(`mod.result.${r.platformResult}` as I18nKey)}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <p className="text-xs text-muted-foreground">{t("mod.privacy")}</p>
-      <details className="rounded-lg border bg-card text-sm" data-testid="mod-shortcuts">
-        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 font-medium">
-          <Keyboard aria-hidden className="size-4" />
-          {modText(lang, "modx.keys.toggle")}
-        </summary>
-        <div className="space-y-2 border-t px-3 py-2">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-            {(
-              [
-                ["J / K", "modx.keys.move"],
-                ["A", "modx.keys.approve"],
-                ["D", "modx.keys.delete"],
-                ["T", "modx.keys.timeout"],
-                ["X", "modx.keys.dismiss"],
-              ] as const
-            ).map(([k, label]) => (
-              <React.Fragment key={k}>
-                <dt>
-                  <kbd className="rounded border px-1.5 font-mono text-xs">{k}</kbd>
-                </dt>
-                <dd>{modText(lang, label)}</dd>
-              </React.Fragment>
-            ))}
-          </dl>
-          <p className="text-xs text-muted-foreground">{modText(lang, "modx.keys.help")}</p>
-          <p className="sr-only">{t("mod.keys")}</p>
+      <div className="grid items-start gap-4 lg:grid-cols-[1.7fr_1fr]">
+        <div className="min-w-0 space-y-3">
+          <Filters filters={filters} categories={categories} onChange={setFilters} />
+          <QueueList
+            items={visible}
+            filtered={state.items.length > 0}
+            selectedKey={selected}
+            preset={preset}
+            lang={lang}
+            onSelect={select}
+            onAct={act}
+            onClearFilters={() => setFilters(NO_FILTERS)}
+          />
+          <p role="status" className="sr-only">
+            {selected ? modText(lang, "modx.selected", { n: Math.max(1, visible.findIndex((e) => e.key === selected) + 1), total: visible.length }) : ""}
+          </p>
         </div>
-      </details>
+
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-4">
+          <section className="module space-y-2 p-4" title={modText(lang, "modx.timeoutHint")}>
+            <h2 className="text-xl font-bold">{t("mod.timeoutLength")}</h2>
+            <Segmented label={t("mod.timeoutLength")} options={timeoutOptions} value={preset} onChange={setPreset} />
+          </section>
+
+          <section aria-labelledby="recent-heading" className="module space-y-3 p-4">
+            <h2 id="recent-heading" className="text-xl font-bold">
+              {t("mod.recent")}
+            </h2>
+            {state.resolved.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("mod.recentNone")}</p>
+            ) : (
+              <ul className="space-y-1.5" data-testid="mod-resolved">
+                {state.resolved.map((r) => (
+                  <li key={r.key} className="module-row flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2 text-sm">
+                    <span aria-hidden className="led text-chat" />
+                    <span className="font-semibold">{t(`mod.state.${r.state}` as I18nKey)}</span>
+                    <span className="text-muted-foreground">{r.categories.map((c) => t(categoryKey(c))).join(", ")}</span>
+                    {r.platformResult === "failed" || r.platformResult === "unsupported" ? (
+                      <span className="text-muted-foreground">{t(`mod.result.${r.platformResult}` as I18nKey)}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <details open className="module text-sm" data-testid="mod-shortcuts">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 font-semibold">
+              <Keyboard aria-hidden className="size-4" />
+              {modText(lang, "modx.keys.toggle")}
+            </summary>
+            <div className="space-y-3 border-t px-4 py-3">
+              <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2">
+                {(
+                  [
+                    ["J", "K", "modx.keys.move"],
+                    ["A", null, "modx.keys.approve"],
+                    ["D", null, "modx.keys.delete"],
+                    ["T", null, "modx.keys.timeout"],
+                    ["X", null, "modx.keys.dismiss"],
+                  ] as const
+                ).map(([k, k2, label]) => (
+                  <React.Fragment key={k}>
+                    <dt className="flex gap-1">
+                      <kbd className="keycap min-w-8 rounded-sm bg-desk-raised px-2 py-1 text-center font-mono text-sm font-semibold">{k}</kbd>
+                      {k2 ? <kbd className="keycap min-w-8 rounded-sm bg-desk-raised px-2 py-1 text-center font-mono text-sm font-semibold">{k2}</kbd> : null}
+                    </dt>
+                    <dd>{modText(lang, label)}</dd>
+                  </React.Fragment>
+                ))}
+              </dl>
+              <p className="text-xs text-muted-foreground">{modText(lang, "modx.keys.help")}</p>
+              <p className="sr-only">{t("mod.keys")}</p>
+            </div>
+          </details>
+
+          <p className="text-xs text-muted-foreground">{t("mod.privacy")}</p>
+        </aside>
+      </div>
     </div>
   )
 }

@@ -27,38 +27,38 @@ export function FaceCard({ face, nowMs, removing = false, onRemove }: FaceCardPr
   const expiry = expiryInfo(face.expires_at, nowMs)
 
   return (
-    <Card className="flex items-center gap-3 p-3" data-face-id={face.face_id}>
-      <Avatar className="size-12 shrink-0">
-        <AvatarFallback aria-hidden>
-          <User className="size-6" />
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="break-words text-base font-semibold leading-snug">{face.label}</p>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-          <Badge variant="secondary" className="gap-1">
-            <Eye aria-hidden className="size-3.5" />
-            {t("enrol.visible")}
-          </Badge>
-          <span data-testid="expiry">
-            {expiry.kind === "never" ? t("enrol.noExpiry") : null}
-            {expiry.kind === "expired" ? t("enrol.expired") : null}
-            {expiry.kind === "in"
-              ? `${t("enrol.expiresIn")} ${expiry.hours} ${t("unit.h")} ${expiry.minutes} ${t("unit.min")}`
-              : null}
-          </span>
-        </div>
+    <Card className="flex flex-col gap-3 p-3" data-face-id={face.face_id}>
+      <div className="flex items-center gap-3">
+        <Avatar className="size-12 shrink-0 rounded-md">
+          <AvatarFallback aria-hidden className="rounded-md">
+            <User className="size-6" />
+          </AvatarFallback>
+        </Avatar>
+        <p className="min-w-0 flex-1 break-words font-display text-xl font-bold leading-tight">{face.label}</p>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11 shrink-0"
+          disabled={removing}
+          onClick={() => onRemove(face)}
+          aria-label={`${t("enrol.remove")}: ${face.label}`}
+        >
+          <Trash2 aria-hidden />
+        </Button>
       </div>
-      <Button
-        variant="outline"
-        size="icon"
-        className="size-11 shrink-0"
-        disabled={removing}
-        onClick={() => onRemove(face)}
-        aria-label={`${t("enrol.remove")}: ${face.label}`}
-      >
-        <Trash2 aria-hidden />
-      </Button>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+        <Badge variant="secondary" className="gap-1">
+          <Eye aria-hidden className="size-3.5" />
+          {t("enrol.visible")}
+        </Badge>
+        <span data-testid="expiry">
+          {expiry.kind === "never" ? t("enrol.noExpiry") : null}
+          {expiry.kind === "expired" ? t("enrol.expired") : null}
+          {expiry.kind === "in"
+            ? `${t("enrol.expiresIn")} ${expiry.hours} ${t("unit.h")} ${expiry.minutes} ${t("unit.min")}`
+            : null}
+        </span>
+      </div>
     </Card>
   )
 }

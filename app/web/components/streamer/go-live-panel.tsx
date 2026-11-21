@@ -25,13 +25,15 @@ import {
   type SetupForm,
 } from "@/lib/golive"
 import type { I18nKey } from "@/lib/i18n"
+import { setupText } from "@/lib/i18n-setup"
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
 import { IngestCard } from "@/components/streamer/ingest-card"
+import { SetupHeader, StatusLed } from "@/components/streamer/setup-header"
+import { SignalPath } from "@/components/streamer/setup-signal-path"
 import { useStreamerApi } from "@/components/streamer/use-streamer-api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -226,24 +228,39 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
 
   const stateLabel = state ? t(SESSION_STATE_KEY[state]) : ""
   const inFailure = state === "failed" || state === "engine_lost"
+  const anyDest = form ? DESTINATIONS.some((k) => form.destinations[k]) : false
+  const onAir = session?.output === "live" && active
+  const stepTitle = (n: number, text: string) => (
+    <h2 className="flex items-center gap-3 font-display text-xl font-bold">
+      <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-desk-raised text-sm text-primary">
+        {n}
+      </span>
+      {text}
+    </h2>
+  )
 
   return (
     <section className="space-y-6" aria-labelledby="golive-title">
-      <header className="space-y-1">
-        <h1 id="golive-title" className="text-2xl font-bold tracking-tight">
-          {t("page.goLive.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("page.goLive.desc")}</p>
-      </header>
+      <SetupHeader id="golive-title" title={t("page.goLive.title")} description={t("page.goLive.desc")}>
+        {form ? (
+          <StatusLed tone={inFailure || onAir ? "tally" : verdict?.ok ? "success" : "warning"}>
+            {stateLabel || t("golive.state.idle")}
+          </StatusLed>
+        ) : null}
+      </SetupHeader>
 
       {!form && !loadFailed ? <p role="status">{t("golive.loading")}</p> : null}
       {loadFailed ? (
         <div role="alert" className="space-y-2">
           <p>{t("golive.loadFailed")}</p>
-          <Button variant="outline" size="lg" onClick={() => {
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => {
               setLoadFailed(false)
               load()
-            }}>
+            }}
+          >
             {t("enrol.retry")}
           </Button>
         </div>
@@ -251,14 +268,16 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
 
       {form ? (
         <>
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{t("golive.dest.title")}</CardTitle>
-                <CardDescription>{t("golive.dest.desc")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ul className="space-y-3">
+          <SignalPath state={state} destOk={anyDest && verdict?.ok === true} anyDest={anyDest} onAir={onAir} />
+
+          <div className="grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
+            <div className="module space-y-6 p-4 md:p-5" role="group" aria-label={setupText(lang, "setup.checklist")}>
+              <section className="space-y-3" aria-labelledby="step-dest">
+                <div id="step-dest">{stepTitle(1, setupText(lang, "setup.step.1"))}</div>
+                <p className="sr-only">
+                  {t("golive.dest.title")}. {t("golive.dest.desc")}
+                </p>
+                <ul className="space-y-2">
                   {DESTINATIONS.map((kind) => {
                     const id = `dest-${kind}`
                     const configured = keyConfigured(config, kind, typed)
@@ -268,64 +287,72 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
                     const name = PLATFORM_NAME[kind]
                     const runningLive = session?.output === "live" && (session.destinations ?? []).includes(kind) && active
                     return (
-                      <li key={kind} className="space-y-2">
-                       <div className="flex min-h-11 items-center justify-between gap-3">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <Label htmlFor={id} className="text-base">
-                            {t(`golive.dest.${kind}` as I18nKey)}
-                          </Label>
-                          <Badge variant={configured ? "secondary" : "destructive"} className="gap-1">
-                            {configured ? <CheckCircle2 aria-hidden className="size-3.5" /> : <CircleX aria-hidden className="size-3.5" />}
-                            {configured ? t("golive.key.configured") : t("golive.key.missing")}
-                          </Badge>
-                        </div>
-                        <Switch
-                          id={id}
-                          checked={form.destinations[kind]}
-                          disabled={locked || busy !== null}
-                          onCheckedChange={(on) => setForm({ ...form, destinations: { ...form.destinations, [kind]: on } })}
-                        />
-                       </div>
-                       <p className="text-sm text-muted-foreground" data-testid={`dest-status-${kind}`}>
-                        {source ? glText(lang, source === "env" ? "golive.keyFrom.env" : "golive.keyFrom.session") : glText(lang, "golive.keyNone")}
-                        {" · "}
-                        <span className={runningLive ? "font-semibold text-red-600" : ""}>
-                          {runningLive
-                            ? glText(lang, "golive.out.liveNow")
-                            : form.destinations[kind]
-                              ? glText(lang, "golive.out.rtmps", { name })
-                              : glText(lang, "golive.out.previewOnly")}
-                        </span>
-                       </p>
-                       {sessionApi.setDestinationKey && source !== "env" ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Label htmlFor={`key-${kind}`} className="sr-only">
-                            {glText(lang, "golive.key.label", { name })}
-                          </Label>
-                          <Input
-                            id={`key-${kind}`}
-                            type="password"
-                            autoComplete="off"
-                            spellCheck={false}
-                            className="min-w-0 flex-1"
-                            placeholder={glText(lang, "golive.key.label", { name })}
-                            value={keyDraft[kind]}
+                      <li key={kind} className="module-row space-y-2 p-3">
+                        <div className="flex min-h-11 items-center justify-between gap-3">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <Label htmlFor={id} className="font-display text-xl font-bold">
+                              {t(`golive.dest.${kind}` as I18nKey)}
+                            </Label>
+                            <Badge variant={configured ? "secondary" : "destructive"} className="gap-1">
+                              {configured ? <CheckCircle2 aria-hidden className="size-3.5" /> : <CircleX aria-hidden className="size-3.5" />}
+                              {configured ? t("golive.key.configured") : t("golive.key.missing")}
+                            </Badge>
+                          </div>
+                          <Switch
+                            id={id}
+                            checked={form.destinations[kind]}
                             disabled={locked || busy !== null}
-                            onChange={(e) => setKeyDraft((d) => ({ ...d, [kind]: e.target.value }))}
+                            onCheckedChange={(on) => setForm({ ...form, destinations: { ...form.destinations, [kind]: on } })}
                           />
-                          <Button type="button" variant="outline" size="lg" disabled={locked || busy !== null || keyDraft[kind].trim() === ""} onClick={() => void saveKey(kind)}>
-                            {glText(lang, "golive.key.set")}
-                          </Button>
-                          {source === "session" ? (
-                            <Button type="button" variant="ghost" size="lg" disabled={locked || busy !== null} onClick={() => void forgetKey(kind)}>
-                              {glText(lang, "golive.key.clear")}
-                            </Button>
-                          ) : null}
                         </div>
-                       ) : null}
-                       {keyMsg?.kind === kind ? (
-                        <p role="status" className="text-sm">{keyMsg.text}</p>
-                       ) : null}
+                        <p className="text-sm text-muted-foreground" data-testid={`dest-status-${kind}`}>
+                          {source ? glText(lang, source === "env" ? "golive.keyFrom.env" : "golive.keyFrom.session") : glText(lang, "golive.keyNone")}
+                          {" · "}
+                          <span className={runningLive ? "font-semibold text-tally" : ""}>
+                            {runningLive
+                              ? glText(lang, "golive.out.liveNow")
+                              : form.destinations[kind]
+                                ? glText(lang, "golive.out.rtmps", { name })
+                                : glText(lang, "golive.out.previewOnly")}
+                          </span>
+                        </p>
+                        {sessionApi.setDestinationKey && source !== "env" ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Label htmlFor={`key-${kind}`} className="sr-only">
+                              {glText(lang, "golive.key.label", { name })}
+                            </Label>
+                            <Input
+                              id={`key-${kind}`}
+                              type="password"
+                              autoComplete="off"
+                              spellCheck={false}
+                              className="min-w-0 flex-1"
+                              placeholder={glText(lang, "golive.key.label", { name })}
+                              value={keyDraft[kind]}
+                              disabled={locked || busy !== null}
+                              onChange={(e) => setKeyDraft((d) => ({ ...d, [kind]: e.target.value }))}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="lg"
+                              disabled={locked || busy !== null || keyDraft[kind].trim() === ""}
+                              onClick={() => void saveKey(kind)}
+                            >
+                              {glText(lang, "golive.key.set")}
+                            </Button>
+                            {source === "session" ? (
+                              <Button type="button" variant="ghost" size="lg" disabled={locked || busy !== null} onClick={() => void forgetKey(kind)}>
+                                {glText(lang, "golive.key.clear")}
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {keyMsg?.kind === kind ? (
+                          <p role="status" className="text-sm">
+                            {keyMsg.text}
+                          </p>
+                        ) : null}
                       </li>
                     )
                   })}
@@ -333,179 +360,174 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
                 {DESTINATIONS.some((k) => !keyConfigured(config, k)) ? (
                   <p className="text-sm text-muted-foreground">{sessionApi.setDestinationKey ? glText(lang, "golive.key.hint") : t("golive.key.missingHint")}</p>
                 ) : null}
-              </CardContent>
-            </Card>
+              </section>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{t("golive.delay.title")}</CardTitle>
-                <CardDescription>{t("golive.delay.desc")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor={delayId}>{t("golive.delay.label")}</Label>
-                    <output htmlFor={delayId} className="text-lg font-semibold tabular-nums">
-                      {t("golive.delay.value").replace("{seconds}", form.delay.toFixed(1))}
-                    </output>
+              <section className="space-y-3" aria-labelledby="step-delay">
+                <div id="step-delay">{stepTitle(2, setupText(lang, "setup.step.2"))}</div>
+                <div className="module-row space-y-4 p-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label htmlFor={delayId}>{t("golive.delay.label")}</Label>
+                      <output htmlFor={delayId} className="timecode text-3xl font-bold">
+                        {t("golive.delay.value").replace("{seconds}", form.delay.toFixed(1))}
+                      </output>
+                    </div>
+                    <Slider
+                      id={delayId}
+                      thumbLabel={t("golive.delay.label")}
+                      valueText={t("golive.delay.value").replace("{seconds}", form.delay.toFixed(1))}
+                      min={DELAY_MIN}
+                      max={DELAY_MAX}
+                      step={DELAY_STEP}
+                      value={[form.delay]}
+                      disabled={active || busy !== null}
+                      onValueChange={([value]) => setForm({ ...form, delay: clampDelay(value) })}
+                    />
+                    <p className="text-xs text-muted-foreground">{t("golive.delay.desc")}</p>
+                    {active ? <p className="text-sm text-muted-foreground">{t("golive.delay.locked")}</p> : null}
+                    {form.delay > 4.5 ? <p className="text-sm text-muted-foreground">{t("golive.delay.warn")}</p> : null}
                   </div>
-                  <Slider
-                    id={delayId}
-                    thumbLabel={t("golive.delay.label")}
-                    valueText={t("golive.delay.value").replace("{seconds}", form.delay.toFixed(1))}
-                    min={DELAY_MIN}
-                    max={DELAY_MAX}
-                    step={DELAY_STEP}
-                    value={[form.delay]}
-                    disabled={active || busy !== null}
-                    onValueChange={([value]) => setForm({ ...form, delay: clampDelay(value) })}
-                  />
-                  {active ? <p className="text-sm text-muted-foreground">{t("golive.delay.locked")}</p> : null}
-                  {form.delay > 4.5 ? <p className="text-sm text-muted-foreground">{t("golive.delay.warn")}</p> : null}
+                  <div className="space-y-1.5">
+                    <Label htmlFor={profileId}>{t("golive.profile.label")}</Label>
+                    <Select
+                      id={profileId}
+                      value={form.profile}
+                      disabled={active || busy !== null}
+                      onChange={(event) => setForm({ ...form, profile: event.target.value === "demo" ? "demo" : "dev" })}
+                    >
+                      {PROFILES.map((profile) => (
+                        <option key={profile} value={profile}>
+                          {t(`golive.profile.${profile}` as I18nKey)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor={profileId}>{t("golive.profile.label")}</Label>
-                  <Select
-                    id={profileId}
-                    value={form.profile}
-                    disabled={active || busy !== null}
-                    onChange={(event) => setForm({ ...form, profile: event.target.value === "demo" ? "demo" : "dev" })}
+              </section>
+
+              <section className="space-y-3" aria-labelledby="step-go">
+                <div id="step-go">{stepTitle(3, setupText(lang, "setup.step.3"))}</div>
+                <div className="module-row space-y-2 p-3">
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span className="font-semibold">{t("golive.session")}:</span>
+                    <span role="status" aria-live="polite" data-testid="session-state" data-state={state ?? ""}>
+                      {stateLabel}
+                    </span>
+                    {session?.session_id ? (
+                      <span className="text-xs text-muted-foreground">
+                        {t("golive.session.id")}: <code>{session.session_id}</code>
+                      </span>
+                    ) : null}
+                  </p>
+                  {session?.output ? (
+                    <p className="text-sm font-semibold" data-testid="output-mode" data-mode={session.output}>
+                      {session.output === "live" ? glText(lang, "golive.out.liveNow") : glText(lang, "golive.out.rehearsalNow")}
+                    </p>
+                  ) : null}
+                  {rehearsalActive ? <p className="text-sm text-muted-foreground">{glText(lang, "golive.rehearsalRunning")}</p> : null}
+                  {newAddress && active ? (
+                    <p role="status" className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-sm" data-testid="new-address">
+                      {glText(lang, newAddress.stable ? "golive.stableLogin" : "golive.newAddress")}
+                    </p>
+                  ) : null}
+                  {verdict && !locked ? (
+                    <p id="golive-readiness" className="text-sm" data-testid="readiness">
+                      {verdict.ok
+                        ? t("golive.ready.ok")
+                        : verdict.reason === "no_destination"
+                          ? t("golive.ready.no_destination")
+                          : t("golive.ready.missing_keys").replace("{names}", names(verdict.missing))}
+                    </p>
+                  ) : null}
+                  {checks ? (
+                    <div className="space-y-1 pt-1">
+                      <p className="text-sm font-semibold">{t("golive.checks.title")}</p>
+                      <p className="text-xs text-muted-foreground">{t("golive.checks.desc")}</p>
+                      <ul className="space-y-1.5 pt-1" data-testid="setup-checks">
+                        {CHECK_LABELS.map(([key, label]) => (
+                          <li key={key} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="flex items-center gap-2">
+                              <span aria-hidden className={`led ${checks[key] ? "text-success" : "text-muted-foreground"}`} />
+                              {t(label)}
+                            </span>
+                            <span className={checks[key] ? "inline-flex items-center gap-1 font-medium text-success" : "text-muted-foreground"}>
+                              {checks[key] ? <CheckCircle2 aria-hidden className="size-4" /> : null}
+                              {checks[key] ? t("golive.check.ok") : t("golive.check.off")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div role="alert" className="min-h-6">
+                  {errorKey ? (
+                    <p className="flex items-start gap-2 text-sm font-medium text-destructive">
+                      <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
+                      {t(errorKey)}
+                    </p>
+                  ) : null}
+                </div>
+
+                {rehearsalActive ? (
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="min-h-14 w-full bg-destructive text-lg text-destructive-foreground hover:bg-destructive/90"
+                    disabled={!verdict?.ok || busy !== null || state === "stopping"}
+                    aria-describedby="golive-readiness"
+                    onClick={() => void start()}
                   >
-                    {PROFILES.map((profile) => (
-                      <option key={profile} value={profile}>
-                        {t(`golive.profile.${profile}` as I18nKey)}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t("golive.session")}</CardTitle>
-              <CardDescription>
-                <span role="status" aria-live="polite" data-testid="session-state" data-state={state ?? ""}>
-                  {stateLabel}
-                </span>
-                {session?.session_id ? (
-                  <span className="ml-2 text-xs">
-                    {t("golive.session.id")}: <code>{session.session_id}</code>
-                  </span>
+                    {busy === "start" ? <Loader2 aria-hidden className="animate-spin motion-reduce:animate-none" /> : null}
+                    {busy === "start" ? glText(lang, "golive.switching") : glText(lang, "golive.switch")}
+                  </Button>
                 ) : null}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {session?.output ? (
-                <p className="text-sm font-semibold" data-testid="output-mode" data-mode={session.output}>
-                  {session.output === "live" ? glText(lang, "golive.out.liveNow") : glText(lang, "golive.out.rehearsalNow")}
-                </p>
-              ) : null}
-              {rehearsalActive ? <p className="text-sm text-muted-foreground">{glText(lang, "golive.rehearsalRunning")}</p> : null}
-              {newAddress && active ? (
-                <p role="status" className="rounded-md border border-amber-500 bg-amber-500/10 px-3 py-2 text-sm" data-testid="new-address">
-                  {glText(lang, newAddress.stable ? "golive.stableLogin" : "golive.newAddress")}
-                </p>
-              ) : null}
-              {verdict && !locked ? (
-                <p id="golive-readiness" className="text-sm" data-testid="readiness">
-                  {verdict.ok
-                    ? t("golive.ready.ok")
-                    : verdict.reason === "no_destination"
-                      ? t("golive.ready.no_destination")
-                      : t("golive.ready.missing_keys").replace("{names}", names(verdict.missing))}
-                </p>
-              ) : null}
 
-              <div role="alert" className="min-h-6">
-                {errorKey ? (
-                  <p className="flex items-start gap-2 text-sm font-medium text-destructive">
-                    <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
-                    {t(errorKey)}
+                {active ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="lg"
+                    className="min-h-14 w-full text-lg"
+                    disabled={busy !== null || state === "stopping"}
+                    onClick={() => setStopOpen(true)}
+                  >
+                    {busy === "stop" || state === "stopping" ? <Loader2 aria-hidden className="animate-spin motion-reduce:animate-none" /> : null}
+                    {busy === "stop" || state === "stopping" ? t("golive.stopping") : t("golive.stop")}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="min-h-14 w-full text-lg"
+                    disabled={!verdict?.ok || busy !== null}
+                    aria-describedby="golive-readiness"
+                    onClick={() => void start()}
+                  >
+                    {busy === "start" ? <Loader2 aria-hidden className="animate-spin motion-reduce:animate-none" /> : null}
+                    {busy === "start" ? t("golive.starting") : t("golive.start")}
+                  </Button>
+                )}
+
+                {inFailure ? (
+                  <p role="alert" className="text-sm font-medium text-destructive">
+                    {stateLabel}
                   </p>
                 ) : null}
-              </div>
 
-              {rehearsalActive ? (
-                <Button
-                  type="button"
-                  size="lg"
-                  className="min-h-14 w-full bg-red-600 text-lg text-white hover:bg-red-700"
-                  disabled={!verdict?.ok || busy !== null || state === "stopping"}
-                  aria-describedby="golive-readiness"
-                  onClick={() => void start()}
-                >
-                  {busy === "start" ? <Loader2 aria-hidden className="animate-spin motion-reduce:animate-none" /> : null}
-                  {busy === "start" ? glText(lang, "golive.switching") : glText(lang, "golive.switch")}
-                </Button>
-              ) : null}
+                {active ? (
+                  <Button asChild variant="outline" size="lg" className="w-full">
+                    <Link href="/live">{t("golive.toLive")}</Link>
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("golive.next")}</p>
+                )}
+              </section>
+            </div>
 
-              {active ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="lg"
-                  className="min-h-14 w-full text-lg"
-                  disabled={busy !== null || state === "stopping"}
-                  onClick={() => setStopOpen(true)}
-                >
-                  {busy === "stop" || state === "stopping" ? <Loader2 aria-hidden className="animate-spin motion-reduce:animate-none" /> : null}
-                  {busy === "stop" || state === "stopping" ? t("golive.stopping") : t("golive.stop")}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="lg"
-                  className="min-h-14 w-full text-lg"
-                  disabled={!verdict?.ok || busy !== null}
-                  aria-describedby="golive-readiness"
-                  onClick={() => void start()}
-                >
-                  {busy === "start" ? <Loader2 aria-hidden className="animate-spin motion-reduce:animate-none" /> : null}
-                  {busy === "start" ? t("golive.starting") : t("golive.start")}
-                </Button>
-              )}
-
-              {inFailure ? (
-                <p role="alert" className="text-sm font-medium text-destructive">
-                  {stateLabel}
-                </p>
-              ) : null}
-
-              {active ? (
-                <Button asChild variant="outline" size="lg" className="w-full">
-                  <Link href="/live">{t("golive.toLive")}</Link>
-                </Button>
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("golive.next")}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {checks ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{t("golive.checks.title")}</CardTitle>
-                <CardDescription>{t("golive.checks.desc")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2" data-testid="setup-checks">
-                  {CHECK_LABELS.map(([key, label]) => (
-                    <li key={key} className="flex items-center justify-between gap-3 text-sm">
-                      <span>{t(label)}</span>
-                      <span className={checks[key] ? "inline-flex items-center gap-1 font-medium text-success" : "text-muted-foreground"}>
-                        {checks[key] ? <CheckCircle2 aria-hidden className="size-4" /> : null}
-                        {checks[key] ? t("golive.check.ok") : t("golive.check.off")}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <IngestCard rtmpUrl={session?.ingest.rtmp_url ?? null} srtUrl={session?.ingest.srt_url ?? null} pairing={shownPairing} qrSrc={shownPairing ? qrSrc : null} />
+            <IngestCard rtmpUrl={session?.ingest.rtmp_url ?? null} srtUrl={session?.ingest.srt_url ?? null} pairing={shownPairing} qrSrc={shownPairing ? qrSrc : null} />
+          </div>
         </>
       ) : null}
 

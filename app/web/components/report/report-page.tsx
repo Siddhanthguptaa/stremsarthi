@@ -20,9 +20,14 @@ import { useReportText } from "@/components/report/use-report-text"
 const PRINT_CSS = `
 @media print {
   body > header, body > a, body > div > header, [data-toast-viewport] { display: none !important; }
+  body { background: #fff !important; }
+  div:has(> main) { padding-left: 0 !important; }
   main { max-width: none !important; padding: 0 !important; }
+  [data-report], [data-report] * { color: #000 !important; box-shadow: none !important; }
+  [data-report] .module, [data-report] .module-row { background: #fff !important; border-color: #bbb !important; }
+  [data-report] .text-muted-foreground { color: #444 !important; }
+  [data-report] .mosaic { background: #000 !important; }
   [data-report] section, [data-report] li, [data-report] tr { break-inside: avoid; }
-  [data-report] * { box-shadow: none !important; }
 }
 `
 
@@ -64,11 +69,11 @@ function Problem({ code, onRetry }: { code: ProblemCode; onRetry: (() => void) |
   )
 }
 
-function Meta({ label, value }: { label: string; value: string }) {
+function Meta({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="font-medium tabular-nums">{value}</dd>
+    <div className="min-w-0">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className={mono ? "timecode break-all text-xl font-bold leading-tight" : "timecode text-2xl font-bold leading-tight"}>{value}</dd>
     </div>
   )
 }
@@ -84,13 +89,15 @@ export function ReportView({ report }: { report: SafetyReport }) {
       )
     : "-"
   return (
-    <div className="space-y-5" data-report>
+    <div className="space-y-5 print:bg-white print:text-black" data-report>
       <style>{PRINT_CSS}</style>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">{x.tr("report.title")}</h1>
-        <p className="text-muted-foreground">{x.tr("report.sub")}</p>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3 md:grid-cols-6" data-testid="report-meta">
-          <Meta label={x.tr("report.session")} value={report.session_id} />
+      <header className="space-y-4">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-extrabold leading-[1.05] md:text-5xl">{x.tr("report.title")}</h1>
+          <p className="text-muted-foreground">{x.tr("report.sub")}</p>
+        </div>
+        <dl className="module grid grid-cols-2 gap-x-6 gap-y-4 p-4 sm:grid-cols-3 lg:grid-cols-6" data-testid="report-meta">
+          <Meta label={x.tr("report.session")} value={report.session_id} mono />
           <Meta label={x.tr("report.when")} value={`${dateLine}, ${when(report.started_at)}`} />
           <Meta label={x.tr("report.ended")} value={when(report.ended_at)} />
           <Meta label={x.tr("report.duration")} value={formatDuration(duration)} />
@@ -100,7 +107,7 @@ export function ReportView({ report }: { report: SafetyReport }) {
       </header>
 
       {report.ended_at === null ? (
-        <p role="status" className="rounded-md border bg-card p-3 text-sm font-medium" data-testid="report-partial">
+        <p role="status" className="module p-3 text-sm font-medium" data-testid="report-partial">
           {x.tr("report.partial")}
         </p>
       ) : null}

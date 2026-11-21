@@ -7,10 +7,12 @@ import type { ApiClient, EnrolList } from "@/lib/api"
 import type { CaptureDeps } from "@/lib/capture"
 import { cleanLabel, enrolErrorKey, LABEL_MAX } from "@/lib/enrol"
 import type { I18nKey } from "@/lib/i18n"
+import { setupText } from "@/lib/i18n-setup"
 import { CameraCapture } from "@/components/enrollment/camera-capture"
 import { FaceCard } from "@/components/enrollment/face-card"
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
+import { SetupHeader, StatusLed } from "@/components/streamer/setup-header"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -52,7 +54,7 @@ interface EnrolPanelProps {
  * The browser keeps no photos and no face data: frames go to the API once, the list shows labels and times.
  */
 export function EnrolPanel({ api, captureDeps }: EnrolPanelProps) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [list, setList] = React.useState<EnrolList | null>(null)
   const [loadFailed, setLoadFailed] = React.useState(false)
   const [label, setLabel] = React.useState("")
@@ -128,69 +130,89 @@ export function EnrolPanel({ api, captureDeps }: EnrolPanelProps) {
     [api],
   )
 
+  const free = list ? Math.max(0, list.max_faces - faces.length) : null
+
   return (
     <section className="space-y-6" aria-labelledby="enrol-title">
-      <header className="space-y-1">
-        <h1 id="enrol-title" className="text-2xl font-bold tracking-tight">
-          {t("page.enrol.title")}
-        </h1>
-        <p className="text-muted-foreground">{t("page.enrol.desc")}</p>
-      </header>
-
-      <div className="space-y-1.5">
-        <Label htmlFor={labelId}>{t("enrol.label.field")}</Label>
-        <Input
-          id={labelId}
-          value={label}
-          maxLength={LABEL_MAX}
-          autoComplete="off"
-          autoCapitalize="words"
-          spellCheck={false}
-          className="h-11"
-          aria-describedby={`${labelId}-hint`}
-          onChange={(e) => setLabel(e.target.value)}
-        />
-        <p id={`${labelId}-hint`} className="text-xs text-muted-foreground">
-          {t("enrol.label.hint")}
-        </p>
-      </div>
-
-      <CameraCapture onCaptured={onCaptured} canScan={canScan} blockedHint={blockedHint} deps={captureDeps} />
-
-      <div role="status" aria-live="polite" className="min-h-6 text-sm" data-testid="enrol-message">
-        {message?.kind === "ok" ? (
-          <span className="inline-flex items-center gap-1.5 text-success">
-            <CheckCircle2 aria-hidden className="size-4" />
-            {t(message.key)}
-          </span>
+      <SetupHeader id="enrol-title" title={t("page.enrol.title")} description={t("page.enrol.desc")}>
+        {list ? (
+          <StatusLed tone={full ? "warning" : "success"}>
+            {faces.length} {t("enrol.of")} {list.max_faces}
+            {free !== null ? ` (${setupText(lang, "setup.enrol.slots", { n: free })})` : ""}
+          </StatusLed>
         ) : null}
-        {message?.kind === "error" ? (
-          <span role="alert" className="inline-flex items-center gap-1.5 text-destructive">
-            <AlertTriangle aria-hidden className="size-4" />
-            {t(message.key)}
-          </span>
-        ) : null}
-      </div>
+      </SetupHeader>
 
-      <section aria-labelledby="enrolled-title" className="space-y-3">
-        <h2 id="enrolled-title" className="flex flex-wrap items-baseline gap-2 text-lg font-semibold">
-          {t("enrol.list.title")}
-          {list ? (
-            <span className="text-sm font-normal text-muted-foreground">
-              {faces.length} {t("enrol.of")} {list.max_faces}
-            </span>
+      <div className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div className="space-y-3">
+          <div className="module space-y-1.5 p-4">
+            <div className="flex items-center gap-3">
+              <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-desk-raised text-sm font-bold text-primary">
+                1
+              </span>
+              <Label htmlFor={labelId} className="font-display text-xl font-bold">
+                {t("enrol.label.field")}
+              </Label>
+            </div>
+            <Input
+              id={labelId}
+              value={label}
+              maxLength={LABEL_MAX}
+              autoComplete="off"
+              autoCapitalize="words"
+              spellCheck={false}
+              className="h-11"
+              aria-describedby={`${labelId}-hint`}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+            <p id={`${labelId}-hint`} className="text-xs text-muted-foreground">
+              {t("enrol.label.hint")}
+            </p>
+          </div>
+
+          <CameraCapture onCaptured={onCaptured} canScan={canScan} blockedHint={blockedHint} deps={captureDeps} />
+
+          <div role="status" aria-live="polite" className="min-h-6 text-sm" data-testid="enrol-message">
+            {message?.kind === "ok" ? (
+              <span className="inline-flex items-center gap-1.5 text-success">
+                <CheckCircle2 aria-hidden className="size-4" />
+                {t(message.key)}
+              </span>
+            ) : null}
+            {message?.kind === "error" ? (
+              <span role="alert" className="inline-flex items-center gap-1.5 text-destructive">
+                <AlertTriangle aria-hidden className="size-4" />
+                {t(message.key)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <section aria-labelledby="enrolled-title" className="space-y-3">
+          <h2 id="enrolled-title" className="flex flex-wrap items-baseline gap-2 font-display text-2xl font-bold">
+            {t("enrol.list.title")}
+            {list ? (
+              <span className="text-sm font-normal text-muted-foreground">
+                {faces.length} {t("enrol.of")} {list.max_faces}
+              </span>
+            ) : null}
+          </h2>
+          {loadFailed ? <p role="alert">{t("enrol.list.loadFailed")}</p> : null}
+          {list && faces.length === 0 ? (
+            <div className="module flex items-center gap-3 p-4">
+              <span aria-hidden className="mosaic mosaic-video size-12 shrink-0 rounded-md" />
+              <p className="text-muted-foreground">{t("enrol.list.empty")}</p>
+            </div>
           ) : null}
-        </h2>
-        {loadFailed ? <p role="alert">{t("enrol.list.loadFailed")}</p> : null}
-        {list && faces.length === 0 ? <p className="text-muted-foreground">{t("enrol.list.empty")}</p> : null}
-        <ul className="space-y-2">
-          {faces.map((face) => (
-            <li key={face.face_id}>
-              <FaceCard face={face} nowMs={now} removing={removing.has(face.face_id)} onRemove={onRemove} />
-            </li>
-          ))}
-        </ul>
-      </section>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            {faces.map((face) => (
+              <li key={face.face_id}>
+                <FaceCard face={face} nowMs={now} removing={removing.has(face.face_id)} onRemove={onRemove} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </section>
   )
 }

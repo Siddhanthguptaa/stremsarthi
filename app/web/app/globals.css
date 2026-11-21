@@ -1,104 +1,73 @@
 /*
  * Adapted from Saximn/privastream (Apache-2.0), src/web/frontend/app/globals.css. See LICENSE.privastream.
- * Stream Sarthi theme: indigo primary, saffron accent, status colours, light/dark by system preference.
- * Contrast pairs were chosen for WCAG 2.2 AA (4.5:1 text, 3:1 UI components).
+ * Streamify "broadcast desk" theme. Design spec: app/web/DESIGN.md.
+ * Bright theme (one theme for all). Contrast pairs meet WCAG 2.2 AA.
  */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 210 25% 98%;
-    --foreground: 224 30% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 30% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 30% 11%;
-    --primary: 226 71% 38%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 94%;
-    --secondary-foreground: 224 30% 15%;
-    --muted: 220 18% 95%;
-    --muted-foreground: 220 12% 36%;
-    --accent: 26 95% 92%;
-    --accent-foreground: 24 80% 22%;
-    --destructive: 0 72% 41%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 152 60% 26%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 95% 52%;
-    --warning-foreground: 30 80% 10%;
-    --border: 220 15% 86%;
-    --input: 220 10% 52%;
-    --ring: 226 71% 45%;
-    --chart-1: 226 71% 45%;
-    --chart-2: 173 58% 32%;
-    --chart-3: 26 90% 45%;
-    --chart-4: 280 50% 45%;
-    --chart-5: 340 70% 45%;
-    --radius: 0.75rem;
-    --font-sans: "Noto Sans Variable", "Noto Sans Devanagari Variable", system-ui, sans-serif;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 224 30% 7%;
-      --foreground: 210 20% 96%;
-      --card: 224 28% 10%;
-      --card-foreground: 210 20% 96%;
-      --popover: 224 28% 10%;
-      --popover-foreground: 210 20% 96%;
-      --primary: 226 90% 74%;
-      --primary-foreground: 224 40% 10%;
-      --secondary: 224 22% 16%;
-      --secondary-foreground: 210 20% 96%;
-      --muted: 224 22% 15%;
-      --muted-foreground: 218 14% 68%;
-      --accent: 26 60% 22%;
-      --accent-foreground: 30 90% 92%;
-      --destructive: 0 72% 46%;
-      --destructive-foreground: 0 0% 100%;
-      --success: 152 55% 40%;
-      --success-foreground: 0 0% 6%;
-      --warning: 38 92% 55%;
-      --warning-foreground: 30 80% 8%;
-      --border: 224 18% 22%;
-      --input: 224 14% 46%;
-      --ring: 226 90% 74%;
-      --chart-1: 226 90% 74%;
-      --chart-2: 173 58% 50%;
-      --chart-3: 26 90% 60%;
-      --chart-4: 280 60% 72%;
-      --chart-5: 340 80% 68%;
-    }
-  }
-
-  /* Forced dark (the /live dashboard reduces glare regardless of the system setting). */
+  :root,
   .dark {
-    --background: 224 30% 7%;
-    --foreground: 210 20% 96%;
-    --card: 224 28% 10%;
-    --card-foreground: 210 20% 96%;
-    --popover: 224 28% 10%;
-    --popover-foreground: 210 20% 96%;
-    --primary: 226 90% 74%;
-    --primary-foreground: 224 40% 10%;
-    --secondary: 224 22% 16%;
-    --secondary-foreground: 210 20% 96%;
-    --muted: 224 22% 15%;
-    --muted-foreground: 218 14% 68%;
-    --accent: 26 60% 22%;
-    --accent-foreground: 30 90% 92%;
-    --destructive: 0 72% 46%;
+    color-scheme: light;
+
+    /* Surfaces: bright */
+    --background: 235 100% 98%; /* lavender white #F6F7FF */
+    --card: 0 0% 100%; /* white panel */
+    --desk-raised: 234 100% 96%; /* #ECEEFF */
+    --popover: 0 0% 100%;
+    --border: 234 55% 88%; /* #D3D7F6 */
+    --input: 236 25% 58%;
+
+    /* Text */
+    --foreground: 244 53% 15%; /* ink #14123A */
+    --card-foreground: 244 53% 15%;
+    --popover-foreground: 244 53% 15%;
+    --muted: 234 100% 96%;
+    --muted-foreground: 244 18% 40%;
+
+    /* Brand and actions */
+    --primary: 250 90% 58%; /* electric violet #5A3CF2 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 234 100% 95%;
+    --secondary-foreground: 244 53% 15%;
+    --accent: 234 100% 94%;
+    --accent-foreground: 244 53% 15%;
+    --ring: 250 90% 58%;
+
+    /* Status. Tally red is reserved for on-air and hold. */
+    --destructive: 350 84% 48%; /* tally red #E2133F */
     --destructive-foreground: 0 0% 100%;
-    --success: 152 55% 40%;
-    --success-foreground: 0 0% 6%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 30 80% 8%;
-    --border: 224 18% 22%;
-    --input: 224 14% 46%;
-    --ring: 226 90% 74%;
+    --tally: 350 90% 52%;
+    --success: 164 83% 33%; /* teal #0E9B76 */
+    --success-foreground: 0 0% 100%;
+    --warning: 24 100% 50%; /* signal orange #FF6A00 */
+    --warning-foreground: 244 53% 12%;
+
+    /* Modality colours, deep enough to read on white. */
+    --video: 32 95% 46%; /* marigold #E57C06 */
+    --audio: 164 83% 35%; /* teal */
+    --chat: 252 100% 66%; /* lilac violet #7A55FF */
+
+    --chart-1: 32 95% 46%;
+    --chart-2: 164 83% 35%;
+    --chart-3: 252 100% 66%;
+    --chart-4: 24 100% 50%;
+    --chart-5: 350 90% 52%;
+
+    --radius: 0.875rem;
+    --font-sans: "Hanken Grotesk Variable", "Noto Sans Devanagari Variable", system-ui, sans-serif;
+    --font-display: "Big Shoulders Display Variable", "Noto Sans Devanagari Variable", system-ui, sans-serif;
+
+    /* Height of the phone bottom tab bar, so fixed bars (HOLD) can sit above it. */
+    --bottom-nav-h: 4.25rem;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --bottom-nav-h: 0px;
+    }
   }
 }
 
@@ -115,6 +84,12 @@
     min-width: 320px;
     overflow-wrap: anywhere;
   }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.005em;
+  }
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
@@ -130,8 +105,78 @@
   }
 }
 
+@layer components {
+  /* A desk module: the panel every section sits in. Flat, a hairline, a faint top highlight. */
+  .module {
+    @apply rounded-lg border bg-card text-card-foreground;
+    box-shadow: 0 1px 0 hsl(var(--border)), 0 6px 18px -12px hsl(250 60% 40% / 0.25);
+  }
+  /* A row inside a module. Never nest modules. */
+  .module-row {
+    @apply rounded-md bg-background;
+  }
+  /* A physical key: depth from an inset bottom edge; the pressed state moves down. */
+  .keycap {
+    box-shadow:
+      inset 0 -3px 0 hsl(0 0% 0% / 0.28),
+      inset 0 1px 0 hsl(0 0% 100% / 0.18);
+  }
+  .keycap:active:not([aria-disabled="true"]):not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      inset 0 -1px 0 hsl(0 0% 0% / 0.28),
+      inset 0 1px 0 hsl(0 0% 100% / 0.12);
+  }
+  /* Status LED. Colour comes from `text-*`. */
+  .led {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+  }
+  /* The redaction mosaic: the brand's mask. Colour comes from `--mosaic` (an HSL triple). */
+  .mosaic {
+    --mosaic: var(--video);
+    background: conic-gradient(
+        hsl(var(--mosaic)) 25%,
+        hsl(var(--mosaic) / 0.55) 0 50%,
+        hsl(var(--mosaic) / 0.8) 0 75%,
+        hsl(var(--mosaic) / 0.4) 0
+      )
+      0 0 / 8px 8px;
+  }
+  .mosaic-video {
+    --mosaic: var(--video);
+  }
+  .mosaic-audio {
+    --mosaic: var(--audio);
+  }
+  .mosaic-chat {
+    --mosaic: var(--chat);
+  }
+  /* Hazard tape. Reserved for the HOLD control. */
+  .hazard {
+    background-image: repeating-linear-gradient(-45deg, hsl(48 100% 52%) 0 12px, hsl(var(--foreground)) 12px 24px);
+  }
+  /* Timecodes and counters: condensed, tabular. */
+  .timecode {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+}
+
 @layer utilities {
   .pb-safe {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media print {
+  .module {
+    box-shadow: none;
   }
 }

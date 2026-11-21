@@ -27,16 +27,10 @@ export function QueueList({ items, filtered, selectedKey, preset, lang, onSelect
   const { t } = useLanguage()
   if (items.length === 0) {
     return (
-      <div
-        role="status"
-        className="flex flex-col items-center gap-2 rounded-lg border bg-card px-4 py-8 text-center"
-        data-testid="mod-empty"
-      >
+      <div role="status" className="module flex flex-col items-center gap-2 px-4 py-10 text-center" data-testid="mod-empty">
         <Inbox aria-hidden className="size-8 text-muted-foreground" />
-        <p className="font-semibold">{filtered ? t("mod.emptyFiltered") : modText(lang, "modx.empty.title")}</p>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          {filtered ? modText(lang, "modx.filtered.body") : t("mod.empty")}
-        </p>
+        <p className="font-display text-2xl font-bold">{filtered ? t("mod.emptyFiltered") : modText(lang, "modx.empty.title")}</p>
+        <p className="max-w-prose text-sm text-muted-foreground">{filtered ? modText(lang, "modx.filtered.body") : t("mod.empty")}</p>
         {filtered && onClearFilters ? (
           <Button type="button" variant="outline" className="min-h-11" onClick={onClearFilters}>
             {modText(lang, "modx.filter.clear")}
@@ -46,8 +40,8 @@ export function QueueList({ items, filtered, selectedKey, preset, lang, onSelect
     )
   }
   return (
-    <div role="log" aria-live="polite" aria-relevant="additions" aria-label={t("mod.queue")} data-testid="mod-queue">
-      <ol className="space-y-3">
+    <div role="log" aria-live="polite" aria-relevant="additions" aria-label={t("mod.queue")} data-testid="mod-queue" className="module p-2">
+      <ol className="space-y-2">
         {items.map((entry) => (
           <QueueItem key={entry.key} entry={entry} selected={entry.key === selectedKey} preset={preset} lang={lang} onSelect={onSelect} onAct={onAct} />
         ))}

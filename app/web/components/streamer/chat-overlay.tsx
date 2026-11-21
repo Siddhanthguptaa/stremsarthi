@@ -19,14 +19,14 @@ interface ChatOverlayProps {
 export function ChatOverlay({ state }: ChatOverlayProps) {
   const { t, lang } = useLanguage()
   return (
-    <section aria-labelledby="chat-heading" className="space-y-2">
+    <section aria-labelledby="chat-heading" className="module space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="chat-heading" className="text-lg font-semibold">
+        <h2 id="chat-heading" className="text-xl font-bold">
           {t("chat.title")}
         </h2>
         <p
           data-testid="hidden-count"
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-full border bg-card px-3 text-sm font-medium"
+          className="module-row inline-flex min-h-8 items-center gap-1.5 px-3 text-sm font-medium"
         >
           <EyeOff aria-hidden className="size-4" />
           <span className="sr-only">{t("chat.hidden")}: </span>
@@ -40,13 +40,13 @@ export function ChatOverlay({ state }: ChatOverlayProps) {
         aria-relevant="additions"
         aria-label={t("chat.region")}
         tabIndex={0}
-        className="max-h-[40vh] min-h-24 overflow-y-auto rounded-lg border bg-card p-2"
+        className="module-row max-h-[40vh] min-h-24 overflow-y-auto p-1.5"
         data-testid="chat-overlay"
       >
         {state.messages.length === 0 ? (
           <p className="px-2 py-4 text-center text-sm text-muted-foreground">{t("chat.empty")}</p>
         ) : (
-          <ol className="space-y-1.5">
+          <ol className="divide-y divide-border">
             {state.messages.map((m) => (
               <ChatRow key={m.key} message={m} lang={lang} />
             ))}
@@ -65,7 +65,7 @@ const ChatRow = React.memo(function ChatRow({ message, lang }: { message: Overla
   const { t } = useLanguage()
   const iso = new Date(message.receivedAt * 1000).toISOString()
   return (
-    <li className="rounded-md border bg-background px-3 py-2" data-platform={message.platform}>
+    <li className="px-2 py-2" data-platform={message.platform}>
       <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
         <span className="font-semibold">{message.author}</span>
         {message.broadcaster ? (
@@ -73,7 +73,7 @@ const ChatRow = React.memo(function ChatRow({ message, lang }: { message: Overla
         ) : message.moderator ? (
           <span className="rounded border px-1.5 text-xs font-medium">{t("chat.role.moderator")}</span>
         ) : null}
-        <time dateTime={iso} className="text-xs text-muted-foreground">
+        <time dateTime={iso} className="timecode text-sm text-muted-foreground">
           {formatTime(iso, lang)}
         </time>
       </p>

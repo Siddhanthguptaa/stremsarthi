@@ -5,7 +5,6 @@ import * as React from "react"
 import { type ApiClient, createApi } from "@/lib/api"
 import { bootstrapToken, clearToken, loadStoredToken, subscribeToken, tokenStatusSnapshot } from "@/lib/auth"
 import { useLanguage } from "@/components/shell/language-provider"
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
 
 export type AuthStatus = "loading" | "ready" | "missing"
 
@@ -53,16 +52,35 @@ export function RequireToken({ children }: { children: React.ReactNode }) {
   const { status } = useAuth()
   const { t } = useLanguage()
   if (status === "ready") return <>{children}</>
-  if (status === "loading") return <p role="status">{t("auth.loading")}</p>
+  if (status === "loading")
+    return (
+      <p role="status" className="flex items-center gap-2 text-muted-foreground">
+        <span aria-hidden className="led animate-pulse text-primary" />
+        {t("auth.loading")}
+      </p>
+    )
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="text-2xl font-bold leading-tight">{t("auth.missing.title")}</h1>
-        <CardDescription>{t("auth.missing.body")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <code className="break-all text-sm">http://127.0.0.1:3000/#token=…</code>
-      </CardContent>
-    </Card>
+    <section className="module relative mx-auto max-w-2xl overflow-hidden" aria-labelledby="auth-missing-title">
+      {/* A strip of redaction mosaic: the link is the one secret this screen asks for. */}
+      <div aria-hidden className="mosaic h-3 w-full" />
+      <div className="space-y-5 p-6 md:p-8">
+        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <span aria-hidden className="led text-warning" />
+          <span>{t("brand.name")}</span>
+        </div>
+        <h1 id="auth-missing-title" className="text-4xl font-extrabold leading-[1.05] md:text-5xl">
+          {t("auth.missing.title")}
+        </h1>
+        <p className="max-w-prose text-muted-foreground">{t("auth.missing.body")}</p>
+        <div className="module-row flex items-center gap-3 border px-4 py-3">
+          <span aria-hidden className="font-display text-lg font-bold text-primary">$</span>
+          <code className="break-all text-sm">
+            http://127.0.0.1:3000/#token=
+            <span aria-hidden className="mosaic ml-0.5 inline-block h-3.5 w-16 translate-y-0.5 rounded-sm" />
+            <span className="sr-only">…</span>
+          </code>
+        </div>
+      </div>
+    </section>
   )
 }

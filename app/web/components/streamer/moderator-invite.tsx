@@ -7,7 +7,6 @@ import { ApiRequestError } from "@/lib/api"
 import { useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 /**
  * Streamer only: make a moderator link (`/mod#token=...`). The token goes into the link and nowhere else:
@@ -48,15 +47,15 @@ export function ModeratorInvite() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+    <section aria-labelledby="invite-heading" className="module space-y-3 p-4">
+      <div className="space-y-1">
+        <h2 id="invite-heading" className="flex items-center gap-2 text-xl font-bold">
           <UserPlus aria-hidden className="size-5" />
           {t("invite.title")}
-        </CardTitle>
-        <CardDescription>{t("invite.desc")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+        </h2>
+        <p className="text-sm text-muted-foreground">{t("invite.desc")}</p>
+      </div>
+      <div className="space-y-3">
         {link ? (
           <>
             <label className="block space-y-1 text-sm font-medium">
@@ -87,7 +86,7 @@ export function ModeratorInvite() {
         <span role="status" className="sr-only">
           {copied ? t("invite.copied") : ""}
         </span>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }

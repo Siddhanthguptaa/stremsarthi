@@ -18,17 +18,16 @@ import { chipFor, engineIsFresh, initialLiveState, liveReducer } from "@/lib/liv
 import type { WireTopic } from "@/lib/wire"
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
-import { ConnectionBanner } from "@/components/shell/connection-banner"
 import { AlertFeed } from "@/components/streamer/alert-feed"
 import { ChatOverlay } from "@/components/streamer/chat-overlay"
 import { CaptionsControl } from "@/components/streamer/captions-control"
-import { EngineChip } from "@/components/streamer/engine-chip"
+import { DelayTape } from "@/components/streamer/delay-tape"
 import { HoldButton } from "@/components/streamer/hold-button"
 import { ModeratorInvite } from "@/components/streamer/moderator-invite"
 import { chatProblemsFromHealth, chatStatusCode, withCode } from "@/lib/chat-status"
 import type { SessionView } from "@/lib/api-streamer"
-import { ChatStatusNotice } from "@/components/streamer/chat-status-notice"
-import { LiveBanner } from "@/components/streamer/live-banner"
+import { HoldDock } from "@/components/streamer/hold-bar"
+import { LiveTallyStrip } from "@/components/streamer/live-tally-strip"
 import { RiskMeter } from "@/components/streamer/risk-meter"
 import { useRealtime } from "@/components/streamer/use-realtime"
 import { useStreamerApi } from "@/components/streamer/use-streamer-api"
@@ -265,52 +264,64 @@ function Dashboard() {
   const engineConfirmed = engineFresh && live.engine !== null && live.engine.hold_active === view.held
 
   return (
-    <div className="space-y-6 pb-52">
+    <div className="space-y-4" style={{ paddingBottom: "calc(var(--bottom-nav-h) + 11rem)" }}>
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">{t("page.live.title")}</h1>
+        <h1 className="text-4xl font-extrabold leading-[1.05] md:text-5xl">{t("page.live.title")}</h1>
         <p className="text-muted-foreground">{t("page.live.desc")}</p>
       </header>
 
-      <LiveBanner session={session} />
+      <LiveTallyStrip
+        session={session}
+        held={view.held}
+        now={now}
+        chip={chip}
+        engine={engineFresh ? live.engine : null}
+        connection={connection}
+        apiDown={live.apiDown}
+        chatCodes={[...new Set([...healthCodes, ...chatCodes])]}
+      />
 
-      <ConnectionBanner state={connection} apiDown={live.apiDown} />
-
-      <ChatStatusNotice codes={[...new Set([...healthCodes, ...chatCodes])]} />
-
-      <EngineChip kind={chip} engine={engineFresh ? live.engine : null} />
-
-      <RiskMeter view={riskNow} />
-
-      <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
-
-      <ChatOverlay state={chat} />
-
-      <CaptionsControl api={api} lines={captions.lines} />
-
-      <ModeratorInvite />
-
-      <WakeLockSwitch />
-
-      <div
-        role="region"
-        aria-label={t("hold.region")}
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
-      >
-        <div className="mx-auto w-full max-w-5xl">
-          <HoldButton
-            view={view}
-            engineConfirmed={engineConfirmed}
-            onPress={press}
-            confirmOpen={confirmOpen}
-            onConfirmOpenChange={setConfirmOpen}
-            onConfirmResume={() => {
-              setConfirmOpen(false)
-              send(false)
-            }}
-          />
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-[1.4fr_1fr] md:items-start">
+        <div className="max-md:contents md:flex md:flex-col md:gap-4">
+          <div className="max-md:order-1">
+            <DelayTape alerts={live.alerts} now={now} delayS={engineFresh ? live.engine?.delay_s_p50 : session?.delay_seconds} />
+          </div>
+          <div className="max-md:order-3">
+            <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
+          </div>
+        </div>
+        <div className="max-md:contents md:flex md:flex-col md:gap-4">
+          <div className="max-md:order-2">
+            <RiskMeter view={riskNow} />
+          </div>
+          <div className="max-md:order-4">
+            <ChatOverlay state={chat} />
+          </div>
+          <div className="max-md:order-5">
+            <CaptionsControl api={api} lines={captions.lines} />
+          </div>
+          <div className="max-md:order-6">
+            <ModeratorInvite />
+          </div>
+          <div className="max-md:order-7">
+            <WakeLockSwitch />
+          </div>
         </div>
       </div>
+
+      <HoldDock>
+        <HoldButton
+          view={view}
+          engineConfirmed={engineConfirmed}
+          onPress={press}
+          confirmOpen={confirmOpen}
+          onConfirmOpenChange={setConfirmOpen}
+          onConfirmResume={() => {
+            setConfirmOpen(false)
+            send(false)
+          }}
+        />
+      </HoldDock>
     </div>
   )
 }
@@ -346,9 +357,9 @@ function WakeLockSwitch() {
     }
   }, [supported, enabled])
 
-  if (!supported) return <p className="text-xs text-muted-foreground">{t("live.keepAwakeNo")}</p>
+  if (!supported) return <p className="module p-3 text-sm text-muted-foreground">{t("live.keepAwakeNo")}</p>
   return (
-    <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2">
+    <div className="flex min-h-11 items-center justify-between gap-3 module px-4 py-2">
       <Label htmlFor="keep-awake" className="text-base">
         {t("live.keepAwake")}
       </Label>

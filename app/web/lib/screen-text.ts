@@ -8,11 +8,11 @@ import type { Lang } from "@/lib/i18n"
 
 export const reportEn = {
   "report.title": "Safety report",
-  "report.sub": "What Stream Sarthi protected during this stream. Category, time and confidence only: no images, no messages, no personal data.",
+  "report.sub": "What Streamify protected during this stream. Category, time and confidence only: no images, no messages, no personal data.",
   "report.session": "Session",
   "report.loading": "Loading the report…",
   "report.retry": "Try again",
-  "report.err.network": "Cannot reach Stream Sarthi on this computer. Check that it is running, then try again.",
+  "report.err.network": "Cannot reach Streamify on this computer. Check that it is running, then try again.",
   "report.err.not_found": "No report for this session. It may have expired (reports are kept for 6 hours) or the link is wrong.",
   "report.err.forbidden": "This link cannot open reports. Use the streamer link or a report link.",
   "report.err.bad_report": "The report could not be read. Try again after the stream has fully stopped.",
@@ -79,7 +79,7 @@ export const reportEn = {
   "report.level.danger": "Danger",
   "report.export.html": "Download printable page (HTML)",
   "report.export.failed": "The download did not work. Try again.",
-  "report.export.local": "Could not reach Stream Sarthi, so this file was saved from the page you are viewing.",
+  "report.export.local": "Could not reach Streamify, so this file was saved from the page you are viewing.",
   "report.note.partial_report_session_live": "The stream is still live, so this report is partial.",
   "report.note.events_file_unavailable": "The event log file could not be written. This report is from memory only.",
   "report.note.timeline_truncated": "The timeline was cut at 10,000 events. Totals still count every event.",
@@ -88,18 +88,18 @@ export const reportEn = {
   "report.modality.chat": "Chat",
   "report.modality.guard": "Strike guard",
   "report.modality.system": "System",
-  "report.printed": "Printed from Stream Sarthi",
+  "report.printed": "Printed from Streamify",
 } as const
 
 export type ReportTextKey = keyof typeof reportEn
 
 export const reportHi: Record<ReportTextKey, string> = {
   "report.title": "सुरक्षा रिपोर्ट",
-  "report.sub": "इस स्ट्रीम में स्ट्रीम सारथी ने क्या सुरक्षित किया। केवल श्रेणी, समय और विश्वास: कोई तस्वीर, संदेश या निजी जानकारी नहीं।",
+  "report.sub": "इस स्ट्रीम में स्ट्रीमिफ़ाई ने क्या सुरक्षित किया। केवल श्रेणी, समय और विश्वास: कोई तस्वीर, संदेश या निजी जानकारी नहीं।",
   "report.session": "सत्र",
   "report.loading": "रिपोर्ट लोड हो रही है…",
   "report.retry": "फिर कोशिश करें",
-  "report.err.network": "इस कंप्यूटर पर स्ट्रीम सारथी से संपर्क नहीं हो पा रहा। जाँचें कि वह चल रहा है, फिर दोबारा कोशिश करें।",
+  "report.err.network": "इस कंप्यूटर पर स्ट्रीमिफ़ाई से संपर्क नहीं हो पा रहा। जाँचें कि वह चल रहा है, फिर दोबारा कोशिश करें।",
   "report.err.not_found": "इस सत्र की कोई रिपोर्ट नहीं मिली। हो सकता है वह समाप्त हो गई हो (रिपोर्ट 6 घंटे रखी जाती हैं) या लिंक गलत हो।",
   "report.err.forbidden": "यह लिंक रिपोर्ट नहीं खोल सकता। स्ट्रीमर लिंक या रिपोर्ट लिंक इस्तेमाल करें।",
   "report.err.bad_report": "रिपोर्ट पढ़ी नहीं जा सकी। स्ट्रीम पूरी तरह रुकने के बाद फिर कोशिश करें।",
@@ -166,7 +166,7 @@ export const reportHi: Record<ReportTextKey, string> = {
   "report.level.danger": "ख़तरा",
   "report.export.html": "प्रिंट योग्य पेज (HTML) डाउनलोड करें",
   "report.export.failed": "डाउनलोड नहीं हो सका। फिर कोशिश करें।",
-  "report.export.local": "स्ट्रीम सारथी से संपर्क नहीं हो सका, इसलिए यह फ़ाइल आपके देखे जा रहे पेज से सहेजी गई।",
+  "report.export.local": "स्ट्रीमिफ़ाई से संपर्क नहीं हो सका, इसलिए यह फ़ाइल आपके देखे जा रहे पेज से सहेजी गई।",
   "report.note.partial_report_session_live": "स्ट्रीम अभी चल रही है, इसलिए यह रिपोर्ट अधूरी है।",
   "report.note.events_file_unavailable": "घटना लॉग फ़ाइल नहीं लिखी जा सकी। यह रिपोर्ट केवल मेमोरी से है।",
   "report.note.timeline_truncated": "समयरेखा 10,000 घटनाओं पर काट दी गई। कुल गिनती में हर घटना शामिल है।",
@@ -175,7 +175,7 @@ export const reportHi: Record<ReportTextKey, string> = {
   "report.modality.chat": "चैट",
   "report.modality.guard": "स्ट्राइक गार्ड",
   "report.modality.system": "सिस्टम",
-  "report.printed": "स्ट्रीम सारथी से प्रिंट किया गया",
+  "report.printed": "स्ट्रीमिफ़ाई से प्रिंट किया गया",
 }
 
 export const modEn = {
@@ -189,7 +189,7 @@ export const modEn = {
   "modx.keys.help": "Shortcuts work when no text box is focused.",
   "modx.selected": "Selected message {n} of {total}",
   "modx.staffKey": "That message is from the streamer or a moderator. It can only be approved or dismissed.",
-  "modx.apiDown": "Cannot reach Stream Sarthi. Actions will not go through until it is back. Messages already here are kept in this tab only.",
+  "modx.apiDown": "Cannot reach Streamify. Actions will not go through until it is back. Messages already here are kept in this tab only.",
   "modx.stale": "The live link dropped. The list may be out of date until it reconnects.",
   "modx.retry": "Reload",
   "modx.empty.title": "All clear",
@@ -212,7 +212,7 @@ export const modHi: Record<ModTextKey, string> = {
   "modx.keys.help": "शॉर्टकट तब काम करते हैं जब कोई टेक्स्ट बॉक्स चुना हुआ न हो।",
   "modx.selected": "चुना गया संदेश {n} / {total}",
   "modx.staffKey": "यह संदेश स्ट्रीमर या मॉडरेटर का है। इसे केवल मंज़ूर या खारिज किया जा सकता है।",
-  "modx.apiDown": "स्ट्रीम सारथी से संपर्क नहीं हो पा रहा। वापस आने तक कार्रवाइयाँ नहीं जाएँगी। यहाँ मौजूद संदेश केवल इसी टैब में हैं।",
+  "modx.apiDown": "स्ट्रीमिफ़ाई से संपर्क नहीं हो पा रहा। वापस आने तक कार्रवाइयाँ नहीं जाएँगी। यहाँ मौजूद संदेश केवल इसी टैब में हैं।",
   "modx.stale": "लाइव कनेक्शन टूट गया। दोबारा जुड़ने तक सूची पुरानी हो सकती है।",
   "modx.retry": "फिर लोड करें",
   "modx.empty.title": "सब ठीक है",

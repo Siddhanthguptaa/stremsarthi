@@ -7,14 +7,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useReportText } from "@/components/report/use-report-text"
 
 function H2({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-xl font-semibold leading-none tracking-tight">{children}</h2>
+  return <h2 className="text-xl font-bold leading-none">{children}</h2>
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="module-row p-3">
       <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-xl font-bold tabular-nums">{value}</dd>
+      <dd className="timecode mt-1 text-3xl font-bold leading-none">{value}</dd>
     </div>
   )
 }
@@ -34,7 +34,7 @@ export function HoldsSection({ report, span }: { report: SafetyReport; span: Spa
         ) : (
           <ul className="space-y-1.5" data-testid="report-holds">
             {report.holds.map((h, i) => (
-              <li key={i} className="rounded-md border px-3 py-2 text-sm">
+              <li key={i} className="module-row px-3 py-2 text-sm">
                 <span className="font-medium">
                   {x.tr("report.holds.item", {
                     start: formatTime(h.start_ts, x.lang),
@@ -97,8 +97,8 @@ export function RiskSection({ report }: { report: SafetyReport }) {
         ) : (
           <ul className="space-y-1.5" data-testid="report-warnings">
             {warnings.map((w, i) => (
-              <li key={i} className="flex flex-wrap gap-x-3 rounded-md border px-3 py-2 text-sm">
-                <time dateTime={w.ts} className="tabular-nums">
+              <li key={i} className="module-row flex flex-wrap gap-x-3 px-3 py-2 text-sm">
+                <time dateTime={w.ts} className="timecode text-base">
                   {formatTime(w.ts, x.lang)}
                 </time>
                 <span className="font-medium">{w.source || "-"}</span>
@@ -146,12 +146,12 @@ export function ChatSection({ report }: { report: SafetyReport }) {
           <>
             <ul className="flex flex-wrap gap-2" data-testid="report-chat">
               {Object.entries(actions).map(([k, n]) => (
-                <li key={`a-${k}`} className="rounded-full border px-3 py-1 text-sm">
+                <li key={`a-${k}`} className="module-row px-3 py-1 text-sm">
                   {k} <span className="font-semibold tabular-nums">{n}</span>
                 </li>
               ))}
               {Object.entries(cats).map(([k, n]) => (
-                <li key={`c-${k}`} className="rounded-full border px-3 py-1 text-sm">
+                <li key={`c-${k}`} className="module-row px-3 py-1 text-sm">
                   {x.category(k)} <span className="font-semibold tabular-nums">{n}</span>
                 </li>
               ))}

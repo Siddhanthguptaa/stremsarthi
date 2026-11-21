@@ -81,9 +81,9 @@ export function CaptionsControl({ api, lines = [] }: CaptionsControlProps) {
   }
 
   return (
-    <section aria-labelledby={`${id}-title`} className="space-y-3 rounded-lg border bg-card p-4" data-testid="captions-control">
+    <section aria-labelledby={`${id}-title`} className="module space-y-3 p-4" data-testid="captions-control">
       <div className="space-y-1">
-        <h2 id={`${id}-title`} className="flex items-center gap-2 text-lg font-semibold">
+        <h2 id={`${id}-title`} className="flex items-center gap-2 text-xl font-bold">
           <Captions aria-hidden className="size-5" />
           {t("captions.title")}
         </h2>
@@ -138,7 +138,7 @@ export function CaptionsControl({ api, lines = [] }: CaptionsControlProps) {
           ) : lines.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("captions.waiting")}</p>
           ) : (
-            <p lang={setting.language} className="rounded-md border bg-background px-3 py-2 text-base leading-relaxed" data-testid="caption-lines">
+            <p lang={setting.language} className="module-row px-3 py-2 text-base leading-relaxed" data-testid="caption-lines">
               {lines.map((line) => (
                 <span key={line.id} className={line.final ? "block" : "block text-muted-foreground"}>
                   {line.text}

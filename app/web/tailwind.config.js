@@ -1,6 +1,6 @@
 /*
  * Adapted from Saximn/privastream (Apache-2.0), src/web/frontend/tailwind.config.js. See LICENSE.privastream.
- * Added Stream Sarthi status colours, font stack and a 360 px "xs" breakpoint.
+ * Added Streamify status, modality and desk colours, display font, font stack and a 360 px "xs" breakpoint.
  */
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -10,9 +10,10 @@ module.exports = {
     extend: {
       screens: { xs: "360px" },
       fontFamily: {
+        display: ["var(--font-display)", "Big Shoulders Display Variable", "system-ui", "sans-serif"],
         sans: [
           "var(--font-sans)",
-          "Noto Sans Variable",
+          "Hanken Grotesk Variable",
           "Noto Sans Devanagari Variable",
           "system-ui",
           "sans-serif",
@@ -35,6 +36,11 @@ module.exports = {
         destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--destructive-foreground))" },
         success: { DEFAULT: "hsl(var(--success))", foreground: "hsl(var(--success-foreground))" },
         warning: { DEFAULT: "hsl(var(--warning))", foreground: "hsl(var(--warning-foreground))" },
+        tally: "hsl(var(--tally))",
+        desk: { DEFAULT: "hsl(var(--card))", raised: "hsl(var(--desk-raised))" },
+        video: "hsl(var(--video))",
+        audio: "hsl(var(--audio))",
+        chat: "hsl(var(--chat))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

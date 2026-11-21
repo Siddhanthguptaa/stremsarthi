@@ -1,4 +1,4 @@
-/** REST client for the Stream Sarthi API. Only the API origin is contacted (docs/specs/app-web.md 4). */
+/** REST client for the Streamify API. Only the API origin is contacted (docs/specs/app-web.md 4). */
 
 import { API_URL } from "@/lib/config"
 import type { ApiAlert } from "@/lib/live-state"

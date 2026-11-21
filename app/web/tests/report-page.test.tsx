@@ -169,7 +169,7 @@ describe("ReportPage loading", () => {
   it("shows a retry when the API cannot be reached, and loads on retry", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("down")).mockResolvedValueOnce(ok(reportFixture()))
     renderIn(<ReportPage sessionId="s1" />)
-    expect((await screen.findByRole("alert")).textContent).toContain("Cannot reach Stream Sarthi")
+    expect((await screen.findByRole("alert")).textContent).toContain("Cannot reach Streamify")
     fireEvent.click(screen.getByRole("button", { name: "Try again" }))
     expect(await screen.findByTestId("report-tiles")).toBeTruthy()
   })

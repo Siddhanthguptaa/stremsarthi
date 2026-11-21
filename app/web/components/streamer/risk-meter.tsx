@@ -1,7 +1,5 @@
 "use client"
 
-import { Gauge } from "lucide-react"
-
 import { formatPercent, categoryKey } from "@/lib/format"
 import { RISK_LEVELS, RISK_LEVEL_KEY, RISK_SOURCE_KEY, type RiskView } from "@/lib/risk"
 import type { RiskLevel } from "@/lib/wire"
@@ -12,12 +10,18 @@ const TONE: Record<RiskLevel, string> = {
   green: "bg-success",
   yellow: "bg-warning",
   orange: "bg-warning",
-  red: "bg-destructive",
+  red: "bg-tally",
+}
+const TEXT: Record<RiskLevel, string> = {
+  green: "text-success",
+  yellow: "text-warning",
+  orange: "text-warning",
+  red: "text-tally",
 }
 
 /**
- * The strike-guard risk meter. `role="meter"` with a text level (never colour alone), a segmented bar that
- * does not animate, and the live warnings as category, kind and score (no labels, no text, no media).
+ * The strike-guard risk meter. `role="meter"` with a text level (never colour alone), four tall segments that
+ * do not animate, and the live warnings as category, kind and score (no labels, no text, no media).
  */
 export function RiskMeter({ view }: { view: RiskView }) {
   const { t } = useLanguage()
@@ -26,20 +30,14 @@ export function RiskMeter({ view }: { view: RiskView }) {
   const reached = RISK_LEVELS.indexOf(view.level) + 1
 
   return (
-    <section aria-labelledby="risk-heading" className="space-y-3 rounded-lg border bg-card p-4" data-testid="risk-meter" data-level={view.level}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h2 id="risk-heading" className="flex items-center gap-2 text-lg font-semibold">
-            <Gauge aria-hidden className="size-5" />
-            {t("risk.title")}
-          </h2>
-          <p className="text-sm text-muted-foreground">{t("risk.desc")}</p>
-        </div>
-        <p className="shrink-0 text-right">
-          <span className="block text-xl font-bold leading-tight">{level}</span>
-          <span className="text-sm tabular-nums text-muted-foreground">{percent}%</span>
-        </p>
+    <section aria-labelledby="risk-heading" className="module space-y-3 p-4" data-testid="risk-meter" data-level={view.level}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="risk-heading" className="text-xl font-bold">
+          {t("risk.title")}
+        </h2>
+        <p className="timecode text-lg text-muted-foreground">{percent}%</p>
       </div>
+      <p className={cn("font-display text-5xl font-extrabold leading-none", TEXT[view.level])}>{level}</p>
 
       <div
         role="meter"
@@ -48,31 +46,32 @@ export function RiskMeter({ view }: { view: RiskView }) {
         aria-valuemax={100}
         aria-valuenow={percent}
         aria-valuetext={t("risk.valueText").replace("{level}", level).replace("{percent}", `${percent}%`)}
-        className="grid grid-cols-4 gap-1"
+        className="grid grid-cols-4 gap-1.5"
       >
         {RISK_LEVELS.map((name, index) => (
           <div
             key={name}
             aria-hidden
             data-filled={index < reached ? "true" : "false"}
-            className={cn("h-3 rounded-sm", index < reached ? TONE[view.level] : "bg-secondary ring-1 ring-input")}
+            className={cn("h-12 rounded-sm", index < reached ? TONE[view.level] : "bg-background/60 ring-1 ring-border")}
           />
         ))}
       </div>
+      <p className="text-sm text-muted-foreground">{t("risk.desc")}</p>
 
       {view.signals.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("risk.none")}</p>
       ) : (
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium">{t("risk.active")}</h3>
-          <ul className="space-y-1">
+        <div className="space-y-1.5">
+          <h3 className="text-base font-bold">{t("risk.active")}</h3>
+          <ul className="space-y-1.5">
             {view.signals.map((signal) => (
-              <li key={signal.key} className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2 text-sm">
+              <li key={signal.key} className="module-row flex items-center justify-between gap-3 px-3 py-2 text-sm">
                 <span className="min-w-0">
                   <span className="block font-medium leading-snug">{t(RISK_SOURCE_KEY[signal.source])}</span>
                   <span className="text-muted-foreground">{t(categoryKey(signal.category))}</span>
                 </span>
-                <span className="shrink-0 font-semibold tabular-nums">
+                <span className="timecode shrink-0 text-lg font-semibold">
                   <span className="sr-only">{t("alerts.confidence")} </span>
                   {formatPercent(signal.score)}
                 </span>

@@ -22,8 +22,8 @@ import {
 } from "@/lib/enrol"
 import type { I18nKey } from "@/lib/i18n"
 import { useLanguage } from "@/components/shell/language-provider"
+import { setupText } from "@/lib/i18n-setup"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 
 export type CameraPhase =
   | { phase: "idle" }
@@ -57,6 +57,20 @@ interface CameraCaptureProps {
   deps?: Partial<CaptureDeps>
 }
 
+/** Viewfinder corner brackets: four L shapes on the corners of the frame. */
+function Brackets({ live }: { live: boolean }) {
+  const c = live ? "border-success" : "border-primary"
+  const base = `pointer-events-none absolute size-7 border-4 ${c}`
+  return (
+    <>
+      <span aria-hidden className={`${base} left-3 top-3 border-b-0 border-r-0`} />
+      <span aria-hidden className={`${base} right-3 top-3 border-b-0 border-l-0`} />
+      <span aria-hidden className={`${base} bottom-3 left-3 border-r-0 border-t-0`} />
+      <span aria-hidden className={`${base} bottom-3 right-3 border-l-0 border-t-0`} />
+    </>
+  )
+}
+
 export function CameraCapture({
   onCaptured,
   canScan,
@@ -65,7 +79,7 @@ export function CameraCapture({
   durationMs = CAPTURE_DURATION_MS,
   deps,
 }: CameraCaptureProps) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [state, setState] = React.useState<CameraPhase>({ phase: "idle" })
   const [guidance, setGuidance] = React.useState<GuidanceKey | null>(null)
   const [failed, setFailed] = React.useState(false)
@@ -191,14 +205,18 @@ export function CameraCapture({
   }
 
   return (
-    <Card data-phase={state.phase}>
-      <CardContent className="space-y-4 p-4 sm:p-6">
+    <section className="module space-y-4 p-3 md:p-4" data-phase={state.phase} aria-label={setupText(lang, "setup.enrol.stage")}>
+      <div className="relative">
+        {!live ? <div aria-hidden className="aspect-video w-full rounded-md bg-background" /> : null}
+        {!live ? <Brackets live={false} /> : null}
+        {!live ? (
+          <div className="absolute inset-0 flex items-center justify-center overflow-y-auto p-6">
         {state.phase === "idle" ? (
           <div className="space-y-3 text-center">
-            <div className="mx-auto w-fit rounded-full bg-muted p-4">
+            <div className="mx-auto w-fit rounded-full bg-desk-raised p-4">
               <Camera aria-hidden className="size-7" />
             </div>
-            <p className="mx-auto max-w-md text-muted-foreground">{t("enrol.poses")}</p>
+            <p className="mx-auto max-w-md text-sm text-muted-foreground md:text-base">{t("enrol.poses")}</p>
             {failed ? (
               <p role="alert" className="text-destructive">
                 {t("enrol.err.generic")}
@@ -233,16 +251,21 @@ export function CameraCapture({
           </div>
         ) : null}
 
+          </div>
+        ) : null}
+      </div>
+
         {live ? (
           <div className="space-y-3">
-            <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-lg bg-black">
+            <div className="relative w-full overflow-hidden rounded-md bg-black">
+              <Brackets live />
               <video
                 ref={attachVideo}
                 autoPlay
                 playsInline
                 muted
                 aria-label={t("enrol.start")}
-                className="aspect-[4/3] w-full -scale-x-100 object-cover"
+                className="aspect-video w-full -scale-x-100 object-cover"
               />
             </div>
 
@@ -286,7 +309,7 @@ export function CameraCapture({
                 aria-valuenow={state.taken}
                 className="h-2 w-full overflow-hidden rounded-full bg-secondary"
               >
-                <div className="h-full bg-primary" style={{ width: `${(state.taken / frames) * 100}%` }} />
+                <div className="h-full bg-success" style={{ width: `${(state.taken / frames) * 100}%` }} />
               </div>
             ) : null}
 
@@ -315,7 +338,6 @@ export function CameraCapture({
           <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0" />
           {t("enrol.privacy")}
         </p>
-      </CardContent>
-    </Card>
+    </section>
   )
 }

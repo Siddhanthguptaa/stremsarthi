@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { EyeOff, ImageOff, Loader2, ShieldCheck, Eye } from "lucide-react"
+import { EyeOff, ImageOff, Loader2 } from "lucide-react"
 
 import type { DemoStatus, PreviewKind } from "@/lib/demo-api"
 import type { DemoKey } from "@/lib/demo-i18n"
@@ -30,6 +30,13 @@ interface PreviewPaneProps {
   getStatus?: () => Promise<DemoStatus>
   /** Presenter mode: bigger labels for the stage. */
   large?: boolean
+  /** The protected monitor is the program output: `onair` gets the tally border and ON AIR label, `hold` the HOLD label. */
+  tally?: "onair" | "hold" | "off"
+  /** The running clock, shown in the corner of the monitor. */
+  timecode?: string
+  /** Drawn on the monitor itself, along the bottom (the caption lower-third). */
+  overlay?: React.ReactNode
+  className?: string
 }
 
 const LABEL: Record<PreviewKind, DemoKey> = { raw: "stage.raw", protected: "stage.protected" }
@@ -40,11 +47,10 @@ const ALT: Record<PreviewKind, DemoKey> = { raw: "pane.raw.alt", protected: "pan
  * One side of the side-by-side stage: a big label, a badge and the MJPEG stream (or a placeholder that says why
  * there is no picture). The image is a stream, not a stored file: nothing here keeps or saves a frame.
  */
-export function PreviewPane({ kind, mode, src, tokenFailed = false, getStatus, large = false }: PreviewPaneProps) {
-  const { d, alt, other } = useDemoText()
+export function PreviewPane({ kind, mode, src, tokenFailed = false, getStatus, large = false, tally = "off", timecode, overlay, className }: PreviewPaneProps) {
+  const { d, alt, other, desk } = useDemoText()
   const headingId = React.useId()
   const isRaw = kind === "raw"
-  const Icon = isRaw ? Eye : ShieldCheck
 
   let body: React.ReactNode
   if (mode === "disabled") {
@@ -62,32 +68,51 @@ export function PreviewPane({ kind, mode, src, tokenFailed = false, getStatus, l
     body = <Notice icon="wait" text={d("pane.connecting")} />
   }
 
+  const onAir = !isRaw && tally === "onair"
+  const holding = !isRaw && tally === "hold"
+  const tallyLabel = onAir ? desk("tally.onair") : holding ? desk("tally.hold") : null
+
   return (
-    <section aria-labelledby={headingId} data-pane={kind} data-mode={mode} className="min-w-0 space-y-2">
+    <section aria-labelledby={headingId} data-pane={kind} data-mode={mode} data-tally={isRaw ? undefined : tally} className={cn("min-w-0 space-y-2", className)}>
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-        <h2 id={headingId} className={cn("font-extrabold leading-tight tracking-wide", large ? "text-2xl lg:text-3xl" : "text-lg sm:text-xl")}>
+        <h2 id={headingId} className={cn("font-display font-extrabold leading-none", isRaw ? "text-lg" : large ? "text-3xl lg:text-4xl" : "text-2xl lg:text-3xl")}>
           {d(LABEL[kind])}
-          <span lang={other} className={cn("block font-semibold tracking-normal text-muted-foreground", large ? "text-lg" : "text-sm")}>
+          <span lang={other} className={cn("mt-1 block font-sans font-medium text-muted-foreground", large ? "text-base" : "text-sm")}>
             {alt(LABEL[kind])}
           </span>
         </h2>
-        <p
-          className={cn(
-            "inline-flex min-h-7 items-center gap-1.5 rounded-full px-3 text-xs font-bold sm:text-sm",
-            isRaw ? "bg-warning text-warning-foreground" : "bg-success text-success-foreground",
-          )}
-        >
-          <Icon aria-hidden className="size-4" />
+        <p className="inline-flex min-h-7 items-center gap-2 rounded-md bg-background/60 px-2.5 text-xs font-semibold sm:text-sm">
+          <span aria-hidden className={cn("led", isRaw ? "text-warning" : "text-success")} />
           {d(BADGE[kind])}
         </p>
       </div>
       <div
         className={cn(
-          "relative aspect-video w-full overflow-hidden rounded-xl border-4 bg-black text-white",
-          isRaw ? "border-warning" : "border-success",
+          "relative w-full overflow-hidden rounded-md bg-black text-white",
+          mode === "disabled" ? "min-h-40" : "aspect-video",
+          onAir ? "border-2 border-tally" : holding ? "border-2 border-warning" : "border-2 border-border",
         )}
       >
         {body}
+        {tallyLabel ? (
+          <span
+            aria-hidden
+            data-testid="tally"
+            className={cn(
+              "absolute left-2 top-2 z-10 inline-flex items-center gap-2 rounded-sm px-2.5 py-1 font-display text-lg font-extrabold leading-none tracking-wider",
+              onAir ? "bg-tally text-white" : "bg-warning text-warning-foreground",
+            )}
+          >
+            <span className="size-2 rounded-full bg-current" />
+            {tallyLabel}
+          </span>
+        ) : null}
+        {timecode ? (
+          <span aria-hidden suppressHydrationWarning className="timecode absolute right-2 top-2 z-10 rounded-sm bg-black/70 px-2 py-0.5 text-lg font-bold leading-tight text-white">
+            {timecode}
+          </span>
+        ) : null}
+        {overlay ? <div className="absolute inset-x-0 bottom-0 z-10">{overlay}</div> : null}
       </div>
     </section>
   )
@@ -111,16 +136,16 @@ function Notice({ icon, text, extra }: { icon: "wait" | "off"; text: string; ext
 function RawDisabled() {
   const { d, alt, other } = useDemoText()
   return (
-    <div role="status" data-testid="raw-disabled" className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-y-auto p-4 text-center">
+    <div role="status" data-testid="raw-disabled" className="flex min-h-40 flex-col items-center justify-center gap-2 p-4 text-center">
       <EyeOff aria-hidden className="size-8 shrink-0" />
-      <p className="text-lg font-bold">
+      <p className="font-display text-xl font-bold">
         {d("raw.disabled.title")}
         <span lang={other} className="block text-sm font-semibold opacity-80">
           {alt("raw.disabled.title")}
         </span>
       </p>
-      <p className="max-w-prose text-sm leading-snug sm:text-base">{d("raw.disabled.body")}</p>
-      <code className="rounded bg-white/15 px-2 py-1 text-sm font-semibold">{d("raw.disabled.env")}</code>
+      <p className="max-w-prose text-xs leading-snug text-white/80 sm:text-sm">{d("raw.disabled.body")}</p>
+      <code className="rounded-sm bg-white/15 px-2 py-1 text-xs font-semibold sm:text-sm">{d("raw.disabled.env")}</code>
     </div>
   )
 }

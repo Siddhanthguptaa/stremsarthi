@@ -46,7 +46,7 @@ export function HoldButton({
   const both = (key: Parameters<typeof t>[0]) => (
     <>
       <span>{t(key)}</span>
-      <span lang={other} className="block text-base font-semibold opacity-90">
+      <span lang={other} className="block text-base font-semibold opacity-90 md:text-sm">
         {translate(other, key)}
       </span>
     </>
@@ -96,7 +96,8 @@ export function HoldButton({
   ].filter(Boolean)
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-1", className)}>
+      <div className={cn("hazard rounded-lg p-1.5", disabled && "opacity-60")}>
       <Button
         type="button"
         onClick={disabled ? undefined : onPress}
@@ -104,7 +105,7 @@ export function HoldButton({
         aria-disabled={disabled}
         data-phase={view.phase}
         className={cn(
-          "h-auto min-h-24 w-full flex-col gap-1 whitespace-normal px-4 py-3 text-3xl font-extrabold leading-tight shadow-lg",
+          "keycap h-auto min-h-20 w-full flex-col gap-1 whitespace-normal px-4 py-2 font-display text-3xl font-extrabold leading-tight md:min-h-24 md:py-2 md:text-[2rem] md:leading-none [&_svg]:size-9 md:[&_svg]:size-7",
           disabled && "cursor-not-allowed",
           tone
         )}
@@ -114,8 +115,9 @@ export function HoldButton({
           <span>{label}</span>
         </span>
       </Button>
+      </div>
       {secondary.length > 0 ? (
-        <p className="text-center text-sm text-muted-foreground" data-testid="hold-hint">
+        <p className="text-center text-xs text-muted-foreground md:text-sm" data-testid="hold-hint">
           {secondary.join(" · ")}
         </p>
       ) : null}

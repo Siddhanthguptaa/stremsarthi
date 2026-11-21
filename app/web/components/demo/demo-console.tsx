@@ -6,7 +6,7 @@ import { Minimize2, Presentation } from "lucide-react"
 import { ApiRequestError } from "@/lib/api"
 import { captionReducer, initialCaptions } from "@/lib/captions"
 import { initialProof, proofReducer } from "@/lib/demo-proof"
-import { paneMode, shouldTogglePresenter } from "@/lib/demo-stream"
+import { paneMode, shouldTogglePresenter, stageState } from "@/lib/demo-stream"
 import { AUTO_SOURCES } from "@/lib/hold-machine"
 import { catchingUpLanes, chipFor, engineIsFresh, initialLiveState, liveReducer } from "@/lib/live-state"
 import { initialRisk, riskReducer, riskView } from "@/lib/risk"
@@ -187,95 +187,128 @@ function Console() {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  const tally = stageState(chip) === "live" ? "onair" : stageState(chip) === "other" ? "off" : "hold"
+  const clock = new Date(now).toLocaleTimeString("en-GB", { hour12: false })
+  const shell = "min-w-0"
+
   return (
-    <div
-      // Wider stage than the shell's max-w-5xl: break out of the centred column, up to 80 rem (7xl), or the full width in presenter mode.
-      className={cn(
-        "relative left-1/2 -translate-x-1/2 space-y-4 pb-48",
-        presenter ? "w-[calc(100vw-2rem)]" : "w-[min(calc(100vw-2rem),80rem)]",
-      )}
-      data-testid="demo-console"
-      data-presenter={presenter ? "on" : "off"}
-    >
-      <style>{"html[data-presenter='on'] body > header { display: none }"}</style>
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-xl font-bold tracking-tight">{d("demo.title")}</h1>
-          <p className="sr-only">{d("demo.desc")}</p>
-          {demoStatus.status ? (
-            <p className="text-xs text-muted-foreground" data-testid="preview-clients">
-              {d("preview.clients")}: {demoStatus.status.clients}
-            </p>
-          ) : null}
-          {presenter ? (
-            <p className="text-sm font-semibold tabular-nums" data-testid="presenter-proof">
-              {proof.total} {d("proof.short")}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <StageStateChip kind={chip} catchingUp={catching} compact />
-          <button
-            type="button"
-            aria-pressed={presenter}
-            aria-keyshortcuts="P"
-            aria-label={d("presenter.label")}
-            onClick={() => setPresenter((on) => !on)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {presenter ? <Minimize2 aria-hidden className="size-4" /> : <Presentation aria-hidden className="size-4" />}
-            {presenter ? d("presenter.off") : d("presenter.on")}
-            <kbd className="rounded border bg-muted px-1.5 text-xs">{d("presenter.key")}</kbd>
-          </button>
-        </div>
-      </header>
-
-      <ConnectionBanner state={connection} apiDown={live.apiDown} />
-
-      <section aria-label={d("demo.stage")} className="grid gap-4 md:grid-cols-2">
-        <PreviewPane kind="raw" mode={rawMode} src={urlFor("raw")} tokenFailed={preview.failed} getStatus={getDemoStatus} large={presenter} />
-        <PreviewPane kind="protected" mode={protectedMode} src={urlFor("protected")} tokenFailed={preview.failed} getStatus={getDemoStatus} large={presenter} />
-      </section>
-
-      <CaptionStrip lines={captions.lines} large={presenter} />
-
-      {presenter ? null : (
-        <>
-          <div className="grid gap-3 lg:grid-cols-2">
-            <RiskStrip view={riskNow} />
-            <ProofCounter state={proof} compact />
-          </div>
-
-          <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
-
-          <details className="rounded-lg border bg-card p-3">
-            <summary className="min-h-11 cursor-pointer py-2 text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              {d("settings.title")}
-            </summary>
-            <div className="pt-3">
-              <CaptionsControl api={api} lines={captions.lines} />
+    <>
+      <div
+        // Wider stage than the shell's centred column: break out of it, up to 80 rem, or the full width in presenter mode.
+        // The left rail takes 15 rem on md+, so the stage is centred in the space beside it.
+        className={cn(
+          "relative left-1/2 -translate-x-1/2 space-y-4 pb-56",
+          presenter ? "w-[calc(100vw-2rem)]" : "w-[min(calc(100vw-2rem),80rem)] md:w-[min(calc(100vw-17rem),80rem)]",
+        )}
+        data-testid="demo-console"
+        data-presenter={presenter ? "on" : "off"}
+      >
+        <style>{"html[data-presenter='on'] body > header { display: none } html[data-presenter='on'] #main { position: relative; left: -7.5rem } html[data-presenter='on'] [data-holdbar] { left: 0 }"}</style>
+        <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0 space-y-1">
+            <h1 className="text-4xl font-extrabold leading-[1.05] md:text-5xl">{d("demo.title")}</h1>
+            <p className="sr-only">{d("demo.desc")}</p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              {demoStatus.status ? (
+                <p className="flex items-center gap-2" data-testid="preview-clients">
+                  {d("preview.clients")}: {demoStatus.status.clients}
+                </p>
+              ) : null}
+              {presenter ? (
+                <p className="timecode text-xl font-bold text-foreground" data-testid="presenter-proof">
+                  {proof.total} {d("proof.short")}
+                </p>
+              ) : null}
             </div>
-          </details>
-        </>
-      )}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <StageStateChip kind={chip} catchingUp={catching} compact />
+            <button
+              type="button"
+              aria-pressed={presenter}
+              aria-keyshortcuts="P"
+              aria-label={d("presenter.label")}
+              onClick={() => setPresenter((on) => !on)}
+              className="keycap inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-desk-raised px-3 text-sm font-semibold hover:bg-accent aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+            >
+              {presenter ? <Minimize2 aria-hidden className="size-4" /> : <Presentation aria-hidden className="size-4" />}
+              {presenter ? d("presenter.off") : d("presenter.on")}
+              <kbd className="rounded-sm bg-background/50 px-1.5 font-mono text-xs">{d("presenter.key")}</kbd>
+            </button>
+          </div>
+        </header>
+
+        <ConnectionBanner state={connection} apiDown={live.apiDown} />
+
+        <section
+          aria-label={d("demo.stage")}
+          className="grid gap-4 lg:grid-cols-[1.6fr_1fr] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:[grid-template-areas:'program_raw'_'program_proof'_'program_risk'_'feed_extra']"
+        >
+          <PreviewPane
+            kind="raw"
+            mode={rawMode}
+            src={urlFor("raw")}
+            tokenFailed={preview.failed}
+            getStatus={getDemoStatus}
+            large={presenter}
+            className={cn(shell, "lg:[grid-area:raw]")}
+          />
+          <PreviewPane
+            kind="protected"
+            mode={protectedMode}
+            src={urlFor("protected")}
+            tokenFailed={preview.failed}
+            getStatus={getDemoStatus}
+            large={presenter}
+            tally={tally}
+            timecode={clock}
+            overlay={<CaptionStrip lines={captions.lines} large={presenter} />}
+            className={cn(shell, "order-first lg:order-none lg:[grid-area:program]")}
+          />
+          {presenter ? null : (
+            <>
+              <div className={cn(shell, "lg:[grid-area:proof]")}>
+                <ProofCounter state={proof} compact />
+              </div>
+              <div className={cn(shell, "lg:[grid-area:risk]")}>
+                <RiskStrip view={riskNow} />
+              </div>
+              <div className={cn(shell, "lg:[grid-area:feed]")}>
+                <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
+              </div>
+              <details className={cn(shell, "module p-3 lg:[grid-area:extra]")}>
+                <summary className="min-h-11 cursor-pointer py-2 text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  {d("settings.title")}
+                </summary>
+                <div className="pt-3">
+                  <CaptionsControl api={api} lines={captions.lines} />
+                </div>
+              </details>
+            </>
+          )}
+        </section>
+      </div>
 
       <div
         role="region"
         aria-label={t("hold.region")}
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        data-holdbar
+        className="fixed inset-x-0 z-40 border-t bg-card md:left-60"
+        style={{ bottom: "var(--bottom-nav-h)" }}
       >
-        <div className={cn("mx-auto w-full", presenter ? "max-w-[100rem]" : "max-w-7xl")}>
-          <HoldButton
-            view={hold.view}
-            engineConfirmed={engineConfirmed}
-            onPress={hold.press}
-            confirmOpen={hold.confirmOpen}
-            onConfirmOpenChange={hold.setConfirmOpen}
-            onConfirmResume={hold.confirmResume}
-          />
+        <div className="px-4 pt-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+          <div className={cn("mx-auto w-full", presenter ? "max-w-[100rem]" : "max-w-7xl")}>
+            <HoldButton
+              view={hold.view}
+              engineConfirmed={engineConfirmed}
+              onPress={hold.press}
+              confirmOpen={hold.confirmOpen}
+              onConfirmOpenChange={hold.setConfirmOpen}
+              onConfirmResume={hold.confirmResume}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

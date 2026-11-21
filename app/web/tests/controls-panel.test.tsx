@@ -33,15 +33,14 @@ function makeApi() {
 }
 
 describe("ControlsPanel", () => {
-  it("shows a card per category in tabs, and never a secret", async () => {
+  it("shows a strip per category in two groups, and never a secret", async () => {
     renderIn(<ControlsPanel api={makeApi()} />)
     expect(await screen.findByText("Face")).toBeTruthy()
-    expect(screen.getByRole("tab", { name: "On screen" })).toBeTruthy()
-    expect(screen.getByRole("tab", { name: "In speech" })).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "On screen" })).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "In speech" })).toBeTruthy()
     expect(screen.getByText("Aadhaar card")).toBeTruthy()
     expect(document.body.textContent).not.toContain("***")
     expect(document.body.textContent).not.toMatch(/groq|stream_key|youtube/i)
-    await userEvent.click(screen.getByRole("tab", { name: "In speech" }))
     expect(await screen.findByText("Spoken phone number")).toBeTruthy()
   })
 

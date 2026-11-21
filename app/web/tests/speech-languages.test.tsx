@@ -70,7 +70,6 @@ function makeApi() {
 describe("audio tab", () => {
   const openAudio = async (api: ReturnType<typeof makeApi>) => {
     renderIn(<ControlsPanel api={api} />)
-    await userEvent.click(await screen.findByRole("tab", { name: "In speech" }))
     return await screen.findByRole("group", { name: /Speech languages/ })
   }
 
@@ -79,7 +78,10 @@ describe("audio tab", () => {
     for (const name of ["Spoken phone number", "Spoken UPI ID", "Spoken address", "Spoken personal detail"]) {
       expect(screen.getByText(name)).toBeTruthy()
     }
-    expect(screen.queryByLabelText("Mask style")).toBeNull()
+    // Both groups are on screen now: only the speech strips must have no mask-style choice.
+    const speech = Array.from(document.querySelectorAll<HTMLElement>('[data-category^="spoken_"]'))
+    expect(speech).toHaveLength(4)
+    for (const strip of speech) expect(within(strip).queryByLabelText("Mask style")).toBeNull()
     expect(screen.getAllByRole("switch", { name: "Mute when unsure" })).toHaveLength(4)
     expect(within(group).getAllByRole("switch")).toHaveLength(6)
     expect((within(group).getByRole("switch", { name: /English/ }) as HTMLElement).getAttribute("aria-checked")).toBe("true")
