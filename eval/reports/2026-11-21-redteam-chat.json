@@ -22,21 +22,21 @@
     },
     {
       "name": "miss rate: chat leetspeak",
-      "note": "32/131 bypass",
+      "note": "13/131 bypass",
       "op": "<=",
-      "passed": false,
+      "passed": true,
       "target": 0.15,
       "unit": "",
-      "value": 0.244275
+      "value": 0.099237
     },
     {
       "name": "miss rate: chat split_words",
-      "note": "114/240 bypass",
+      "note": "46/240 bypass",
       "op": "<=",
       "passed": false,
       "target": 0.15,
       "unit": "",
-      "value": 0.475
+      "value": 0.191667
     },
     {
       "name": "miss rate: chat mixed_script",
@@ -49,12 +49,12 @@
     },
     {
       "name": "miss rate: chat visual_tricks",
-      "note": "23/234 bypass",
+      "note": "19/234 bypass",
       "op": "<=",
       "passed": true,
       "target": 0.25,
       "unit": "",
-      "value": 0.098291
+      "value": 0.081197
     },
     {
       "name": "miss rate: chat url_obfuscation",
@@ -144,7 +144,7 @@
       "passed": true,
       "target": 500.0,
       "unit": "",
-      "value": 199.4
+      "value": 314.1
     },
     {
       "name": "log records and events containing message text",
@@ -225,7 +225,7 @@
       "passed": true,
       "target": 100.0,
       "unit": "",
-      "value": 0.115
+      "value": 0.27
     },
     {
       "name": "flood: !hold event published",
@@ -261,39 +261,39 @@
       "by_label": {
         "encoding/abuse": {
           "ci": [
-            0.8602,
-            0.9885
+            0.0,
+            0.0741
           ],
-          "k": 46,
+          "k": 0,
           "n": 48,
-          "rate": 0.958333
+          "rate": 0.0
         },
         "encoding/doxxing": {
           "ci": [
-            0.753,
-            0.9414
+            0.0037,
+            0.109
           ],
-          "k": 42,
+          "k": 1,
           "n": 48,
-          "rate": 0.875
+          "rate": 0.020833
         },
         "encoding/fake_upi": {
           "ci": [
-            0.8602,
-            0.9885
+            0.0,
+            0.0741
           ],
-          "k": 46,
+          "k": 0,
           "n": 48,
-          "rate": 0.958333
+          "rate": 0.0
         },
         "encoding/scam": {
           "ci": [
-            0.8316,
-            0.9785
+            0.0,
+            0.0741
           ],
-          "k": 45,
+          "k": 0,
           "n": 48,
-          "rate": 0.9375
+          "rate": 0.0
         },
         "homoglyph/abuse": {
           "ci": [
@@ -333,30 +333,30 @@
         },
         "leetspeak/abuse": {
           "ci": [
-            0.0346,
-            0.2562
+            0.0185,
+            0.2132
           ],
-          "k": 3,
+          "k": 2,
           "n": 30,
-          "rate": 0.1
+          "rate": 0.066667
         },
         "leetspeak/doxxing": {
           "ci": [
-            0.2551,
-            0.5926
+            0.055,
+            0.3056
           ],
-          "k": 12,
+          "k": 4,
           "n": 29,
-          "rate": 0.413793
+          "rate": 0.137931
         },
         "leetspeak/fake_upi": {
           "ci": [
-            0.2248,
-            0.5243
+            0.0287,
+            0.2183
           ],
-          "k": 13,
+          "k": 3,
           "n": 36,
-          "rate": 0.361111
+          "rate": 0.083333
         },
         "leetspeak/scam": {
           "ci": [
@@ -477,39 +477,39 @@
         },
         "split_words/abuse": {
           "ci": [
-            0.2417,
-            0.4764
+            0.1183,
+            0.3178
           ],
-          "k": 21,
+          "k": 12,
           "n": 60,
-          "rate": 0.35
+          "rate": 0.2
         },
         "split_words/doxxing": {
           "ci": [
-            0.441,
-            0.6843
+            0.2709,
+            0.5098
           ],
-          "k": 34,
+          "k": 23,
           "n": 60,
-          "rate": 0.566667
+          "rate": 0.383333
         },
         "split_words/fake_upi": {
           "ci": [
-            0.3006,
-            0.5427
+            0.0171,
+            0.137
           ],
-          "k": 25,
+          "k": 3,
           "n": 60,
-          "rate": 0.416667
+          "rate": 0.05
         },
         "split_words/scam": {
           "ci": [
-            0.441,
-            0.6843
+            0.0691,
+            0.2417
           ],
-          "k": 34,
+          "k": 8,
           "n": 60,
-          "rate": 0.566667
+          "rate": 0.133333
         },
         "staff_claim/abuse": {
           "ci": [
@@ -567,21 +567,21 @@
         },
         "visual_tricks/abuse": {
           "ci": [
-            0.0177,
-            0.1414
+            0.0271,
+            0.1643
           ],
-          "k": 3,
+          "k": 4,
           "n": 58,
-          "rate": 0.051724
+          "rate": 0.068966
         },
         "visual_tricks/doxxing": {
           "ci": [
-            0.0608,
-            0.2325
+            0.0491,
+            0.2112
           ],
-          "k": 7,
+          "k": 6,
           "n": 57,
-          "rate": 0.122807
+          "rate": 0.105263
         },
         "visual_tricks/fake_upi": {
           "ci": [
@@ -594,12 +594,12 @@
         },
         "visual_tricks/scam": {
           "ci": [
-            0.0931,
-            0.2803
+            0.0466,
+            0.2015
           ],
-          "k": 10,
+          "k": 6,
           "n": 60,
-          "rate": 0.166667
+          "rate": 0.1
         },
         "zero_width/abuse": {
           "ci": [
@@ -643,1125 +643,57 @@
           "by_technique": {
             "enc_base64": {
               "ci": [
-                0.9259,
-                1.0
+                0.0037,
+                0.109
               ],
-              "k": 48,
+              "k": 1,
               "n": 48,
-              "rate": 1.0
+              "rate": 0.020833
             },
             "enc_hex": {
               "ci": [
-                0.8602,
-                0.9885
+                0.0,
+                0.0741
               ],
-              "k": 46,
+              "k": 0,
               "n": 48,
-              "rate": 0.958333
+              "rate": 0.0
             },
             "enc_reversed": {
               "ci": [
-                0.891,
-                0.9963
+                0.0,
+                0.0741
               ],
-              "k": 47,
+              "k": 0,
               "n": 48,
-              "rate": 0.979167
+              "rate": 0.0
             },
             "enc_rot13": {
               "ci": [
-                0.6574,
-                0.8827
+                0.0,
+                0.0741
               ],
-              "k": 38,
+              "k": 0,
               "n": 48,
-              "rate": 0.791667
+              "rate": 0.0
             }
           },
           "bypass": [
-            {
-              "base_kind": "abbrev",
-              "id": "rt01016",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01017",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01018",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01019",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "slur_deva",
-              "id": "rt01020",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "slur_latn",
-              "id": "rt01021",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "slur_regional",
-              "id": "rt01022",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "threat",
-              "id": "rt01023",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt01024",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01025",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01026",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01027",
-              "label": "abuse",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01028",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt01029",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "hack_tool",
-              "id": "rt01030",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "invite",
-              "id": "rt01031",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "kyc_bank",
-              "id": "rt01032",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "loan",
-              "id": "rt01033",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt01034",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phishing",
-              "id": "rt01035",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "shortener",
-              "id": "rt01036",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "support_call",
-              "id": "rt01037",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01038",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt01039",
-              "label": "scam",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01040",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01041",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01042",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01043",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt01044",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01045",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01046",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01047",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01048",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt01049",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01050",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01051",
-              "label": "fake_upi",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01052",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01053",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
             {
               "base_kind": "phone",
               "id": "rt01054",
               "label": "doxxing",
               "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phone_embedded",
-              "id": "rt01055",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01056",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt01057",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01058",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01059",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phone",
-              "id": "rt01060",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phone_embedded",
-              "id": "rt01061",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01062",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt01063",
-              "label": "doxxing",
-              "technique": "enc_base64"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt01064",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01065",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01066",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01067",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "slur_latn",
-              "id": "rt01069",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "threat",
-              "id": "rt01071",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt01072",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01073",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01074",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01075",
-              "label": "abuse",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01076",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "hack_tool",
-              "id": "rt01078",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "invite",
-              "id": "rt01079",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "kyc_bank",
-              "id": "rt01080",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "loan",
-              "id": "rt01081",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt01082",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "phishing",
-              "id": "rt01083",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "shortener",
-              "id": "rt01084",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "support_call",
-              "id": "rt01085",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01086",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt01087",
-              "label": "scam",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01088",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01089",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01090",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01091",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01093",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01094",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01095",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01096",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01098",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01099",
-              "label": "fake_upi",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01100",
-              "label": "doxxing",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01101",
-              "label": "doxxing",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01104",
-              "label": "doxxing",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt01105",
-              "label": "doxxing",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01106",
-              "label": "doxxing",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01107",
-              "label": "doxxing",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01110",
-              "label": "doxxing",
-              "technique": "enc_rot13"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt01112",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01113",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01114",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01115",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "slur_deva",
-              "id": "rt01116",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "slur_latn",
-              "id": "rt01117",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "slur_regional",
-              "id": "rt01118",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "threat",
-              "id": "rt01119",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt01120",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01121",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01122",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01123",
-              "label": "abuse",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01124",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt01125",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "hack_tool",
-              "id": "rt01126",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "invite",
-              "id": "rt01127",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "kyc_bank",
-              "id": "rt01128",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt01130",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phishing",
-              "id": "rt01131",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "shortener",
-              "id": "rt01132",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01134",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt01135",
-              "label": "scam",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01136",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01137",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01138",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01139",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt01140",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01141",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01142",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01143",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01144",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt01145",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01146",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01147",
-              "label": "fake_upi",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01148",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01149",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone",
-              "id": "rt01150",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone_embedded",
-              "id": "rt01151",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01152",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt01153",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01154",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01155",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone",
-              "id": "rt01156",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone_embedded",
-              "id": "rt01157",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01158",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt01159",
-              "label": "doxxing",
-              "technique": "enc_hex"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt01160",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01161",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01162",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01163",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "slur_deva",
-              "id": "rt01164",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "slur_latn",
-              "id": "rt01165",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "slur_regional",
-              "id": "rt01166",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "threat",
-              "id": "rt01167",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt01168",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt01169",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "profane_praise",
-              "id": "rt01170",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt01171",
-              "label": "abuse",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01172",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt01173",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "hack_tool",
-              "id": "rt01174",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "invite",
-              "id": "rt01175",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "kyc_bank",
-              "id": "rt01176",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "loan",
-              "id": "rt01177",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt01178",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phishing",
-              "id": "rt01179",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "shortener",
-              "id": "rt01180",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "support_call",
-              "id": "rt01181",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt01182",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt01183",
-              "label": "scam",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01184",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01185",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01186",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01187",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt01188",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01189",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01190",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt01191",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt01192",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt01193",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt01194",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt01195",
-              "label": "fake_upi",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01196",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01197",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone",
-              "id": "rt01198",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone_embedded",
-              "id": "rt01199",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01200",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt01201",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt01202",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt01203",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone",
-              "id": "rt01204",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone_embedded",
-              "id": "rt01205",
-              "label": "doxxing",
-              "technique": "enc_reversed"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt01206",
-              "label": "doxxing",
-              "technique": "enc_reversed"
             }
           ],
           "ci": [
-            0.8876,
-            0.96
+            0.0009,
+            0.0289
           ],
-          "k": 179,
+          "k": 1,
           "n": 192,
           "plain_not_flagged_skipped": 0,
-          "rate": 0.932292
+          "rate": 0.005208
         },
         "homoglyph": {
           "by_technique": {
@@ -1816,51 +748,33 @@
           "by_technique": {
             "leet_heavy": {
               "ci": [
-                0.0793,
-                0.2937
+                0.0126,
+                0.1514
               ],
-              "k": 7,
+              "k": 2,
               "n": 44,
-              "rate": 0.159091
+              "rate": 0.045455
             },
             "leet_light": {
               "ci": [
-                0.0368,
-                0.216
+                0.0041,
+                0.1206
               ],
-              "k": 4,
+              "k": 1,
               "n": 43,
-              "rate": 0.093023
+              "rate": 0.023256
             },
             "leet_symbols": {
               "ci": [
-                0.3375,
-                0.6206
+                0.1284,
+                0.3699
               ],
-              "k": 21,
+              "k": 10,
               "n": 44,
-              "rate": 0.477273
+              "rate": 0.227273
             }
           },
           "bypass": [
-            {
-              "base_kind": "collect",
-              "id": "rt00395",
-              "label": "fake_upi",
-              "technique": "leet_light"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00402",
-              "label": "fake_upi",
-              "technique": "leet_light"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt00406",
-              "label": "doxxing",
-              "technique": "leet_light"
-            },
             {
               "base_kind": "phone_spoken",
               "id": "rt00408",
@@ -1868,38 +782,8 @@
               "technique": "leet_light"
             },
             {
-              "base_kind": "collect",
-              "id": "rt00438",
-              "label": "fake_upi",
-              "technique": "leet_heavy"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00445",
-              "label": "fake_upi",
-              "technique": "leet_heavy"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt00448",
-              "label": "fake_upi",
-              "technique": "leet_heavy"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt00449",
-              "label": "doxxing",
-              "technique": "leet_heavy"
-            },
-            {
               "base_kind": "phone_spoken",
               "id": "rt00451",
-              "label": "doxxing",
-              "technique": "leet_heavy"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt00453",
               "label": "doxxing",
               "technique": "leet_heavy"
             },
@@ -1912,12 +796,6 @@
             {
               "base_kind": "abbrev",
               "id": "rt00459",
-              "label": "abuse",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "sexual",
-              "id": "rt00462",
               "label": "abuse",
               "technique": "leet_symbols"
             },
@@ -1958,38 +836,8 @@
               "technique": "leet_symbols"
             },
             {
-              "base_kind": "deeplink",
-              "id": "rt00483",
-              "label": "fake_upi",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00484",
-              "label": "fake_upi",
-              "technique": "leet_symbols"
-            },
-            {
               "base_kind": "collect",
               "id": "rt00487",
-              "label": "fake_upi",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt00488",
-              "label": "fake_upi",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00489",
-              "label": "fake_upi",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt00491",
               "label": "fake_upi",
               "technique": "leet_symbols"
             },
@@ -2000,50 +848,20 @@
               "technique": "leet_symbols"
             },
             {
-              "base_kind": "address",
-              "id": "rt00493",
-              "label": "doxxing",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt00494",
-              "label": "doxxing",
-              "technique": "leet_symbols"
-            },
-            {
               "base_kind": "phone_spoken",
               "id": "rt00495",
-              "label": "doxxing",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt00496",
-              "label": "doxxing",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt00497",
-              "label": "doxxing",
-              "technique": "leet_symbols"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt00501",
               "label": "doxxing",
               "technique": "leet_symbols"
             }
           ],
           "ci": [
-            0.1787,
-            0.3244
+            0.0589,
+            0.1624
           ],
-          "k": 32,
+          "k": 13,
           "n": 131,
           "plain_not_flagged_skipped": 0,
-          "rate": 0.244275
+          "rate": 0.099237
         },
         "mixed_script": {
           "by_technique": {
@@ -2249,48 +1067,48 @@
           "by_technique": {
             "split_dotted": {
               "ci": [
-                0.4631,
-                0.7298
+                0.0115,
+                0.1398
               ],
-              "k": 29,
+              "k": 2,
               "n": 48,
-              "rate": 0.604167
+              "rate": 0.041667
             },
             "split_midword": {
               "ci": [
-                0.1492,
-                0.3878
+                0.1019,
+                0.3194
               ],
-              "k": 12,
+              "k": 9,
               "n": 48,
-              "rate": 0.25
+              "rate": 0.1875
             },
             "split_newline": {
               "ci": [
-                0.1492,
-                0.3878
+                0.1019,
+                0.3194
               ],
-              "k": 12,
+              "k": 9,
               "n": 48,
-              "rate": 0.25
+              "rate": 0.1875
             },
             "split_spaced": {
               "ci": [
-                0.3447,
-                0.6167
+                0.2702,
+                0.5369
               ],
-              "k": 23,
+              "k": 19,
               "n": 48,
-              "rate": 0.479167
+              "rate": 0.395833
             },
             "split_underscore": {
               "ci": [
-                0.6574,
-                0.8827
+                0.0725,
+                0.2717
               ],
-              "k": 38,
+              "k": 7,
               "n": 48,
-              "rate": 0.791667
+              "rate": 0.145833
             }
           },
           "bypass": [
@@ -2307,6 +1125,12 @@
               "technique": "split_spaced"
             },
             {
+              "base_kind": "slur_deva",
+              "id": "rt00507",
+              "label": "abuse",
+              "technique": "split_spaced"
+            },
+            {
               "base_kind": "abbrev",
               "id": "rt00511",
               "label": "abuse",
@@ -2319,26 +1143,8 @@
               "technique": "split_spaced"
             },
             {
-              "base_kind": "invite",
-              "id": "rt00518",
-              "label": "scam",
-              "technique": "split_spaced"
-            },
-            {
               "base_kind": "kyc_bank",
               "id": "rt00519",
-              "label": "scam",
-              "technique": "split_spaced"
-            },
-            {
-              "base_kind": "loan",
-              "id": "rt00520",
-              "label": "scam",
-              "technique": "split_spaced"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt00521",
               "label": "scam",
               "technique": "split_spaced"
             },
@@ -2351,12 +1157,6 @@
             {
               "base_kind": "shortener",
               "id": "rt00523",
-              "label": "scam",
-              "technique": "split_spaced"
-            },
-            {
-              "base_kind": "support_call",
-              "id": "rt00524",
               "label": "scam",
               "technique": "split_spaced"
             },
@@ -2409,12 +1209,6 @@
               "technique": "split_spaced"
             },
             {
-              "base_kind": "streamer_private",
-              "id": "rt00544",
-              "label": "doxxing",
-              "technique": "split_spaced"
-            },
-            {
               "base_kind": "address",
               "id": "rt00545",
               "label": "doxxing",
@@ -2439,170 +1233,8 @@
               "technique": "split_dotted"
             },
             {
-              "base_kind": "sexual",
-              "id": "rt00554",
-              "label": "abuse",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt00559",
-              "label": "abuse",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt00563",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt00564",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "invite",
-              "id": "rt00566",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "kyc_bank",
-              "id": "rt00567",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "loan",
-              "id": "rt00568",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt00569",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "phishing",
-              "id": "rt00570",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "shortener",
-              "id": "rt00571",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "support_call",
-              "id": "rt00572",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt00573",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt00574",
-              "label": "scam",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt00575",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt00576",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt00577",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00578",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt00580",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt00581",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt00582",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00583",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt00585",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt00586",
-              "label": "fake_upi",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt00588",
-              "label": "doxxing",
-              "technique": "split_dotted"
-            },
-            {
               "base_kind": "phone_spoken",
               "id": "rt00591",
-              "label": "doxxing",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt00592",
-              "label": "doxxing",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt00594",
-              "label": "doxxing",
-              "technique": "split_dotted"
-            },
-            {
-              "base_kind": "phone_spoken",
-              "id": "rt00597",
               "label": "doxxing",
               "technique": "split_dotted"
             },
@@ -2613,26 +1245,8 @@
               "technique": "split_midword"
             },
             {
-              "base_kind": "slur_deva",
-              "id": "rt00603",
-              "label": "abuse",
-              "technique": "split_midword"
-            },
-            {
-              "base_kind": "slur_latn",
-              "id": "rt00604",
-              "label": "abuse",
-              "technique": "split_midword"
-            },
-            {
               "base_kind": "threat",
               "id": "rt00606",
-              "label": "abuse",
-              "technique": "split_midword"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt00608",
               "label": "abuse",
               "technique": "split_midword"
             },
@@ -2685,164 +1299,8 @@
               "technique": "split_underscore"
             },
             {
-              "base_kind": "sexual",
-              "id": "rt00650",
-              "label": "abuse",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "abbrev",
-              "id": "rt00655",
-              "label": "abuse",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt00659",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt00660",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "invite",
-              "id": "rt00662",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "kyc_bank",
-              "id": "rt00663",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "loan",
-              "id": "rt00664",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt00665",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "phishing",
-              "id": "rt00666",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "shortener",
-              "id": "rt00667",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "support_call",
-              "id": "rt00668",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "crypto",
-              "id": "rt00669",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "giveaway",
-              "id": "rt00670",
-              "label": "scam",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt00671",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt00672",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt00673",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00674",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt00675",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt00676",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt00677",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "deeplink",
-              "id": "rt00678",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "pay_to_id",
-              "id": "rt00679",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "phone_upi",
-              "id": "rt00680",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "app_deeplink",
-              "id": "rt00681",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "collect",
-              "id": "rt00682",
-              "label": "fake_upi",
-              "technique": "split_underscore"
-            },
-            {
               "base_kind": "address",
               "id": "rt00683",
-              "label": "doxxing",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt00684",
               "label": "doxxing",
               "technique": "split_underscore"
             },
@@ -2853,32 +1311,8 @@
               "technique": "split_underscore"
             },
             {
-              "base_kind": "phone_embedded",
-              "id": "rt00686",
-              "label": "doxxing",
-              "technique": "split_underscore"
-            },
-            {
               "base_kind": "phone_spoken",
               "id": "rt00687",
-              "label": "doxxing",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "streamer_private",
-              "id": "rt00688",
-              "label": "doxxing",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "address",
-              "id": "rt00689",
-              "label": "doxxing",
-              "technique": "split_underscore"
-            },
-            {
-              "base_kind": "intent",
-              "id": "rt00690",
               "label": "doxxing",
               "technique": "split_underscore"
             },
@@ -2895,12 +1329,6 @@
               "technique": "split_underscore"
             },
             {
-              "base_kind": "phone_spoken",
-              "id": "rt00693",
-              "label": "doxxing",
-              "technique": "split_underscore"
-            },
-            {
               "base_kind": "streamer_private",
               "id": "rt00694",
               "label": "doxxing",
@@ -2913,26 +1341,8 @@
               "technique": "split_newline"
             },
             {
-              "base_kind": "slur_deva",
-              "id": "rt00699",
-              "label": "abuse",
-              "technique": "split_newline"
-            },
-            {
-              "base_kind": "slur_latn",
-              "id": "rt00700",
-              "label": "abuse",
-              "technique": "split_newline"
-            },
-            {
               "base_kind": "threat",
               "id": "rt00702",
-              "label": "abuse",
-              "technique": "split_newline"
-            },
-            {
-              "base_kind": "english",
-              "id": "rt00704",
               "label": "abuse",
               "technique": "split_newline"
             },
@@ -2980,13 +1390,13 @@
             }
           ],
           "ci": [
-            0.4127,
-            0.5381
+            0.1469,
+            0.2462
           ],
-          "k": 114,
+          "k": 46,
           "n": 240,
           "plain_not_flagged_skipped": 0,
-          "rate": 0.475
+          "rate": 0.191667
         },
         "staff_claim": {
           "by_technique": {
@@ -3339,12 +1749,12 @@
             },
             "vis_vertical": {
               "ci": [
-                0.3447,
-                0.6167
+                0.2702,
+                0.5369
               ],
-              "k": 23,
+              "k": 19,
               "n": 48,
-              "rate": 0.479167
+              "rate": 0.395833
             },
             "vis_zalgo": {
               "ci": [
@@ -3370,6 +1780,12 @@
               "technique": "vis_vertical"
             },
             {
+              "base_kind": "slur_deva",
+              "id": "rt01350",
+              "label": "abuse",
+              "technique": "vis_vertical"
+            },
+            {
               "base_kind": "abbrev",
               "id": "rt01354",
               "label": "abuse",
@@ -3382,26 +1798,8 @@
               "technique": "vis_vertical"
             },
             {
-              "base_kind": "invite",
-              "id": "rt01361",
-              "label": "scam",
-              "technique": "vis_vertical"
-            },
-            {
               "base_kind": "kyc_bank",
               "id": "rt01362",
-              "label": "scam",
-              "technique": "vis_vertical"
-            },
-            {
-              "base_kind": "loan",
-              "id": "rt01363",
-              "label": "scam",
-              "technique": "vis_vertical"
-            },
-            {
-              "base_kind": "lottery",
-              "id": "rt01364",
               "label": "scam",
               "technique": "vis_vertical"
             },
@@ -3414,12 +1812,6 @@
             {
               "base_kind": "shortener",
               "id": "rt01366",
-              "label": "scam",
-              "technique": "vis_vertical"
-            },
-            {
-              "base_kind": "support_call",
-              "id": "rt01367",
               "label": "scam",
               "technique": "vis_vertical"
             },
@@ -3472,12 +1864,6 @@
               "technique": "vis_vertical"
             },
             {
-              "base_kind": "streamer_private",
-              "id": "rt01387",
-              "label": "doxxing",
-              "technique": "vis_vertical"
-            },
-            {
               "base_kind": "address",
               "id": "rt01388",
               "label": "doxxing",
@@ -3497,13 +1883,13 @@
             }
           ],
           "ci": [
-            0.0664,
-            0.1432
+            0.0526,
+            0.1233
           ],
-          "k": 23,
+          "k": 19,
           "n": 234,
           "plain_not_flagged_skipped": 0,
-          "rate": 0.098291
+          "rate": 0.081197
         },
         "zero_width": {
           "by_technique": {
@@ -3562,27 +1948,27 @@
         "config_rejected": 0,
         "dropped_overload": 0,
         "duplicates": 0,
-        "hidden_count": 1797,
+        "hidden_count": 2066,
         "mod_actions": 0,
-        "modqueue_pending": 349,
-        "p95_ms": 284.795,
+        "modqueue_pending": 407,
+        "p95_ms": 1273.813,
         "queued": 0,
         "received": 2161,
-        "shown": 364
+        "shown": 95
       },
-      "wall_s": 4.12
+      "wall_s": 17.38
     },
     "flood": {
       "benign_dropped_unclassified": 2700,
       "dropped_overload": 3000,
       "hold_events": 1,
-      "hold_submit_ms": 0.115,
+      "hold_submit_ms": 0.27,
       "messages": 4000,
       "positives": 400,
       "positives_dropped_unclassified": 300,
       "positives_flagged": 100,
       "positives_shown_on_overlay": 0,
-      "submit_burst_s": 0.004
+      "submit_burst_s": 0.012
     },
     "hold": {
       "denied_events_flood_1000": 0,
@@ -3618,15 +2004,15 @@
     },
     "logs": {
       "event_leaks": 0,
-      "events_scanned": 6703,
+      "events_scanned": 7452,
       "log_leaks": 0,
-      "log_records": 13028
+      "log_records": 13450
     },
     "malformed": {
       "cases": 30,
       "classify_errors": 0,
       "crashes": [],
-      "max_ms": 199.4,
+      "max_ms": 314.1,
       "no_verdict": [],
       "positive_bypass": [],
       "positives": 10,
@@ -3634,20 +2020,20 @@
       "shown_no_verdict": [],
       "slowest": [
         {
-          "ms": 199.4,
+          "ms": 314.1,
           "name": "regex_hostile_dots"
         },
         {
-          "ms": 189.3,
+          "ms": 264.0,
           "name": "slur_head_then_huge"
         },
         {
-          "ms": 135.1,
-          "name": "huge_1m"
+          "ms": 175.3,
+          "name": "repeat_slur_10k"
         },
         {
-          "ms": 93.0,
-          "name": "emoji_flood"
+          "ms": 159.7,
+          "name": "huge_1m"
         }
       ]
     },
@@ -3664,7 +2050,7 @@
     "bases": 48,
     "categories": "all",
     "defect": "",
-    "git_rev": "0aaadeddab5e",
+    "git_rev": "0a2b6b66ea1a",
     "hardware": {
       "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
       "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
@@ -3711,15 +2097,15 @@
         [
           "leetspeak",
           131,
-          32,
-          "24.4% (32/131, CI 18%-32%)",
+          13,
+          "9.9% (13/131, CI 6%-16%)",
           "<= 15%"
         ],
         [
           "split_words",
           240,
-          114,
-          "47.5% (114/240, CI 41%-54%)",
+          46,
+          "19.2% (46/240, CI 15%-25%)",
           "<= 15%"
         ],
         [
@@ -3732,15 +2118,15 @@
         [
           "encoding",
           192,
-          179,
-          "93.2% (179/192, CI 89%-96%)",
+          1,
+          "0.5% (1/192, CI 0%-3%)",
           "informational"
         ],
         [
           "visual_tricks",
           234,
-          23,
-          "9.8% (23/234, CI 7%-14%)",
+          19,
+          "8.1% (19/234, CI 5%-12%)",
           "<= 25%"
         ],
         [
@@ -3799,80 +2185,62 @@
         [
           "leetspeak/leet_heavy",
           44,
-          7,
-          0.159091
+          2,
+          0.045455
         ],
         [
           "leetspeak/leet_light",
           43,
-          4,
-          0.093023
+          1,
+          0.023256
         ],
         [
           "leetspeak/leet_symbols",
           44,
-          21,
-          0.477273
+          10,
+          0.227273
         ],
         [
           "split_words/split_dotted",
           48,
-          29,
-          0.604167
+          2,
+          0.041667
         ],
         [
           "split_words/split_midword",
           48,
-          12,
-          0.25
+          9,
+          0.1875
         ],
         [
           "split_words/split_newline",
           48,
-          12,
-          0.25
+          9,
+          0.1875
         ],
         [
           "split_words/split_spaced",
           48,
-          23,
-          0.479167
+          19,
+          0.395833
         ],
         [
           "split_words/split_underscore",
           48,
-          38,
-          0.791667
+          7,
+          0.145833
         ],
         [
           "encoding/enc_base64",
           48,
-          48,
-          1.0
-        ],
-        [
-          "encoding/enc_hex",
-          48,
-          46,
-          0.958333
-        ],
-        [
-          "encoding/enc_reversed",
-          48,
-          47,
-          0.979167
-        ],
-        [
-          "encoding/enc_rot13",
-          48,
-          38,
-          0.791667
+          1,
+          0.020833
         ],
         [
           "visual_tricks/vis_vertical",
           48,
-          23,
-          0.479167
+          19,
+          0.395833
         ],
         [
           "url_obfuscation/url_comma_dot",
@@ -3934,46 +2302,28 @@
       ],
       "rows": [
         [
-          "encoding/abuse",
-          48,
-          46,
-          0.958333
-        ],
-        [
           "encoding/doxxing",
           48,
-          42,
-          0.875
-        ],
-        [
-          "encoding/fake_upi",
-          48,
-          46,
-          0.958333
-        ],
-        [
-          "encoding/scam",
-          48,
-          45,
-          0.9375
+          1,
+          0.020833
         ],
         [
           "leetspeak/abuse",
           30,
-          3,
-          0.1
+          2,
+          0.066667
         ],
         [
           "leetspeak/doxxing",
           29,
-          12,
-          0.413793
+          4,
+          0.137931
         ],
         [
           "leetspeak/fake_upi",
           36,
-          13,
-          0.361111
+          3,
+          0.083333
         ],
         [
           "leetspeak/scam",
@@ -3996,26 +2346,26 @@
         [
           "split_words/abuse",
           60,
-          21,
-          0.35
+          12,
+          0.2
         ],
         [
           "split_words/doxxing",
           60,
-          34,
-          0.566667
+          23,
+          0.383333
         ],
         [
           "split_words/fake_upi",
           60,
-          25,
-          0.416667
+          3,
+          0.05
         ],
         [
           "split_words/scam",
           60,
-          34,
-          0.566667
+          8,
+          0.133333
         ],
         [
           "upi_confusables/fake_upi",
@@ -4032,14 +2382,14 @@
         [
           "visual_tricks/abuse",
           58,
-          3,
-          0.051724
+          4,
+          0.068966
         ],
         [
           "visual_tricks/doxxing",
           57,
-          7,
-          0.122807
+          6,
+          0.105263
         ],
         [
           "visual_tricks/fake_upi",
@@ -4050,8 +2400,8 @@
         [
           "visual_tricks/scam",
           60,
-          10,
-          0.166667
+          6,
+          0.1
         ]
       ],
       "title": "Bypass by label"
@@ -4072,15 +2422,15 @@
         ],
         [
           "flood",
-          "{\"messages\": 4000, \"positives\": 400, \"submit_burst_s\": 0.004, \"hold_submit_ms\": 0.115, \"hold_events\": 1, \"positives_shown_on_overlay\": 0, \"positives_flagged\": 100, \"positives_dropped_unclassified\": 300, \"benign_dropped_unclassified\": 2700, \"dropped_overload\": 3000}"
+          "{\"messages\": 4000, \"positives\": 400, \"submit_burst_s\": 0.012, \"hold_submit_ms\": 0.27, \"hold_events\": 1, \"positives_shown_on_overlay\": 0, \"positives_flagged\": 100, \"positives_dropped_unclassified\": 300, \"benign_dropped_unclassified\": 2700, \"dropped_overload\": 3000}"
         ],
         [
           "malformed",
-          "{\"cases\": 30, \"crashes\": [], \"rejected_at_contract\": [], \"no_verdict\": [], \"positive_bypass\": [], \"positives\": 10, \"max_ms\": 199.4, \"classify_errors\": 0, \"shown_no_verdict\": []}"
+          "{\"cases\": 30, \"crashes\": [], \"rejected_at_contract\": [], \"no_verdict\": [], \"positive_bypass\": [], \"positives\": 10, \"max_ms\": 314.1, \"classify_errors\": 0, \"shown_no_verdict\": []}"
         ],
         [
           "malformed slowest",
-          "[{\"name\": \"regex_hostile_dots\", \"ms\": 199.4}, {\"name\": \"slur_head_then_huge\", \"ms\": 189.3}, {\"name\": \"huge_1m\", \"ms\": 135.1}, {\"name\": \"emoji_flood\", \"ms\": 93.0}]"
+          "[{\"name\": \"regex_hostile_dots\", \"ms\": 314.1}, {\"name\": \"slur_head_then_huge\", \"ms\": 264.0}, {\"name\": \"repeat_slur_10k\", \"ms\": 175.3}, {\"name\": \"huge_1m\", \"ms\": 159.7}]"
         ],
         [
           "prompt structure",
@@ -4088,7 +2438,7 @@
         ],
         [
           "logs",
-          "{\"log_records\": 13028, \"log_leaks\": 0, \"events_scanned\": 6703, \"event_leaks\": 0}"
+          "{\"log_records\": 13450, \"log_leaks\": 0, \"events_scanned\": 7452, \"event_leaks\": 0}"
         ],
         [
           "injection (obedient LLM)",
@@ -4108,27 +2458,6 @@
       "rows": [
         [
           "leetspeak",
-          "rt00395",
-          "leet_light",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "leetspeak",
-          "rt00402",
-          "leet_light",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "leetspeak",
-          "rt00406",
-          "leet_light",
-          "doxxing",
-          "address"
-        ],
-        [
-          "leetspeak",
           "rt00408",
           "leet_light",
           "doxxing",
@@ -4136,45 +2465,10 @@
         ],
         [
           "leetspeak",
-          "rt00438",
-          "leet_heavy",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "leetspeak",
-          "rt00445",
-          "leet_heavy",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "leetspeak",
-          "rt00448",
-          "leet_heavy",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "leetspeak",
-          "rt00449",
-          "leet_heavy",
-          "doxxing",
-          "address"
-        ],
-        [
-          "leetspeak",
           "rt00451",
           "leet_heavy",
           "doxxing",
           "phone_spoken"
-        ],
-        [
-          "leetspeak",
-          "rt00453",
-          "leet_heavy",
-          "doxxing",
-          "address"
         ],
         [
           "leetspeak",
@@ -4189,13 +2483,6 @@
           "leet_symbols",
           "abuse",
           "abbrev"
-        ],
-        [
-          "leetspeak",
-          "rt00462",
-          "leet_symbols",
-          "abuse",
-          "sexual"
         ],
         [
           "leetspeak",
@@ -4241,45 +2528,10 @@
         ],
         [
           "leetspeak",
-          "rt00483",
-          "leet_symbols",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "leetspeak",
-          "rt00484",
-          "leet_symbols",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "leetspeak",
           "rt00487",
           "leet_symbols",
           "fake_upi",
           "collect"
-        ],
-        [
-          "leetspeak",
-          "rt00488",
-          "leet_symbols",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "leetspeak",
-          "rt00489",
-          "leet_symbols",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "leetspeak",
-          "rt00491",
-          "leet_symbols",
-          "fake_upi",
-          "app_deeplink"
         ],
         [
           "leetspeak",
@@ -4290,42 +2542,7 @@
         ],
         [
           "leetspeak",
-          "rt00493",
-          "leet_symbols",
-          "doxxing",
-          "address"
-        ],
-        [
-          "leetspeak",
-          "rt00494",
-          "leet_symbols",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "leetspeak",
           "rt00495",
-          "leet_symbols",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "leetspeak",
-          "rt00496",
-          "leet_symbols",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "leetspeak",
-          "rt00497",
-          "leet_symbols",
-          "doxxing",
-          "address"
-        ],
-        [
-          "leetspeak",
-          "rt00501",
           "leet_symbols",
           "doxxing",
           "phone_spoken"
@@ -4346,6 +2563,13 @@
         ],
         [
           "split_words",
+          "rt00507",
+          "split_spaced",
+          "abuse",
+          "slur_deva"
+        ],
+        [
+          "split_words",
           "rt00511",
           "split_spaced",
           "abuse",
@@ -4360,31 +2584,10 @@
         ],
         [
           "split_words",
-          "rt00518",
-          "split_spaced",
-          "scam",
-          "invite"
-        ],
-        [
-          "split_words",
           "rt00519",
           "split_spaced",
           "scam",
           "kyc_bank"
-        ],
-        [
-          "split_words",
-          "rt00520",
-          "split_spaced",
-          "scam",
-          "loan"
-        ],
-        [
-          "split_words",
-          "rt00521",
-          "split_spaced",
-          "scam",
-          "lottery"
         ],
         [
           "split_words",
@@ -4399,13 +2602,6 @@
           "split_spaced",
           "scam",
           "shortener"
-        ],
-        [
-          "split_words",
-          "rt00524",
-          "split_spaced",
-          "scam",
-          "support_call"
         ],
         [
           "split_words",
@@ -4465,13 +2661,6 @@
         ],
         [
           "split_words",
-          "rt00544",
-          "split_spaced",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "split_words",
           "rt00545",
           "split_spaced",
           "doxxing",
@@ -4500,196 +2689,7 @@
         ],
         [
           "split_words",
-          "rt00554",
-          "split_dotted",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "split_words",
-          "rt00559",
-          "split_dotted",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "split_words",
-          "rt00563",
-          "split_dotted",
-          "scam",
-          "crypto"
-        ],
-        [
-          "split_words",
-          "rt00564",
-          "split_dotted",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "split_words",
-          "rt00566",
-          "split_dotted",
-          "scam",
-          "invite"
-        ],
-        [
-          "split_words",
-          "rt00567",
-          "split_dotted",
-          "scam",
-          "kyc_bank"
-        ],
-        [
-          "split_words",
-          "rt00568",
-          "split_dotted",
-          "scam",
-          "loan"
-        ],
-        [
-          "split_words",
-          "rt00569",
-          "split_dotted",
-          "scam",
-          "lottery"
-        ],
-        [
-          "split_words",
-          "rt00570",
-          "split_dotted",
-          "scam",
-          "phishing"
-        ],
-        [
-          "split_words",
-          "rt00571",
-          "split_dotted",
-          "scam",
-          "shortener"
-        ],
-        [
-          "split_words",
-          "rt00572",
-          "split_dotted",
-          "scam",
-          "support_call"
-        ],
-        [
-          "split_words",
-          "rt00573",
-          "split_dotted",
-          "scam",
-          "crypto"
-        ],
-        [
-          "split_words",
-          "rt00574",
-          "split_dotted",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "split_words",
-          "rt00575",
-          "split_dotted",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "split_words",
-          "rt00576",
-          "split_dotted",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "split_words",
-          "rt00577",
-          "split_dotted",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "split_words",
-          "rt00578",
-          "split_dotted",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "split_words",
-          "rt00580",
-          "split_dotted",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "split_words",
-          "rt00581",
-          "split_dotted",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "split_words",
-          "rt00582",
-          "split_dotted",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "split_words",
-          "rt00583",
-          "split_dotted",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "split_words",
-          "rt00585",
-          "split_dotted",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "split_words",
-          "rt00586",
-          "split_dotted",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "split_words",
-          "rt00588",
-          "split_dotted",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "split_words",
           "rt00591",
-          "split_dotted",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "split_words",
-          "rt00592",
-          "split_dotted",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "split_words",
-          "rt00594",
-          "split_dotted",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "split_words",
-          "rt00597",
           "split_dotted",
           "doxxing",
           "phone_spoken"
@@ -4703,31 +2703,10 @@
         ],
         [
           "split_words",
-          "rt00603",
-          "split_midword",
-          "abuse",
-          "slur_deva"
-        ],
-        [
-          "split_words",
-          "rt00604",
-          "split_midword",
-          "abuse",
-          "slur_latn"
-        ],
-        [
-          "split_words",
           "rt00606",
           "split_midword",
           "abuse",
           "threat"
-        ],
-        [
-          "split_words",
-          "rt00608",
-          "split_midword",
-          "abuse",
-          "english"
         ],
         [
           "split_words",
@@ -4787,192 +2766,10 @@
         ],
         [
           "split_words",
-          "rt00650",
-          "split_underscore",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "split_words",
-          "rt00655",
-          "split_underscore",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "split_words",
-          "rt00659",
-          "split_underscore",
-          "scam",
-          "crypto"
-        ],
-        [
-          "split_words",
-          "rt00660",
-          "split_underscore",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "split_words",
-          "rt00662",
-          "split_underscore",
-          "scam",
-          "invite"
-        ],
-        [
-          "split_words",
-          "rt00663",
-          "split_underscore",
-          "scam",
-          "kyc_bank"
-        ],
-        [
-          "split_words",
-          "rt00664",
-          "split_underscore",
-          "scam",
-          "loan"
-        ],
-        [
-          "split_words",
-          "rt00665",
-          "split_underscore",
-          "scam",
-          "lottery"
-        ],
-        [
-          "split_words",
-          "rt00666",
-          "split_underscore",
-          "scam",
-          "phishing"
-        ],
-        [
-          "split_words",
-          "rt00667",
-          "split_underscore",
-          "scam",
-          "shortener"
-        ],
-        [
-          "split_words",
-          "rt00668",
-          "split_underscore",
-          "scam",
-          "support_call"
-        ],
-        [
-          "split_words",
-          "rt00669",
-          "split_underscore",
-          "scam",
-          "crypto"
-        ],
-        [
-          "split_words",
-          "rt00670",
-          "split_underscore",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "split_words",
-          "rt00671",
-          "split_underscore",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "split_words",
-          "rt00672",
-          "split_underscore",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "split_words",
-          "rt00673",
-          "split_underscore",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "split_words",
-          "rt00674",
-          "split_underscore",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "split_words",
-          "rt00675",
-          "split_underscore",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "split_words",
-          "rt00676",
-          "split_underscore",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "split_words",
-          "rt00677",
-          "split_underscore",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "split_words",
-          "rt00678",
-          "split_underscore",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "split_words",
-          "rt00679",
-          "split_underscore",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "split_words",
-          "rt00680",
-          "split_underscore",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "split_words",
-          "rt00681",
-          "split_underscore",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "split_words",
-          "rt00682",
-          "split_underscore",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "split_words",
           "rt00683",
           "split_underscore",
           "doxxing",
           "address"
-        ],
-        [
-          "split_words",
-          "rt00684",
-          "split_underscore",
-          "doxxing",
-          "intent"
         ],
         [
           "split_words",
@@ -4983,38 +2780,10 @@
         ],
         [
           "split_words",
-          "rt00686",
-          "split_underscore",
-          "doxxing",
-          "phone_embedded"
-        ],
-        [
-          "split_words",
           "rt00687",
           "split_underscore",
           "doxxing",
           "phone_spoken"
-        ],
-        [
-          "split_words",
-          "rt00688",
-          "split_underscore",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "split_words",
-          "rt00689",
-          "split_underscore",
-          "doxxing",
-          "address"
-        ],
-        [
-          "split_words",
-          "rt00690",
-          "split_underscore",
-          "doxxing",
-          "intent"
         ],
         [
           "split_words",
@@ -5032,13 +2801,6 @@
         ],
         [
           "split_words",
-          "rt00693",
-          "split_underscore",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "split_words",
           "rt00694",
           "split_underscore",
           "doxxing",
@@ -5053,31 +2815,10 @@
         ],
         [
           "split_words",
-          "rt00699",
-          "split_newline",
-          "abuse",
-          "slur_deva"
-        ],
-        [
-          "split_words",
-          "rt00700",
-          "split_newline",
-          "abuse",
-          "slur_latn"
-        ],
-        [
-          "split_words",
           "rt00702",
           "split_newline",
           "abuse",
           "threat"
-        ],
-        [
-          "split_words",
-          "rt00704",
-          "split_newline",
-          "abuse",
-          "english"
         ],
         [
           "split_words",
@@ -5130,1256 +2871,10 @@
         ],
         [
           "encoding",
-          "rt01016",
-          "enc_base64",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01017",
-          "enc_base64",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01018",
-          "enc_base64",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01019",
-          "enc_base64",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01020",
-          "enc_base64",
-          "abuse",
-          "slur_deva"
-        ],
-        [
-          "encoding",
-          "rt01021",
-          "enc_base64",
-          "abuse",
-          "slur_latn"
-        ],
-        [
-          "encoding",
-          "rt01022",
-          "enc_base64",
-          "abuse",
-          "slur_regional"
-        ],
-        [
-          "encoding",
-          "rt01023",
-          "enc_base64",
-          "abuse",
-          "threat"
-        ],
-        [
-          "encoding",
-          "rt01024",
-          "enc_base64",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01025",
-          "enc_base64",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01026",
-          "enc_base64",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01027",
-          "enc_base64",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01028",
-          "enc_base64",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01029",
-          "enc_base64",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "encoding",
-          "rt01030",
-          "enc_base64",
-          "scam",
-          "hack_tool"
-        ],
-        [
-          "encoding",
-          "rt01031",
-          "enc_base64",
-          "scam",
-          "invite"
-        ],
-        [
-          "encoding",
-          "rt01032",
-          "enc_base64",
-          "scam",
-          "kyc_bank"
-        ],
-        [
-          "encoding",
-          "rt01033",
-          "enc_base64",
-          "scam",
-          "loan"
-        ],
-        [
-          "encoding",
-          "rt01034",
-          "enc_base64",
-          "scam",
-          "lottery"
-        ],
-        [
-          "encoding",
-          "rt01035",
-          "enc_base64",
-          "scam",
-          "phishing"
-        ],
-        [
-          "encoding",
-          "rt01036",
-          "enc_base64",
-          "scam",
-          "shortener"
-        ],
-        [
-          "encoding",
-          "rt01037",
-          "enc_base64",
-          "scam",
-          "support_call"
-        ],
-        [
-          "encoding",
-          "rt01038",
-          "enc_base64",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01039",
-          "enc_base64",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "encoding",
-          "rt01040",
-          "enc_base64",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01041",
-          "enc_base64",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01042",
-          "enc_base64",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01043",
-          "enc_base64",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01044",
-          "enc_base64",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "encoding",
-          "rt01045",
-          "enc_base64",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01046",
-          "enc_base64",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01047",
-          "enc_base64",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01048",
-          "enc_base64",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01049",
-          "enc_base64",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "encoding",
-          "rt01050",
-          "enc_base64",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01051",
-          "enc_base64",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01052",
-          "enc_base64",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01053",
-          "enc_base64",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
           "rt01054",
           "enc_base64",
           "doxxing",
           "phone"
-        ],
-        [
-          "encoding",
-          "rt01055",
-          "enc_base64",
-          "doxxing",
-          "phone_embedded"
-        ],
-        [
-          "encoding",
-          "rt01056",
-          "enc_base64",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "encoding",
-          "rt01057",
-          "enc_base64",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "encoding",
-          "rt01058",
-          "enc_base64",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01059",
-          "enc_base64",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
-          "rt01060",
-          "enc_base64",
-          "doxxing",
-          "phone"
-        ],
-        [
-          "encoding",
-          "rt01061",
-          "enc_base64",
-          "doxxing",
-          "phone_embedded"
-        ],
-        [
-          "encoding",
-          "rt01062",
-          "enc_base64",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "encoding",
-          "rt01063",
-          "enc_base64",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "encoding",
-          "rt01064",
-          "enc_rot13",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01065",
-          "enc_rot13",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01066",
-          "enc_rot13",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01067",
-          "enc_rot13",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01069",
-          "enc_rot13",
-          "abuse",
-          "slur_latn"
-        ],
-        [
-          "encoding",
-          "rt01071",
-          "enc_rot13",
-          "abuse",
-          "threat"
-        ],
-        [
-          "encoding",
-          "rt01072",
-          "enc_rot13",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01073",
-          "enc_rot13",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01074",
-          "enc_rot13",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01075",
-          "enc_rot13",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01076",
-          "enc_rot13",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01078",
-          "enc_rot13",
-          "scam",
-          "hack_tool"
-        ],
-        [
-          "encoding",
-          "rt01079",
-          "enc_rot13",
-          "scam",
-          "invite"
-        ],
-        [
-          "encoding",
-          "rt01080",
-          "enc_rot13",
-          "scam",
-          "kyc_bank"
-        ],
-        [
-          "encoding",
-          "rt01081",
-          "enc_rot13",
-          "scam",
-          "loan"
-        ],
-        [
-          "encoding",
-          "rt01082",
-          "enc_rot13",
-          "scam",
-          "lottery"
-        ],
-        [
-          "encoding",
-          "rt01083",
-          "enc_rot13",
-          "scam",
-          "phishing"
-        ],
-        [
-          "encoding",
-          "rt01084",
-          "enc_rot13",
-          "scam",
-          "shortener"
-        ],
-        [
-          "encoding",
-          "rt01085",
-          "enc_rot13",
-          "scam",
-          "support_call"
-        ],
-        [
-          "encoding",
-          "rt01086",
-          "enc_rot13",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01087",
-          "enc_rot13",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "encoding",
-          "rt01088",
-          "enc_rot13",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01089",
-          "enc_rot13",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01090",
-          "enc_rot13",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01091",
-          "enc_rot13",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01093",
-          "enc_rot13",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01094",
-          "enc_rot13",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01095",
-          "enc_rot13",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01096",
-          "enc_rot13",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01098",
-          "enc_rot13",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01099",
-          "enc_rot13",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01100",
-          "enc_rot13",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01101",
-          "enc_rot13",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
-          "rt01104",
-          "enc_rot13",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "encoding",
-          "rt01105",
-          "enc_rot13",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "encoding",
-          "rt01106",
-          "enc_rot13",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01107",
-          "enc_rot13",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
-          "rt01110",
-          "enc_rot13",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "encoding",
-          "rt01112",
-          "enc_hex",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01113",
-          "enc_hex",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01114",
-          "enc_hex",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01115",
-          "enc_hex",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01116",
-          "enc_hex",
-          "abuse",
-          "slur_deva"
-        ],
-        [
-          "encoding",
-          "rt01117",
-          "enc_hex",
-          "abuse",
-          "slur_latn"
-        ],
-        [
-          "encoding",
-          "rt01118",
-          "enc_hex",
-          "abuse",
-          "slur_regional"
-        ],
-        [
-          "encoding",
-          "rt01119",
-          "enc_hex",
-          "abuse",
-          "threat"
-        ],
-        [
-          "encoding",
-          "rt01120",
-          "enc_hex",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01121",
-          "enc_hex",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01122",
-          "enc_hex",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01123",
-          "enc_hex",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01124",
-          "enc_hex",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01125",
-          "enc_hex",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "encoding",
-          "rt01126",
-          "enc_hex",
-          "scam",
-          "hack_tool"
-        ],
-        [
-          "encoding",
-          "rt01127",
-          "enc_hex",
-          "scam",
-          "invite"
-        ],
-        [
-          "encoding",
-          "rt01128",
-          "enc_hex",
-          "scam",
-          "kyc_bank"
-        ],
-        [
-          "encoding",
-          "rt01130",
-          "enc_hex",
-          "scam",
-          "lottery"
-        ],
-        [
-          "encoding",
-          "rt01131",
-          "enc_hex",
-          "scam",
-          "phishing"
-        ],
-        [
-          "encoding",
-          "rt01132",
-          "enc_hex",
-          "scam",
-          "shortener"
-        ],
-        [
-          "encoding",
-          "rt01134",
-          "enc_hex",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01135",
-          "enc_hex",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "encoding",
-          "rt01136",
-          "enc_hex",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01137",
-          "enc_hex",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01138",
-          "enc_hex",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01139",
-          "enc_hex",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01140",
-          "enc_hex",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "encoding",
-          "rt01141",
-          "enc_hex",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01142",
-          "enc_hex",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01143",
-          "enc_hex",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01144",
-          "enc_hex",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01145",
-          "enc_hex",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "encoding",
-          "rt01146",
-          "enc_hex",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01147",
-          "enc_hex",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01148",
-          "enc_hex",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01149",
-          "enc_hex",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
-          "rt01150",
-          "enc_hex",
-          "doxxing",
-          "phone"
-        ],
-        [
-          "encoding",
-          "rt01151",
-          "enc_hex",
-          "doxxing",
-          "phone_embedded"
-        ],
-        [
-          "encoding",
-          "rt01152",
-          "enc_hex",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "encoding",
-          "rt01153",
-          "enc_hex",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "encoding",
-          "rt01154",
-          "enc_hex",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01155",
-          "enc_hex",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
-          "rt01156",
-          "enc_hex",
-          "doxxing",
-          "phone"
-        ],
-        [
-          "encoding",
-          "rt01157",
-          "enc_hex",
-          "doxxing",
-          "phone_embedded"
-        ],
-        [
-          "encoding",
-          "rt01158",
-          "enc_hex",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "encoding",
-          "rt01159",
-          "enc_hex",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "encoding",
-          "rt01160",
-          "enc_reversed",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01161",
-          "enc_reversed",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01162",
-          "enc_reversed",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01163",
-          "enc_reversed",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01164",
-          "enc_reversed",
-          "abuse",
-          "slur_deva"
-        ],
-        [
-          "encoding",
-          "rt01165",
-          "enc_reversed",
-          "abuse",
-          "slur_latn"
-        ],
-        [
-          "encoding",
-          "rt01166",
-          "enc_reversed",
-          "abuse",
-          "slur_regional"
-        ],
-        [
-          "encoding",
-          "rt01167",
-          "enc_reversed",
-          "abuse",
-          "threat"
-        ],
-        [
-          "encoding",
-          "rt01168",
-          "enc_reversed",
-          "abuse",
-          "abbrev"
-        ],
-        [
-          "encoding",
-          "rt01169",
-          "enc_reversed",
-          "abuse",
-          "english"
-        ],
-        [
-          "encoding",
-          "rt01170",
-          "enc_reversed",
-          "abuse",
-          "profane_praise"
-        ],
-        [
-          "encoding",
-          "rt01171",
-          "enc_reversed",
-          "abuse",
-          "sexual"
-        ],
-        [
-          "encoding",
-          "rt01172",
-          "enc_reversed",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01173",
-          "enc_reversed",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "encoding",
-          "rt01174",
-          "enc_reversed",
-          "scam",
-          "hack_tool"
-        ],
-        [
-          "encoding",
-          "rt01175",
-          "enc_reversed",
-          "scam",
-          "invite"
-        ],
-        [
-          "encoding",
-          "rt01176",
-          "enc_reversed",
-          "scam",
-          "kyc_bank"
-        ],
-        [
-          "encoding",
-          "rt01177",
-          "enc_reversed",
-          "scam",
-          "loan"
-        ],
-        [
-          "encoding",
-          "rt01178",
-          "enc_reversed",
-          "scam",
-          "lottery"
-        ],
-        [
-          "encoding",
-          "rt01179",
-          "enc_reversed",
-          "scam",
-          "phishing"
-        ],
-        [
-          "encoding",
-          "rt01180",
-          "enc_reversed",
-          "scam",
-          "shortener"
-        ],
-        [
-          "encoding",
-          "rt01181",
-          "enc_reversed",
-          "scam",
-          "support_call"
-        ],
-        [
-          "encoding",
-          "rt01182",
-          "enc_reversed",
-          "scam",
-          "crypto"
-        ],
-        [
-          "encoding",
-          "rt01183",
-          "enc_reversed",
-          "scam",
-          "giveaway"
-        ],
-        [
-          "encoding",
-          "rt01184",
-          "enc_reversed",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01185",
-          "enc_reversed",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01186",
-          "enc_reversed",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01187",
-          "enc_reversed",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01188",
-          "enc_reversed",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "encoding",
-          "rt01189",
-          "enc_reversed",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01190",
-          "enc_reversed",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01191",
-          "enc_reversed",
-          "fake_upi",
-          "deeplink"
-        ],
-        [
-          "encoding",
-          "rt01192",
-          "enc_reversed",
-          "fake_upi",
-          "pay_to_id"
-        ],
-        [
-          "encoding",
-          "rt01193",
-          "enc_reversed",
-          "fake_upi",
-          "phone_upi"
-        ],
-        [
-          "encoding",
-          "rt01194",
-          "enc_reversed",
-          "fake_upi",
-          "app_deeplink"
-        ],
-        [
-          "encoding",
-          "rt01195",
-          "enc_reversed",
-          "fake_upi",
-          "collect"
-        ],
-        [
-          "encoding",
-          "rt01196",
-          "enc_reversed",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01197",
-          "enc_reversed",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
-          "rt01198",
-          "enc_reversed",
-          "doxxing",
-          "phone"
-        ],
-        [
-          "encoding",
-          "rt01199",
-          "enc_reversed",
-          "doxxing",
-          "phone_embedded"
-        ],
-        [
-          "encoding",
-          "rt01200",
-          "enc_reversed",
-          "doxxing",
-          "phone_spoken"
-        ],
-        [
-          "encoding",
-          "rt01201",
-          "enc_reversed",
-          "doxxing",
-          "streamer_private"
-        ],
-        [
-          "encoding",
-          "rt01202",
-          "enc_reversed",
-          "doxxing",
-          "address"
-        ],
-        [
-          "encoding",
-          "rt01203",
-          "enc_reversed",
-          "doxxing",
-          "intent"
-        ],
-        [
-          "encoding",
-          "rt01204",
-          "enc_reversed",
-          "doxxing",
-          "phone"
-        ],
-        [
-          "encoding",
-          "rt01205",
-          "enc_reversed",
-          "doxxing",
-          "phone_embedded"
-        ],
-        [
-          "encoding",
-          "rt01206",
-          "enc_reversed",
-          "doxxing",
-          "phone_spoken"
         ],
         [
           "visual_tricks",
@@ -6397,6 +2892,13 @@
         ],
         [
           "visual_tricks",
+          "rt01350",
+          "vis_vertical",
+          "abuse",
+          "slur_deva"
+        ],
+        [
+          "visual_tricks",
           "rt01354",
           "vis_vertical",
           "abuse",
@@ -6411,31 +2913,10 @@
         ],
         [
           "visual_tricks",
-          "rt01361",
-          "vis_vertical",
-          "scam",
-          "invite"
-        ],
-        [
-          "visual_tricks",
           "rt01362",
           "vis_vertical",
           "scam",
           "kyc_bank"
-        ],
-        [
-          "visual_tricks",
-          "rt01363",
-          "vis_vertical",
-          "scam",
-          "loan"
-        ],
-        [
-          "visual_tricks",
-          "rt01364",
-          "vis_vertical",
-          "scam",
-          "lottery"
         ],
         [
           "visual_tricks",
@@ -6450,13 +2931,6 @@
           "vis_vertical",
           "scam",
           "shortener"
-        ],
-        [
-          "visual_tricks",
-          "rt01367",
-          "vis_vertical",
-          "scam",
-          "support_call"
         ],
         [
           "visual_tricks",
@@ -6513,13 +2987,6 @@
           "vis_vertical",
           "doxxing",
           "phone_spoken"
-        ],
-        [
-          "visual_tricks",
-          "rt01387",
-          "vis_vertical",
-          "doxxing",
-          "streamer_private"
         ],
         [
           "visual_tricks",
@@ -6655,7 +3122,7 @@
           "slur_deva"
         ]
       ],
-      "title": "Bypass list (364; ids and techniques, message text via --show ID)"
+      "title": "Bypass list (95; ids and techniques, message text via --show ID)"
     },
     {
       "columns": [

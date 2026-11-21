@@ -151,14 +151,21 @@ class TextDetector:
         return bool(conf is not None and conf.enabled and conf.mask_when_unsure)
 
     @staticmethod
-    def _text_like(long_side: float, short_side: float, *, weak: bool = False) -> bool:
-        """Geometry test for mask-all-text: a text line is wider than tall; a big square-ish region is a picture."""
+    def _text_like(
+        long_side: float, short_side: float, *, weak: bool = False, recognised: bool = False
+    ) -> bool:
+        """Geometry test for mask-all-text: a text line is wider than tall; a big square-ish region is a picture.
+
+        ``recognised`` = the OCR read text in the box with confidence >= ``DET_FLOOR``: a big stacked two-line sign
+        or a large short word is then real text and the near-square skip does not apply (a photo that the
+        detector boxed has no confidently read text)."""
         aspect = long_side / max(short_side, 1e-6)
         area = long_side * short_side
-        if aspect < SQUARE_ASPECT and area > SQUARE_MIN_AREA:
-            return False
-        if aspect < BIG_ASPECT and area > BIG_MIN_AREA:
-            return False
+        if not recognised:
+            if aspect < SQUARE_ASPECT and area > SQUARE_MIN_AREA:
+                return False
+            if aspect < BIG_ASPECT and area > BIG_MIN_AREA:
+                return False
         return not (weak and aspect < WEAK_MIN_ASPECT)
 
     def _allow_bare_pin(self) -> bool:
@@ -205,7 +212,9 @@ class TextDetector:
                     continue
                 if long_side * short_side > SIGN_MAX_AREA * area:
                     continue
-                if not self._text_like(long_side, short_side):
+                if not self._text_like(
+                    long_side, short_side, recognised=bool(texts[i]) and confs[i] >= DET_FLOOR
+                ):
                     continue
                 if not texts[i] and confs[i] < DET_FLOOR:
                     continue

@@ -40,6 +40,7 @@ ENV_BIND_HOST = "INGEST_BIND_HOST"  # default 127.0.0.1; a LAN or Tailscale addr
 ENV_PORT_RTSP = "INGEST_PORT_RTSP"  # internal RTSP reader port, default 8554
 ENV_PUBLISH_USER = "INGEST_PUBLISH_USER"  # optional fixed publisher login so OBS survives restarts
 ENV_PUBLISH_PASSWORD = "INGEST_PUBLISH_PASSWORD"
+ENV_DEMO_RAW_PREVIEW = "DEMO_RAW_PREVIEW"  # "1" lets loopback read the raw `camera` path (demo preview only)
 ENV_SRT_PASSPHRASE = "INGEST_SRT_PASSPHRASE"  # optional fixed phone passphrase; else generated per run
 
 
@@ -169,6 +170,9 @@ def build(config: Config, bus: EventBus, *, environ: dict[str, str] | None = Non
     address = _bind_address(config, env)
     for warning in tuning_warnings(config.relay.srt_latency_ms, config.relay.ingest_hold_after_s):
         log.warning("relay tuning: %s", warning)
+    demo_raw_preview = env.get(ENV_DEMO_RAW_PREVIEW) == "1"
+    if demo_raw_preview:
+        log.warning("demo_raw_preview: enabled")
     transport: dict[str, Any] = {}
 
     def on_mediamtx_event(event: dict[str, Any]) -> None:
@@ -181,6 +185,7 @@ def build(config: Config, bus: EventBus, *, environ: dict[str, str] | None = Non
         phone=_publisher_credentials(env),
         srt_latency_ms=config.relay.srt_latency_ms,
         srt_passphrase=_srt_passphrase(address, env),
+        demo_raw_preview=demo_raw_preview,
         on_event=on_mediamtx_event,
     ).start()
     session_id = uuid.uuid4().hex

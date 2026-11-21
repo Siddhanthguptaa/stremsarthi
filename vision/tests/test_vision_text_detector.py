@@ -281,6 +281,22 @@ def test_signboard_does_not_mask_a_picture_sized_square_box_but_keeps_text_lines
     assert any(abs(b[0] - 100) <= 1 and abs(b[3] - 460) <= 1 for b in got)
 
 
+def test_signboard_masks_a_large_near_square_box_when_the_text_was_read_confidently() -> None:
+    """A big stacked two-line sign or a large short word is real text: the near-square skip is only for boxes the
+    OCR could not read (a photo or UI tile the detector boxed)."""
+    boxes = [
+        ("OPEN NOW", (100, 100, 300, 300)),  # 200x200, aspect 1.0, read
+        ("WELCOME", (500, 400, 1000, 740)),  # 500x340, area 170k, read
+    ]
+    out = _run(_detector(_cfg(), _ocr(boxes, conf=0.9)))
+    got = {tuple(int(v) for v in d.quad.bbox()) for d in _only(out, Category.SIGNBOARD)}
+    assert any(abs(b[0] - 100) <= 1 and abs(b[2] - 300) <= 1 for b in got)
+    assert any(abs(b[0] - 500) <= 1 and abs(b[2] - 1000) <= 1 for b in got)
+    unread = [("", (100, 100, 300, 300)), ("WELCOME", (500, 400, 1000, 740))]
+    out = _run(_detector(_cfg(), _ocr(unread, conf=0.3)))  # low confidence: skipped again
+    assert not _only(out, Category.SIGNBOARD)
+
+
 def test_signboard_min_height_comes_from_the_config() -> None:
     boxes = [("", (100, 100, 400, 120))]  # 20 px tall
     result = OcrResult(tuple(_quad(r) for _, r in boxes), ("",), (0.9,), ("unknown",))

@@ -286,6 +286,16 @@ class RuleMatcher:
                     entry = self._exact.get(key)
             if entry is not None:
                 found[id(entry)] = entry
+        # "bhos di", "chu tiya": a word cut in two by a space; two neighbours that make a listed word together
+        for left, right in zip(toks, toks[1:], strict=False):
+            if left.isascii() and right.isascii():
+                ok = len(left) >= 3 and len(right) >= 3 and left.isalpha() and right.isalpha()
+            else:  # Indic fragments are short: "गां डू"
+                ok = len(left) >= 2 and len(right) >= 2 and not left.isascii() and not right.isascii()
+            if ok:
+                entry = self._tokens.get(_key(left + right))
+                if entry is not None:
+                    found[id(entry)] = entry
         joined = " ".join(keys)
         if self._phrase_re is not None and " " in joined:
             for m in self._phrase_re.finditer(joined):

@@ -171,9 +171,11 @@ class Extra:
             self._start()
         except Exception as exc:
             log.warning("extra %r failed to start: %s", self.name, type(exc).__name__)
+            log.info("extra %s: failed (%s)", self.name, type(exc).__name__)
             self.close()
             return False
         self.started = True
+        log.info("extra %s: started", self.name)
         return True
 
     def close(self) -> None:
@@ -197,14 +199,18 @@ def _build_extras(config: Config, bus: LocalBus, skip: Sequence[str]) -> list[Ex
     extras: list[Extra] = []
     for name, path in config.runtime.extras.items():
         if name in skip or not path:
+            log.info("extra %s: skipped", name)
             continue
         try:
             obj = load_builder(path)(config, bus)
         except Exception as exc:  # ModuleLoadError, ImportError, anything a builder raises
             log.warning("extra %r unavailable: %s", name, type(exc).__name__)
+            log.info("extra %s: failed (%s)", name, type(exc).__name__)
             continue
         if obj is not None:
             extras.append(Extra(name, obj))
+        else:
+            log.info("extra %s: skipped", name)
     return extras
 
 
@@ -234,6 +240,17 @@ class Assembly:
 
     def shutdown(self) -> None:
         """Stop in dependency order; every step is attempted even if an earlier one fails."""
+        try:  # counters only, no content
+            stats = self.session.stats
+            log.info(
+                "audio counters: audio_unvouched=%s audio_beats_rejected=%s audio_heartbeats=%s audio_watchdog=%s",
+                stats.get("audio_unvouched"),
+                getattr(self.session, "audio_beats_rejected", None),
+                getattr(self.session, "audio_heartbeats", None),
+                stats.get("audio_watchdog"),
+            )
+        except Exception as exc:
+            log.warning("audio counters unavailable: %s", type(exc).__name__)
         steps: list[Callable[[], None]] = [self.session.stop, lambda: _close_extras(self.extras)]
         if self.audio_host is not None:
             steps.append(self.audio_host.close)

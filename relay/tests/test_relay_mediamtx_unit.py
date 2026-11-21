@@ -101,6 +101,11 @@ def test_rendered_config_has_no_unreplaced_placeholders_and_carries_the_users():
     users = yaml.safe_load(text)["authInternalUsers"]
     assert len(users) == 4
 
+    on = yaml.safe_load(
+        render_config(RelayAddress(), *[Credentials.generate() for _ in range(2)], demo_raw_preview=True)
+    )
+    assert len(on["authInternalUsers"]) == 5, "DEMO_RAW_PREVIEW adds one anonymous loopback read of camera"
+
 
 @pytest.mark.parametrize("latency", [0, 19, 2001, 1.5, "120"])
 def test_srt_latency_is_validated(latency):

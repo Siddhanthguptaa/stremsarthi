@@ -22,7 +22,7 @@ import unicodedata
 from dataclasses import dataclass
 
 from .fold import clean_chars
-from .links import blank_urls, refang
+from .links import UPI_HANDLES, blank_urls, refang
 
 _LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
 _LEET_CHARS = frozenset("013457@$")
@@ -221,6 +221,9 @@ class Normalized:
     glued: str = ""
     fanged: bool = False  # the link view differs from the text as written: obfuscation was undone
     blobs: tuple[str, ...] = ()  # runs of single letters joined into one word (``b.h.e.n.c.h.o.d``)
+    link_blobs: tuple[
+        str, ...
+    ] = ()  # runs of single characters (any, incl. ``: / ? =``) joined, for link and ID shapes
 
 
 def link_view(text: str) -> str:
@@ -228,11 +231,18 @@ def link_view(text: str) -> str:
     return refang(_strip_latin_marks(clean_chars(text)))
 
 
-def lexicon_view_ex(text: str) -> tuple[str, list[str]]:
-    """The lexicon form of ``text`` and the runs of single letters that were joined (``b h e n c h o d``)."""
+def lexicon_view_ex(text: str, *, aggressive: bool = False) -> tuple[str, list[str]]:
+    """The lexicon form of ``text`` and the runs of single letters that were joined (``b h e n c h o d``).
+
+    ``aggressive`` also reads a word-initial ``@`` / ``$`` and a lone ``1`` / ``!`` / ``|`` as letters (``@be``, ``$tream``,
+    ``1 know``). That is wrong for real mentions and numbers, so it is only a second reading of a message that looks leeted.
+    """
     t = _strip_latin_marks(clean_chars(text)).lower()
     t = _native_clean(t)
-    t = _symbol_leet(_SPACES.sub(" ", t).strip())
+    t = _SPACES.sub(" ", t).strip()
+    if aggressive:
+        t = _aggressive(t)
+    t = _symbol_leet(t)
     t = _leet_tokens(t)
     t = _RUNS.sub(r"\1\1", t)
     joined: list[str] = []
@@ -248,6 +258,59 @@ def lexicon_view_ex(text: str) -> tuple[str, list[str]]:
         if joined:
             t = _leet_tokens(t)
     return t, joined
+
+
+_LONE = {"1": "i", "!": "i", "|": "l"}
+
+
+_AGG_SYMBOLS = str.maketrans({"!": "i", "|": "l", "(": "c", "[": "c"})
+
+
+def _aggressive(text: str) -> str:
+    parts = text.split(" ")
+    for i, tok in enumerate(parts):
+        if tok in _LONE:
+            parts[i] = _LONE[tok]
+        elif len(tok) >= 3 and tok[0] in "@$" and sum(c.isalpha() for c in tok[1:]) >= 2:
+            parts[i] = ("a" if tok[0] == "@" else "s") + tok[1:]
+        elif len(tok) >= 3 and any(c in tok for c in "!|([") and sum(c.isalpha() for c in tok) >= 1:
+            body = tok.rstrip("!?.,:;)")
+            if body != tok and not any(c in body for c in "@$013457|(["):
+                body = tok  # a plain "kya baat hai!"
+            parts[i] = body.translate(_AGG_SYMBOLS) + tok[len(body) :]
+    return " ".join(parts)
+
+
+#: Looks leeted: a letter-symbol-letter mix, a word-initial ``@``/``$``, a lone ``1``/``!``/``|``, or a symbol in a handle.
+LEETISH = re.compile(
+    r"[A-Za-z][0134578@$|!(][A-Za-z]|(?<!\S)[@$][A-Za-z]{2}|(?<!\S)[1!|] [A-Za-z]{2}|@[A-Za-z0-9]*[01345|!$]"
+)
+_HANDLE_TAIL = re.compile(r"@([A-Za-z0-9|!$]{2,20})(?![A-Za-z0-9|!$@])")
+_HANDLE_LEET = str.maketrans(
+    {"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "|": "l", "!": "i", "$": "s"}
+)
+
+
+def _fix_token(tok: str) -> str:
+    core = tok.rstrip(".,;:!?)")
+    tail_junk = tok[len(core) :]
+    for i in range(len(core) - 1, 0, -1):
+        if core[i] != "@":
+            continue
+        h = core[i + 1 :].translate(_HANDLE_LEET).replace("@", "a").lower()
+        if h in UPI_HANDLES:
+            return core[:i].replace("@", "a") + "@" + h + tail_junk
+    return tok
+
+
+_UPI_WORD = re.compile(r"(?i)(?<![a-z0-9])up[!1|]:")
+
+
+def _fix_handles(link: str) -> str:
+    """``name@oksb1`` -> ``name@oksbi``, ``a@@p@ytm`` -> ``aa@paytm``, ``up!://`` -> ``upi://``: symbols for letters."""
+    if "@" in link:
+        link = " ".join(_fix_token(t) if "@" in t else t for t in link.split(" "))
+    return _UPI_WORD.sub("upi:", link)
 
 
 def lexicon_view(text: str) -> str:
@@ -271,10 +334,18 @@ def _symbol_leet(text: str) -> str:
 _INWORD = re.compile(r"(?<=[a-z])[_.\-'`·•](?=[a-z])")
 
 
-def normalize(text: str) -> Normalized:
+_LINK_RUN = re.compile(r"(?<!\S)(?:\S\s){5,}\S(?!\S)")
+
+
+def normalize(text: str, *, aggressive: bool = False) -> Normalized:
     link = link_view(text)
     fanged = link != _strip_latin_marks(clean_chars(text))
-    lex, blobs = lexicon_view_ex(blank_urls(link))
+    if aggressive:
+        fixed = _fix_handles(link)
+        fanged = fanged or fixed != link
+        link = fixed
+    lex, blobs = lexicon_view_ex(blank_urls(link), aggressive=aggressive)
+    link_blobs = tuple(re.sub(r"\s", "", m.group(0)) for m in _LINK_RUN.finditer(link))[:6]
     roman = transliterate_devanagari(lex) if has_devanagari(lex) else ""
     glued = _INWORD.sub("", lex) if any(c in lex for c in "_.-'`·•") else ""
     return Normalized(
@@ -285,4 +356,5 @@ def normalize(text: str) -> Normalized:
         glued=glued if glued != lex else "",
         fanged=fanged,
         blobs=tuple(b for b in blobs if len(b) >= 5),
+        link_blobs=link_blobs,
     )

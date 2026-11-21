@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from typing import Any
 
 ROLES = ("streamer", "moderator", "hotkey", "viewer-readonly")
+PREVIEW_ROLE = "preview"  # NOT in ROLES: a preview token never verifies as a Principal anywhere
+PREVIEW_TTL_S = 300
 HOTKEY_ROOM = "hotkey"  # fixed scope of hotkey tokens, see TokenService.verify
 ROLE_TTL_S = {"streamer": 6 * 3600, "moderator": 6 * 3600, "hotkey": 24 * 3600, "viewer-readonly": 6 * 3600}
 
@@ -109,3 +111,15 @@ class TokenService:
         # actor: stable per token, reveals nothing about it (HMAC of the signature part).
         actor = hmac.new(self._secret, token.encode("utf-8"), hashlib.sha256).hexdigest()[:16]
         return Principal(role=payload["role"], room_id=self.room_id, exp=int(payload["exp"]), actor=actor)
+
+    # --- demo preview scope ---------------------------------------------------------------
+    def issue_preview(self, ttl_seconds: int = PREVIEW_TTL_S) -> str:
+        """Short-lived token for the demo MJPEG streams only. ``role`` is not in ``ROLES`` and the room is
+        ``<room>:preview``, so ``verify`` (every other endpoint and the WebSocket) rejects it."""
+        return issue_room_token(self._secret, f"{self.room_id}:preview", PREVIEW_ROLE, ttl_seconds)
+
+    def verify_preview(self, token: str | None) -> bool:
+        if not token:
+            return False
+        payload = verify_room_token(self._secret, token, f"{self.room_id}:preview")
+        return payload is not None and payload.get("role") == PREVIEW_ROLE

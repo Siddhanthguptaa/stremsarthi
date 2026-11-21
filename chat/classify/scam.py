@@ -158,6 +158,31 @@ def _near(a: re.Pattern[str], b: re.Pattern[str], text: str, window: int = _WIND
     return False
 
 
+_BLOB_UPI = re.compile(
+    rf"[a-z0-9._\-]{{3,64}}@(?:{'|'.join(re.escape(h) for h in UPI_HANDLES)})", re.IGNORECASE
+)
+_BLOB_HOST = re.compile(
+    r"(?:bit\.ly|tinyurl\.com|t\.ly|cutt\.ly|rb\.gy|is\.gd|shorturl\.at|goo\.gl|ow\.ly|t\.me|wa\.me|paytm\.me|rzp\.io)/",
+    re.IGNORECASE,
+)
+
+
+def detect_blob(blob: str) -> list[Candidate]:
+    """Link and ID shapes inside a run of single characters joined into one string (``u p i : / / p a y ...``).
+
+    Word boundaries are lost in such a run, so only shapes that need none are looked for: a UPI deep link, an ID with a
+    UPI handle, a shortener or payment host. Spelling a payment ID letter by letter is itself the tell.
+    """
+    low = blob.lower()
+    if "upi://" in low or "pay?pa=" in low:
+        return [Candidate(Category.CHAT_FAKE_UPI, 0.98, "fake_upi_link_split")]
+    if _BLOB_UPI.search(blob):
+        return [Candidate(Category.CHAT_FAKE_UPI, 0.95, "fake_upi_id_split")]
+    if _BLOB_HOST.search(blob):
+        return [Candidate(Category.CHAT_SCAM_LINK, 0.9, "scam_host_split")]
+    return []
+
+
 def _is_discussion(text: str) -> bool:
     """A warning or a moderator notice about scams (see ``_WARN_NEG``)."""
     if _WARN_NEG.search(text):

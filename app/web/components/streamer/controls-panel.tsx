@@ -18,6 +18,7 @@ import {
 import { RequireToken, useAuth } from "@/components/shell/auth-provider"
 import { useLanguage } from "@/components/shell/language-provider"
 import { CategoryToggle } from "@/components/streamer/category-toggle"
+import { HoldBar } from "@/components/streamer/hold-bar"
 import { LanguagePicker } from "@/components/streamer/language-picker"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,6 +28,8 @@ export function ControlsScreen() {
   return (
     <RequireToken>
       <ControlsWithAuth />
+      <div aria-hidden className="h-52" />
+      <HoldBar />
     </RequireToken>
   )
 }

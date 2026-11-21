@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 
 import numpy as np
+import pytest
 
 from contracts import Config, HoldCommand, HoldSource, Lane, StageTiming, Topic
 from engine.bus import LocalBus
@@ -18,6 +19,7 @@ from engine.testing import lane_result
 T0, FPS, D = 10.0, 30, 3.0
 RATE = 48000
 SLICE = RATE // FPS
+V = RATE  # the last second before the end of a finite test stream is never vouched for (vouch margin 1.0 s)
 
 
 def tone(n: int, first: int = 0, amp: int = 10000) -> np.ndarray:
@@ -55,7 +57,9 @@ class Rig:
         self.sub = self.bus.subscribe([Topic.SAFETY_EVENT, Topic.ENGINE_STATUS])
 
     def beat(self, t: float, pts: float | None = -1.0) -> None:
-        pts = max(0.0, t - T0) if pts == -1.0 else pts  # default: the host has seen the audio up to now
+        if pts == -1.0:  # default: the host has seen the audio ingested up to now (never ahead of it)
+            newest = self.session._newest_ingest_pts
+            pts = max(0.0, t - T0) if newest is None else min(max(0.0, t - T0), newest)
         self.bus.publish(Topic.TIMING, StageTiming("audio_heartbeat", 0, pts, t, t))
 
     def run(
@@ -105,7 +109,7 @@ def test_heartbeats_keep_the_audio_unmuted():
     rig = Rig()
     rig.run(6.0, beats=(0.0, 20.0))
     audio = rig.audio()
-    n = 6 * RATE
+    n = 6 * RATE - V
     assert np.array_equal(audio[:n], tone(n))
     assert not rig.session.audio_unchecked and rig.session.counts["audio_watchdog"] == 0
     assert not failsafe_audio_events(rig.events())
@@ -133,7 +137,7 @@ def test_grace_period_tolerates_a_slow_start_then_heartbeats_take_over():
         7.0, beats=(2.0, 20.0)
     )  # first heartbeat 2 s in: inside the grace (4 s requested, clamped to 2.5)
     assert rig.session.counts["audio_watchdog"] == 0
-    n = 7 * RATE
+    n = 7 * RATE - V
     assert np.array_equal(rig.audio()[:n], tone(n))
 
 
@@ -193,7 +197,7 @@ def test_recovery_in_flight_audio_after_the_resume_is_not_muted():
     audio = rig.audio()
     first_ok = 120 * SLICE  # audio ingested after the resume (frame 90 + a beat period of slack)
     assert not audio[: 90 * SLICE].any()  # everything ingested while the module was dead is muted
-    assert np.array_equal(audio[first_ok : 170 * SLICE], tone(170 * SLICE)[first_ok:])
+    assert np.array_equal(audio[first_ok : 148 * SLICE], tone(148 * SLICE)[first_ok:])
 
 
 def test_watchdog_is_off_without_an_audio_host_or_with_a_zero_timeout():
@@ -262,25 +266,25 @@ def test_explicit_long_grace_is_clamped_too():
 def test_a_healthy_host_with_default_settings_is_not_muted():
     rig = Rig(watchdog=None, grace=None)
     rig.run(8.0, beats=(0.5, 30.0), beat_every=1.0)  # the real host beats once a second
-    n = 8 * RATE
+    n = 8 * RATE - V
     assert np.array_equal(rig.audio()[:n], tone(n))
-    assert rig.session.counts["audio_watchdog"] == 0 and rig.session.counts["audio_unvouched"] == 0
+    assert rig.session.counts["audio_watchdog"] == 0
 
 
 def test_a_late_first_heartbeat_mutes_only_what_was_not_vouched_for():
     rig = Rig(watchdog=None, grace=None)
     rig.run(8.0, beats=(2.0, 30.0), beat_every=1.0)  # inside the clamped 2.5 s grace
     assert rig.session.counts["audio_watchdog"] == 0
-    assert np.array_equal(rig.audio()[: 8 * RATE], tone(8 * RATE))
+    assert np.array_equal(rig.audio()[: 8 * RATE - V], tone(8 * RATE - V))
 
 
 def test_alive_but_stuck_loop_is_muted_from_where_its_pts_stopped():
-    """Heartbeats keep coming but their pts froze at 1.0 s: the loop is alive, the audio intake is not."""
+    """Heartbeats keep coming but their pts froze at 4.0 s: the loop is alive, the audio intake is not."""
     rig = Rig(watchdog=None, grace=None)
     s = rig.session
-    rig.run(10.0, beats=(0.0, 30.0), beat_every=0.5, beat_pts=lambda off: min(off, 1.0))
+    rig.run(10.0, beats=(0.0, 30.0), beat_every=0.5, beat_pts=lambda off: min(off, 4.0))
     audio = rig.audio()
-    cut = 30 * SLICE  # 1.0 s
+    cut = 4 * RATE - V  # frozen at 4.0 s, vouched for up to 4.0 - margin
     assert np.array_equal(audio[:cut], tone(cut))
     assert not audio[cut : 10 * RATE].any()  # nothing after the frozen pts is ever emitted
     assert s.audio_beats_rejected > 0 and s.counts["audio_unvouched"] > 0
@@ -334,4 +338,84 @@ def test_a_block_that_could_not_be_handed_to_the_audio_host_goes_out_as_silence(
     assert rig.session.counts["audio_errors"] == 1
     assert not audio[k * SLICE : (k + 1) * SLICE].any()
     assert np.array_equal(audio[: k * SLICE], tone(k * SLICE))
-    assert np.array_equal(audio[(k + 1) * SLICE : 6 * RATE], tone(6 * RATE)[(k + 1) * SLICE :])
+    assert np.array_equal(
+        audio[(k + 1) * SLICE : 6 * RATE - V], tone(6 * RATE)[(k + 1) * SLICE : 6 * RATE - V]
+    )
+
+
+# ------------------------------------------------------------------ reviewer findings: in-flight speech, clock reset
+
+
+def test_a_hung_audio_loop_leaks_no_in_flight_speech():
+    """The beat is the newest chunk handed to the host, not the oldest undecided audio: when the loop hangs at
+    P, the last second before P has no verdict yet and must not go out, whatever the timeout does."""
+    rig = Rig(watchdog=None, grace=None)
+    s = rig.session
+    rig.run(10.0, beats=(0.0, 5.01), beat_every=0.5)  # the loop dies after its beat at 5.0 s: P = 5.0
+    audio = rig.audio()
+    p = 5 * RATE
+    vouch = round(s.audio_vouch_margin_s * RATE)
+    assert np.array_equal(
+        audio[: p - vouch - SLICE], tone(p - vouch - SLICE)[: p - vouch - SLICE]
+    )  # not over-muted
+    assert not audio[p - vouch : 10 * RATE].any()  # nothing from the unvouched tail or after
+    assert s.counts["audio_watchdog"] == 1
+
+
+def test_watchdog_trigger_also_silences_the_in_flight_window_before_the_last_beat():
+    """A fast watchdog (0.5 s) fires while speech from up to delay - 0.5 s before the last beat is still in the
+    delay buffer: all of it is silenced, not just what came after the beat."""
+    rig = Rig(watchdog=0.5, grace=None)
+    rig.run(10.0, beats=(0.0, 5.01), beat_every=0.3)  # the last beat is at about 4.8 s
+    audio = rig.audio()
+    start = rig.session._wd_beat_index - round((D - 0.5) * RATE)  # the last accepted beat, minus the window
+    assert np.array_equal(audio[: start - SLICE], tone(start - SLICE)[: start - SLICE])
+    # (the slice at the very start of the window is emitted on the same tick the timeout expires)
+    assert not audio[start + SLICE : 10 * RATE].any()
+
+
+def test_recovery_silences_the_unchecked_stretch_including_the_in_flight_window():
+    rig = Rig(watchdog=None, grace=None)
+    s = rig.session
+    rig.run(14.0, beats=(0.0, 4.01), beat_every=0.5)
+    assert s.audio_unchecked
+    t = rig.now[0]
+    s.audio_heartbeat(now=t, pts=s._newest_ingest_pts)  # the loop is back (virtual: after the run)
+    s.step(t + 0.01)
+    assert not s.audio_unchecked
+    audio = rig.audio()
+    assert not audio[round((4.0 - s.audio_vouch_margin_s) * RATE) : 14 * RATE].any()
+
+
+def test_a_beat_carrying_the_clock_from_before_a_pts_reset_does_not_vouch_for_anything():
+    rig = Rig(watchdog=None, grace=None)
+    s = rig.session
+    for seq in range(300):  # 10 s of audio: pts up to 10
+        s.on_audio(seq * SLICE, tone(SLICE, seq * SLICE))
+    assert s.audio_heartbeat(now=T0, pts=10.0) is True and s._checked_until == 10.0
+    s._reset_audio_clock()  # the PTS clock restarted
+    assert s._checked_until == float("-inf")
+    for seq in range(30):  # one second of the new clock
+        s.on_audio(seq * SLICE, tone(SLICE, seq * SLICE))
+    assert (
+        s.audio_heartbeat(now=T0 + 1, pts=10.0) is False
+    )  # the host's old, higher clock: ahead of the audio
+    assert s._checked_until == float("-inf") and s.audio_beats_rejected == 1
+    assert s.audio_heartbeat(now=T0 + 1, pts=0.9) is True
+    assert s._checked_until == pytest.approx(0.9)
+
+
+def test_a_beat_slightly_ahead_of_the_ingested_audio_vouches_only_for_what_was_ingested():
+    rig = Rig(watchdog=None, grace=None)
+    s = rig.session
+    for seq in range(30):
+        s.on_audio(seq * SLICE, tone(SLICE, seq * SLICE))
+    newest = 30 * SLICE / RATE
+    assert s.audio_heartbeat(now=T0, pts=newest + 1.0) is True  # within the margin
+    assert s._checked_until == pytest.approx(newest)
+
+
+def test_grace_constant_matches_the_config_default():
+    from engine.session import AUDIO_GRACE_S
+
+    assert AUDIO_GRACE_S == Config(_env_file=None).engine.audio_grace_s

@@ -305,6 +305,43 @@ def test_encoder_recovers_with_a_new_generation_and_a_fresh_timeline():
     assert events == ["encoder_down", "encoder_up"]
 
 
+def test_aligner_reports_a_backwards_clock_instead_of_trimming_everything():
+    aligner = AudioAligner()
+    aligner.place(90.0, _chunk())
+    aligner.place(90.0 + 1 / 30, _chunk())
+    with pytest.raises(EncoderError, match="timeline-reset"):
+        aligner.place(0.0, _chunk())  # the engine PTS clock restarted at 0 (sender reconnected)
+
+
+def test_pts_clock_restart_gives_a_new_generation_with_audio_on_the_new_timeline():
+    """A sender restart restarts the engine PTS clock. The old behaviour trimmed every audio chunk until the new
+    clock caught up with the old one (a long video-only stream MediaMTX drops); now the timeline restarts."""
+    script, clock = Script(), Clock()
+    events: list[str] = []
+    encoder = make_encoder(script, clock, on_event=events.append).start()
+    for k in range(5):
+        pts = 90.0 + k / 30
+        assert encoder.encode(pts, IMG, [(pts, _chunk())]).generation == 1
+    assert encoder.encode(0.0, IMG, [(0.0, _chunk())]) is None  # the frame at the jump is dropped
+    assert encoder.last_error == "timeline-reset" and not encoder.healthy
+    clock.now += 0.6
+    result = encoder.encode(1 / 30, IMG, [(1 / 30, _chunk())])
+    assert result is not None and result.generation == 2 and result.video_index == 0
+    assert (
+        script.processes[1].audio[0][0][0] == 0 and script.processes[1].audio[0][0][1] == 1600
+    )  # audio kept
+    assert events == ["encoder_down", "encoder_up"]
+    follow = encoder.encode(2 / 30, IMG, [(2 / 30, _chunk())])
+    assert follow.generation == 2 and script.processes[1].audio[1] == [(1600, 1600)]
+
+
+def test_small_backward_pts_jitter_is_not_a_restart():
+    script, clock = Script(), Clock()
+    encoder = make_encoder(script, clock).start()
+    encoder.encode(10.0, IMG, [])
+    assert encoder.encode(9.5, IMG, []) is not None and encoder.generation == 1
+
+
 def test_nvenc_start_failure_falls_back_to_x264():
     script, clock = Script(), Clock()
     script.nvenc_fails = True

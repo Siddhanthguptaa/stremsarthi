@@ -58,6 +58,7 @@ class HoldCommands:
         self._cfg = config or ChatCommandsConfig()
         self._clock: Clock = clock or SystemClock()
         self._seen: OrderedDict[tuple[str, str], None] = OrderedDict()
+        self._denied_seen: OrderedDict[tuple[str, str], None] = OrderedDict()
         self._accepted_at: OrderedDict[tuple[str, str], float] = OrderedDict()
         self._denied_window_start: float | None = None
         self.denied_suppressed = 0  # denials not reported as an event (same window)
@@ -79,13 +80,17 @@ class HoldCommands:
         if not self._cfg.enabled:
             return self._done(command, "disabled", actor, mid)
         key = (message.platform, message.message_id)
-        if key in self._seen:
+        if key in self._seen or key in self._denied_seen:
             return self._done(command, "duplicate", actor, mid)
-        self._remember(key)
         now = self._clock.monotonic()
         allowed = self._cfg.hold_roles if command == "hold" else self._cfg.unhold_roles
         if not roles_of(message).intersection(allowed):
+            # denied ids live in their own bounded set: a flood of viewers must never evict a staff command's id
+            self._denied_seen[key] = None
+            while len(self._denied_seen) > _DEDUPE_CAP:
+                self._denied_seen.popitem(last=False)
             return self._deny(command, actor, mid, now)
+        self._remember(key)
         limit_key = (actor, command)
         last = self._accepted_at.get(limit_key)
         if last is not None and now - last < self._cfg.rate_limit_s:

@@ -27,6 +27,7 @@ from typing import Any
 
 import av
 
+from .audiofile import FileTrack
 from .beep import SAMPLE_RATE, BeepTrack, beep_frame_flag
 from .scenes import ScenePlayer
 from .stamp import CANVAS_H, CANVAS_W, draw_stamp, monotonic_ms
@@ -118,11 +119,12 @@ def run_sender(
     realtime: bool = True,
     truth_path: Path | None = None,
     stop: threading.Event | None = None,
+    audio_file: Path | None = None,
 ) -> dict[str, Any]:
     """Send frames until `duration` seconds (or the script's total when None) have been sent."""
     player = ScenePlayer(script, fps)
     total_frames = int(round((duration if duration is not None else player.total_s) * fps))
-    beeps = BeepTrack(SAMPLE_RATE, fps)
+    beeps = FileTrack(audio_file, SAMPLE_RATE, fps) if audio_file is not None else BeepTrack(SAMPLE_RATE, fps)
     stop = stop or threading.Event()
     sink = open_output(url)
     out = sink.container
@@ -173,7 +175,7 @@ def run_sender(
                     late_max = max(late_max, -wait)
             frame, scene, targets = player.render(index)
             cap_ms = monotonic_ms()
-            flag = beep_frame_flag(index, fps)
+            flag = beep_frame_flag(index, fps) and audio_file is None
             draw_stamp(frame, index, cap_ms, flag)
             vf = av.VideoFrame.from_ndarray(frame, format="rgb24").reformat(format="yuv420p")
             vf.pts, vf.time_base = index, Fraction(1, fps)
@@ -237,6 +239,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--threads", type=int, default=2)
     p.add_argument("--no-realtime", action="store_true", help="render as fast as possible (file output)")
     p.add_argument("--truth", type=Path, default=None, help="write per-frame ground truth JSONL here")
+    p.add_argument(
+        "--audio-file",
+        type=Path,
+        default=None,
+        help="loop this WAV (48 kHz mono) as the audio track instead of the beep",
+    )
     p.add_argument("--clock", default="monotonic", choices=["monotonic"], help="stamp clock (only monotonic)")
     args = p.parse_args(argv)
 
@@ -254,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         not args.no_realtime,
         args.truth,
         stop,
+        args.audio_file,
     )
     print(json.dumps(stats))
     return 0

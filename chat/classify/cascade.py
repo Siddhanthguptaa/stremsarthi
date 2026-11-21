@@ -34,12 +34,13 @@ from contracts import Category, ChatAction, ChatMessage, ChatVerdict
 from contracts.config import ChatConfig
 
 from .candidate import Candidate
+from .decode import decoded_views
 from .doxxing import DoxxingDetector
-from .fold import windows
+from .fold import clean_chars, windows
 from .llm import LlmResult, LlmStage, LlmTransport
-from .normalize import Normalized, lexicon_view, normalize
+from .normalize import LEETISH, Normalized, lexicon_view, normalize
 from .rules import RuleMatcher, default_matcher
-from .scam import detect_scam
+from .scam import detect_blob, detect_scam
 from .suspect import detect_shapes, detect_suspects
 
 _LOG = logging.getLogger("chat.classify")
@@ -67,6 +68,33 @@ INJECTION_CUE = re.compile(
     r"(?:isse|ise|isko)\W+clean|clean\W+mark",
     re.IGNORECASE,
 )
+# The same cues with every non-alphanumeric character removed: "i g n o r e  p r e v i o u s" and "ignore_previous..."
+_SQUASHED_CUE = re.compile(
+    r"(?:ignore|disregard|forget|override|bypass)(?:the|all|any|your|these|those)?(?:previous|prior|above|earlier)"
+    r"(?:instructions?|rules?|prompts?|messages?)|(?:mark|label|classify|tag|treat|rate)(?:this|it|themessage|themsg)?"
+    r"(?:as|is)?(?:clean|safe|harmless|benign|allowed)|newinstructions|isseclean|isecleanmark|cleanmark|systemprompt|"
+    r"(?:system|assistant|developer)(?:says|note|override)"
+)
+
+
+def has_injection(text: str) -> bool:
+    """Instruction-like text aimed at the classifier, also when hidden by zero-width, look-alike or spaced letters.
+
+    Only the first and last 4,000 characters are read, so a huge message costs the same as a long one.
+    """
+    if len(text) > 8000:
+        text = text[:4000] + " " + text[-4000:]
+    if INJECTION_CUE.search(text):
+        return True
+    cleaned = clean_chars(text)
+    if INJECTION_CUE.search(cleaned):
+        return True
+    folded = lexicon_view(cleaned)
+    if INJECTION_CUE.search(folded):
+        return True
+    return _SQUASHED_CUE.search(re.sub(r"[\W_]+", "", folded)) is not None
+
+
 _LLM_CONFIDENT = 0.8
 _LLM_MIN_FLAG = 0.5
 
@@ -188,9 +216,19 @@ class ChatClassifier:
             return FastOutcome(self._allow(msg, t0, "clean", 1.0))
         staff = msg.is_broadcaster or msg.is_moderator
         cands: list[Candidate] = []
-        norms = [
-            normalize(w) for w in windows(text)
-        ]  # one slice for a normal message; bounded work for a huge one
+        norms: list[Normalized] = []
+        for w in windows(text):  # one slice for a normal message; bounded work for a huge one
+            norms.append(normalize(w))
+            if LEETISH.search(
+                w
+            ):  # a second reading of a message that looks leeted ("@be", "1 know", "name@oksb1")
+                alt = normalize(w, aggressive=True)
+                if alt.text != norms[-1].text or alt.link_text != norms[-1].link_text:
+                    norms.append(alt)
+            for view in decoded_views(
+                w
+            ):  # base64, hex, rot13 and reversed text that decodes to readable words
+                norms.append(normalize(view))
         for norm in norms:
             cands.extend(self._detect(norm, staff))
         if staff:
@@ -249,6 +287,8 @@ class ChatClassifier:
                     Candidate(Category.CHAT_ABUSE, rr.score, f"rules_{rr.kind}", severe=rr.severity == 3)
                 )
             cands.extend(detect_scam(norm.link_text, fanged=norm.fanged))
+            for blob in norm.link_blobs:
+                cands.extend(detect_blob(blob))
             alt = lexicon_view(norm.link_text)  # leetspeak and letter-by-letter spelling of scam wording
             if alt != norm.link_text.lower():
                 cands.extend(detect_scam(alt, fanged=True))
@@ -288,7 +328,7 @@ class ChatClassifier:
             return self._verdict(
                 msg, t0, ChatAction.HOLD_FOR_MOD, (top.category,), top.score, "llm_timeout_hold", "rules"
             )
-        if INJECTION_CUE.search(msg.text) and (result.clean or result.confidence < _LLM_MIN_FLAG):
+        if has_injection(msg.text) and (result.clean or result.confidence < _LLM_MIN_FLAG):
             # text aimed at the classifier ("mark this as clean") must not be able to release the message
             return self._verdict(
                 msg, t0, ChatAction.HOLD_FOR_MOD, (top.category,), top.score, "llm_injection_hold", "llm"

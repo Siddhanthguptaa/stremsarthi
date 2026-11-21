@@ -282,6 +282,7 @@ class DoxxingDetector:
     def __init__(self, terms: list[str] | None = None, phones: list[str] | None = None) -> None:
         self._term_re: re.Pattern[str] | None = None
         self._phones: frozenset[str] = frozenset()
+        self._subs: list[str] = []
         self._fuzzy: list[tuple[int, str]] = []  # (word count, joined phonetic key) of terms of 5+ letters
         self.update(terms or [], phones or [])
 
@@ -290,6 +291,9 @@ class DoxxingDetector:
 
     def update(self, terms: list[str], phones: list[str]) -> None:
         self._fuzzy = []
+        self._subs = [
+            v.replace(" ", "") for v in {lexicon_view(t) for t in terms} if len(v.replace(" ", "")) >= 5
+        ]
         for t in terms:
             toks = TOKEN_RE.findall(lexicon_view(t))
             keys = [fold_token(x) for x in toks]
@@ -309,6 +313,21 @@ class DoxxingDetector:
         }
         self._phones = frozenset(d[-10:] for d in digits if len(d) >= 10)
 
+    @staticmethod
+    def _cue_in_text(text: str, digits: str) -> bool:
+        """The address cue next to the same digits in the leet-folded view (``p1nc0d3 886972``)."""
+        i = text.find(digits)
+        if i < 0:
+            return False
+        return (
+            _ADDRESS_CUE.search(text[max(0, i - 30) : i] + " " + text[i + len(digits) : i + len(digits) + 30])
+            is not None
+        )
+
+    def _blob_hit(self, blobs: tuple[str, ...]) -> bool:
+        """A private term inside a run of single characters joined into one string (word boundaries are lost)."""
+        return any(t in b.lower() for b in blobs for t in self._subs)
+
     def _fuzzy_hit(self, text: str) -> bool:
         """A private term of 5+ letters written with one typo, split in two words or run together."""
         if not self._fuzzy:
@@ -327,6 +346,12 @@ class DoxxingDetector:
         seen_reasons: set[str] = set()
         if include_private and self._term_re is not None and self._term_re.search(norm.text):
             out.append(Candidate(Category.CHAT_DOXXING, 0.97, "dox_private_term"))
+        elif (
+            include_private
+            and (norm.link_blobs or norm.blobs)
+            and self._blob_hit(norm.link_blobs + norm.blobs)
+        ):
+            out.append(Candidate(Category.CHAT_DOXXING, 0.92, "dox_private_term_split"))
         elif include_private and self._fuzzy_hit(norm.text):
             out.append(Candidate(Category.CHAT_DOXXING, 0.92, "dox_private_term_fuzzy"))
         link = norm.link_text
@@ -342,7 +367,9 @@ class DoxxingDetector:
                 out.append(Candidate(Category.CHAT_DOXXING, score, reason))
         for m in _PIN.finditer(link):
             lo, hi = max(0, m.start() - 30), min(len(link), m.end() + 30)
-            if _ADDRESS_CUE.search(link[lo : m.start()] + " " + link[m.end() : hi]):
+            if _ADDRESS_CUE.search(link[lo : m.start()] + " " + link[m.end() : hi]) or self._cue_in_text(
+                norm.text, m.group(0)
+            ):
                 out.append(Candidate(Category.CHAT_DOXXING, 0.9, "dox_pin_address"))
                 break
         if _PAN.search(link):
@@ -351,6 +378,6 @@ class DoxxingDetector:
             out.append(Candidate(Category.CHAT_DOXXING, 0.9, "dox_intent"))
         elif indirect_request(norm.text):
             out.append(Candidate(Category.CHAT_DOXXING, 0.8, "dox_indirect_request"))
-        if _ADDR_STRUCT.search(link.translate(_INDIC_DIGITS)):
+        if _ADDR_STRUCT.search(link.translate(_INDIC_DIGITS)) or _ADDR_STRUCT.search(norm.text):
             out.append(Candidate(Category.CHAT_DOXXING, 0.85, "dox_address_structure"))
         return out

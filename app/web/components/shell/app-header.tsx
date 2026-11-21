@@ -14,6 +14,7 @@ const NAV: { href: string; key: I18nKey }[] = [
   { href: "/enrol", key: "nav.enrol" },
   { href: "/controls", key: "nav.controls" },
   { href: "/live", key: "nav.live" },
+  { href: "/demo", key: "nav.demo" },
   { href: "/mod", key: "nav.moderator" },
 ]
 

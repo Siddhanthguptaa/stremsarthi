@@ -160,14 +160,23 @@ def disable_core_dumps() -> None:
             pass
 
 
-def mediamtx_users(address: RelayAddress, phone: Credentials, internal: Credentials) -> list[dict]:
+def mediamtx_users(
+    address: RelayAddress,
+    phone: Credentials,
+    internal: Credentials,
+    *,
+    demo_raw_preview: bool = False,
+) -> list[dict]:
     """MediaMTX ``authInternalUsers``. No anonymous publisher; no wildcard paths.
 
     * ``phone``: publish ``camera`` only (OBS or the phone app).
     * ``internal``: read ``camera`` and publish ``shielded``, loopback only (the relay itself).
     * anonymous loopback: read ``shielded`` (the eval tap) and use the API.
+    * only with ``demo_raw_preview`` (env ``DEMO_RAW_PREVIEW=1``, default OFF): anonymous loopback may
+      also READ ``camera`` (the unmasked ingest) so the demo preview can show it. Normal sessions
+      never expose the raw stream to other local processes.
     """
-    return [
+    users = [
         {
             "user": phone.user,
             "pass": phone.password,
@@ -186,6 +195,11 @@ def mediamtx_users(address: RelayAddress, phone: Credentials, internal: Credenti
         {"user": "any", "ips": [LOOPBACK], "permissions": [{"action": "read", "path": PATH_SHIELDED}]},
         {"user": "any", "ips": [LOOPBACK], "permissions": [{"action": "api"}]},
     ]
+    if demo_raw_preview:
+        users.append(
+            {"user": "any", "ips": [LOOPBACK], "permissions": [{"action": "read", "path": PATH_CAMERA}]}
+        )
+    return users
 
 
 # --- redaction -----------------------------------------------------------------------------

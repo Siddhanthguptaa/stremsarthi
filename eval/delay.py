@@ -193,26 +193,52 @@ def encoder_pts_map(log: TimingLog) -> dict[int, float]:
     }
 
 
+def ingest_origin_s(log: TimingLog) -> float | None:
+    """Container PTS (s) of the first video frame the engine ingested, from the relay's ``ingest_origin`` line.
+
+    The engine rebases frame PTS to 0 at its first frame: engine pts = sender stream pts - origin."""
+    first = next((t for t in log.timings if t["stage"] == "ingest_origin" and t.get("pts") is not None), None)
+    return None if first is None else float(first["pts"])
+
+
+def _engine_key(f: TapFrame, fps: float, origin_s: float) -> int | None:
+    """``engine_delay`` seq of a tap frame from its optical stamp counter (the sender's frame index).
+
+    The tap's stream PTS cannot be used: the relay rebases PTS to the connect keyframe and MediaMTX rebases
+    again for the reader, so the tap PTS has an unknown offset from the engine's."""
+    if f.counter is None:
+        return None
+    return round(f.counter - origin_s * fps)
+
+
 def align_to_engine(
     frames: Sequence[TapFrame],
     engine: dict[int, EngineFrame],
     fps: float = 30.0,
     enc_map: dict[int, float] | None = None,
+    origin_s: float | None = None,
 ) -> dict[str, Any]:
     """Attach ``extra['engine_arrival'/'engine_emitted']`` to tap frames.
 
-    With ``enc_map`` (real relay) the tap PTS gives the encoder seq, which maps to the engine PTS and so to the
-    engine seq. Without it (the reference engine) the tap PTS is the engine PTS: ``seq = round(pts * fps)``.
+    With ``origin_s`` (real engine: the relay's ``ingest_origin`` line) the stamp counter gives the engine seq:
+    ``round(counter - origin_s * fps)``. With ``enc_map`` the tap PTS gives the encoder seq, which maps to the
+    engine PTS and so to the engine seq. With neither (the reference engine) the tap PTS is the engine PTS:
+    ``seq = round(pts * fps)``.
     The mapping is checked: for live frames ``arrival - capture`` is the ingest latency and must be small and
     steady. Returns ``{"matched", "ingest_s_median", "ingest_s_std", "valid"}``.
     """
     ingest: list[float] = []
     matched = 0
     for f in frames:
-        if f.pts_s is None:
+        if origin_s is not None:
+            key = _engine_key(f, fps, origin_s)
+            if key is None:
+                continue
+        elif f.pts_s is None:
             continue
-        key = round(f.pts_s * fps)
-        if enc_map:
+        else:
+            key = round(f.pts_s * fps)
+        if origin_s is None and enc_map:
             pts_e = enc_map.get(key)
             if pts_e is None:
                 continue
@@ -239,11 +265,23 @@ def align_to_engine(
 
 
 def egress_delays(
-    frames: Sequence[TapFrame], log: TimingLog, fps: float = 30.0, warmup_s: float = 1.0
+    frames: Sequence[TapFrame],
+    log: TimingLog,
+    fps: float = 30.0,
+    warmup_s: float = 1.0,
+    origin_s: float | None = None,
 ) -> list[float]:
     """Capture to the frame being written to the egress socket (D-1), from the relay's ``egress_write``
-    timing (``t_end`` per engine seq) and the tap frame's capture time. Empty when the stage is not logged."""
-    ends = {t["seq"]: t["t_end"] for t in log.timings if t["stage"] == "egress_write"}
+    timing (``t_end`` per engine seq) and the tap frame's capture time. Empty when the stage is not logged.
+    With ``origin_s`` the tap frame is found by its stamp counter and the line by its engine PTS."""
+    if origin_s is not None:
+        ends = {
+            round(float(t["pts"]) * fps): t["t_end"]
+            for t in log.timings
+            if t["stage"] == "egress_write" and t.get("pts") is not None
+        }
+    else:
+        ends = {t["seq"]: t["t_end"] for t in log.timings if t["stage"] == "egress_write"}
     if not ends:
         return []
     live = live_frames(frames)
@@ -252,9 +290,15 @@ def egress_delays(
     first = min(f.t_read for f in live)
     out: list[float] = []
     for f in live:
-        if f.pts_s is None or f.capture_s is None or f.t_read - first < warmup_s:
+        if f.capture_s is None or f.t_read - first < warmup_s:
             continue
-        end = ends.get(round(f.pts_s * fps))
+        if origin_s is not None:
+            key = _engine_key(f, fps, origin_s)
+        else:
+            key = None if f.pts_s is None else round(f.pts_s * fps)
+        if key is None:
+            continue
+        end = ends.get(key)
         if end is not None:
             out.append(end - f.capture_s)
     return out

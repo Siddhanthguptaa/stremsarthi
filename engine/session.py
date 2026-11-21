@@ -74,10 +74,15 @@ RESYNC_SAMPLES = RATE // 50  # 20 ms: audio and video clocks further apart than 
 # second while it is healthy. Without one for ``audio_watchdog_s`` the audio is unchecked and goes out muted.
 AUDIO_HEARTBEAT_STAGE = "audio_heartbeat"
 AUDIO_WATCHDOG_S = 3.0  # default silence tolerated between heartbeats
-AUDIO_GRACE_S = 10.0  # requested startup grace before the first heartbeat (clamped to delay - 0.5 s)
+AUDIO_GRACE_S = (
+    2.5  # startup grace before the first heartbeat (matches the config default; clamped to delay - 0.5 s)
+)
 # The heartbeat's pts is the newest audio pts the host has seen. A beat whose pts lags the newest ingested
 # audio pts by more than this is a stuck loop (or a spoof) and counts as no beat at all.
 AUDIO_HEARTBEAT_LAG_S = 2.0
+# A beat vouches for audio only up to ``beat pts - margin``: the beat is the newest chunk handed to the host, and
+# speech inside the last second or so has no verdict yet (STT is still working on it). Clamped to delay - 1.5 s.
+AUDIO_VOUCH_MARGIN_S = 1.0
 
 
 class AudioRing:
@@ -176,6 +181,7 @@ class Session:
         audio_watchdog_s: float | None = None,
         audio_grace_s: float | None = None,
         audio_heartbeat_lag_s: float | None = None,
+        audio_vouch_margin_s: float | None = None,
     ) -> None:
         self.config = config
         self.source, self.sink = source, sink
@@ -221,6 +227,13 @@ class Session:
         if lag is None:
             lag = getattr(config.engine, "audio_heartbeat_lag_s", AUDIO_HEARTBEAT_LAG_S)
         self.audio_heartbeat_lag_s = max(0.0, float(lag))
+        margin = audio_vouch_margin_s
+        if margin is None:
+            margin = getattr(config.engine, "audio_vouch_margin_s", AUDIO_VOUCH_MARGIN_S)
+        self.audio_vouch_margin_s = max(0.0, min(float(margin), delay - 1.5))
+        self._inflight_samples = round(
+            (delay - 0.5) * RATE
+        )  # speech that may be in flight when a beat stalls
         if self.audio_watchdog_s and abs(self.audio_grace_s - float(grace)) > 1e-9:
             log.warning(
                 "audio startup grace %.1f s is longer than delay - 0.5 s: using %.1f s",
@@ -309,13 +322,19 @@ class Session:
         with self._wd_lock:
             newest = self._newest_ingest_pts
             seen = pts if pts is not None else self._first_ingest_pts
-            if newest is not None and seen is not None and newest - seen > self.audio_heartbeat_lag_s:
-                self.audio_beats_rejected += 1
-                return False
+            if newest is not None and seen is not None:
+                lag = newest - seen
+                # behind (stuck loop) or ahead (a clock from before a PTS reset, or a spoof): proves nothing
+                if abs(lag) > self.audio_heartbeat_lag_s:
+                    self.audio_beats_rejected += 1
+                    return False
             self._wd_last_beat = now
-            if pts is not None:
-                self._wd_beat_index = min(self.ring.latest, round(pts * RATE))
-                self._checked_until = max(self._checked_until, float(pts))
+            if pts is not None and newest is not None:
+                seen_to = min(float(pts), newest)  # never vouch for audio that has not been ingested
+                self._wd_beat_index = min(self.ring.latest, round(seen_to * RATE))
+                self._checked_until = max(self._checked_until, seen_to)
+            elif pts is not None:  # no audio ingested yet: nothing to vouch for
+                self._wd_beat_index = self.ring.latest
             else:  # nothing the host has seen yet: none of the ingested samples is vouched for
                 first = self._wd_first_index
                 self._wd_beat_index = (first - 1) if first is not None else self.ring.latest
@@ -345,14 +364,17 @@ class Session:
             from_index = self._wd_beat_index if beat is not None else (self._wd_first_index or 0)
             if trigger:
                 self._audio_stale, self._audio_stale_since = True, now
-                self._wd_stale_from = max(0, from_index)
+                self._wd_stale_from = max(0, from_index - self._inflight_samples)
             elif recover:
                 self._audio_stale = False
                 since, self._audio_stale_since = self._audio_stale_since, None
                 resumed_at = self._wd_beat_index
         if trigger:
-            if self.ring.latest >= from_index:
-                self.mutes.add_silence(max(0, from_index), self.ring.latest + 1)
+            # Speech ingested up to delay - 0.5 s before the last beat may still be in flight (no verdict yet):
+            # silence that too (samples already emitted are a no-op), then everything up to the newest sample.
+            start = max(0, from_index - self._inflight_samples)
+            if self.ring.latest >= start:
+                self.mutes.add_silence(start, self.ring.latest + 1)
             self.counts["audio_watchdog"] += 1
             log.warning("audio watchdog: no heartbeat from the audio module, audio is muted")
             if self.safety is not None:
@@ -361,7 +383,9 @@ class Session:
                 self.status.audio_stale = True
         elif recover:
             # what was ingested while the module was silent is still unchecked when it is emitted later
-            self.mutes.add_silence(self._wd_stale_from, resumed_at + 1)
+            self.mutes.add_silence(
+                max(0, min(self._wd_stale_from, resumed_at - self._inflight_samples)), resumed_at + 1
+            )
             log.warning("audio watchdog: the audio module is back, audio is checked again")
             if self.safety is not None:
                 self.safety.audio_unchecked(False, self._last_pts, round((now - (since or now)) * 1000.0))
@@ -734,7 +758,9 @@ class Session:
         if self._audio_stale:  # the audio module is silent: nothing it has not checked goes out
             pcm[:] = 0
         elif (
-            self.audio_host is not None and self.audio_watchdog_s and (first + n) / RATE > self._checked_until
+            self.audio_host is not None
+            and self.audio_watchdog_s
+            and (first + n) / RATE > self._checked_until - self.audio_vouch_margin_s
         ):
             # no accepted heartbeat has vouched for these samples yet (host not started, or its pts is stuck)
             pcm[:] = 0

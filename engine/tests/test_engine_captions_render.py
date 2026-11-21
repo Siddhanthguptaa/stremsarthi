@@ -457,3 +457,20 @@ def test_newlines_are_drawn_as_given_two_lines_of_at_most_42_chars(renderer):
     assert len(lines) == 2 and truncated and lines[1].endswith("...")
     # the box has two lines of text
     assert renderer.prepare(ev(text=f"{line1}\n{line2}", lang="hi")).lines == 2
+
+
+def test_zero_length_redaction_replaces_a_long_running_caption_even_when_it_is_past():
+    """Privacy: the caption service vacates a slot with a zero-length event (pts_end == pts_start). The slot
+    started more than the late-prune horizon before the newest rendered pts and is still on screen: the
+    replacement must still apply, and the old text must stop drawing."""
+    r = CaptionRenderer(enabled=True)
+    r.add(ev(10.0, 14.0, "OLD unredacted"))
+    r._newest_pts = 11.5
+    r.add(ev(10.0, 10.0, "[mask]"))
+    assert r.active(12.0) is None  # nothing from the old event
+    assert all(e.event.text != "OLD unredacted" for e in r._entries)
+    img = np.zeros((H, W, 3), np.uint8)
+    assert r.render(img, 12.0) is False and not img.any()
+    # a genuinely stale event with no counterpart is still dropped and counted
+    r.add(ev(1.0, 2.0, "stale"))
+    assert r.stats["late"] == 1

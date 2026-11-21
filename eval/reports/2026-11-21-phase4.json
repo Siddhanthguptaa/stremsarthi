@@ -72,7 +72,7 @@
       "passed": true,
       "target": 300.0,
       "unit": "ms",
-      "value": 1.099
+      "value": 2.201
     },
     {
       "name": "staff messages hidden",
@@ -274,7 +274,7 @@
     },
     {
       "name": "YouTube: quotaExceeded pauses reads until the Pacific-midnight reset, then polling resumes",
-      "note": "resumed after 70279 s, reset in 70278 s",
+      "note": "resumed after 49279 s, reset in 49278 s",
       "op": ">=",
       "passed": true,
       "target": 1.0,
@@ -283,7 +283,7 @@
     },
     {
       "name": "YouTube: log records containing flagged text",
-      "note": "8829 records scanned",
+      "note": "2350 records scanned",
       "op": "==",
       "passed": true,
       "target": 0.0,
@@ -476,11 +476,11 @@
   "header": {
     "commands": [
       "(check)",
-      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-093508 --leg data",
-      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-093508 --leg classify",
-      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-093508 --leg classify_llm",
-      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-093508 --leg youtube",
-      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-093508 --leg twitch"
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-103834 --leg data",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-103834 --leg classify",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-103834 --leg classify_llm",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-103834 --leg youtube",
+      "python -m eval.phase4 --data eval/data/generated/chat --out eval/runs/phase4-20261121-103834 --leg twitch"
     ],
     "dataset": {
       "by_kind": {
@@ -551,7 +551,7 @@
       "staff": 60
     },
     "dataset_sha256": "d525cbb95d0afec7aaccb0db44715385aad04555a97691d95b261ec262f76b17",
-    "git_rev": "0aaadeddab5e",
+    "git_rev": "0a2b6b66ea1a",
     "hardware": {
       "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
       "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
@@ -921,23 +921,23 @@
         ],
         [
           "classifier_max",
-          2.878
+          20.079
         ],
         [
           "classifier_p50",
-          0.362
+          0.612
         ],
         [
           "classifier_p95",
-          1.099
+          2.201
         ],
         [
           "end_to_end_p50",
-          19.668
+          37.196
         ],
         [
           "end_to_end_p95",
-          28.649
+          75.466
         ]
       ],
       "title": "Latency (ms)"
@@ -1049,7 +1049,7 @@
         ],
         [
           "calls_by_kind",
-          "{\"ban\": 1, \"delete\": 93, \"list\": 8094, \"lookup\": 1}"
+          "{\"ban\": 1, \"delete\": 93, \"list\": 1643, \"lookup\": 1}"
         ],
         [
           "clean_messages_deleted",
@@ -1061,7 +1061,7 @@
         ],
         [
           "governor_used",
-          90
+          15
         ],
         [
           "messages_sent",
@@ -1077,11 +1077,11 @@
         ],
         [
           "units_by_kind",
-          "{\"ban\": 200, \"delete\": 1860, \"list\": 40470, \"lookup\": 1}"
+          "{\"ban\": 200, \"delete\": 1860, \"list\": 8215, \"lookup\": 1}"
         ],
         [
           "units_used",
-          90
+          15
         ],
         [
           "verdict_deletes",
@@ -1153,31 +1153,31 @@
           "data check",
           0,
           0,
-          0.9
+          1.2
         ],
         [
           "classify (no LLM)",
           0,
           0,
-          5.2
+          7.3
         ],
         [
           "classify (stand-in Groq, informational)",
           0,
           0,
-          14.3
+          17.5
         ],
         [
           "YouTube mock",
           0,
           0,
-          7.9
+          6.7
         ],
         [
           "Twitch mock",
           0,
           0,
-          4.6
+          7.4
         ]
       ],
       "title": "Gate steps"

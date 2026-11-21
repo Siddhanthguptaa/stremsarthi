@@ -227,6 +227,9 @@ class EngineConfig(_Model):
     audio_heartbeat_lag_s: float = Field(
         2.0, ge=0.1, le=10.0
     )  # a heartbeat whose pts lags the newest ingested audio by more than this is ignored
+    audio_vouch_margin_s: float = Field(
+        1.0, ge=0.0, le=5.0
+    )  # a heartbeat vouches only for audio up to its pts minus this (the engine clamps it to delay - 1.5 s)
 
 
 def _default_modules() -> dict[str, str]:

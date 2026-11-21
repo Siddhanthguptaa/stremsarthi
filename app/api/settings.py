@@ -85,6 +85,12 @@ class ApiSettings(BaseSettings):
     session_ttl_s: float = Field(21600.0, validation_alias="SESSION_TTL_S")
     sessions_dir: str = Field("~/.streamsarthi/sessions", validation_alias="SESSIONS_DIR")
     ingest_host: str = Field("127.0.0.1", validation_alias="INGEST_BIND_HOST")
+    # Demo preview (routes/demo.py). The RAW view shows unmasked video: off unless DEMO_RAW_PREVIEW=1, and
+    # then only on a loopback-bound API for loopback clients. ``DEMO_FFMPEG_CMD`` is the ffmpeg binary.
+    demo_raw_preview: bool = Field(False, validation_alias="DEMO_RAW_PREVIEW")
+    demo_ffmpeg_cmd: str = Field("ffmpeg", validation_alias="DEMO_FFMPEG_CMD")
+    demo_max_clients: int = Field(4, ge=1, le=8, validation_alias="DEMO_MAX_CLIENTS")
+    demo_first_frame_timeout_s: float = Field(8.0, validation_alias="DEMO_FIRST_FRAME_TIMEOUT_S")
     # Moderator actions per moderator token (a held key or a script must not flood the platform APIs).
     mod_action_limit: int = 30
     mod_action_window_s: float = 10.0

@@ -47,6 +47,7 @@ MAX_AUDIO_SAMPLES = AUDIO_RATE * 6  # the shared audio slot: a frame's audio plu
 REPLY_DEADLINE_S = 5.0
 START_DEADLINE_S = 20.0
 BACKOFF_SECONDS = (0.5, 1.0, 2.0, 4.0, 8.0)
+TIMELINE_RESET_S = 4.0  # a frame PTS this far behind the last one means the clock restarted
 KIND_VIDEO, KIND_AUDIO = 0, 1
 CODEC_X264, CODEC_NVENC = "libx264", "h264_nvenc"
 CODECS = (CODEC_X264, CODEC_NVENC)
@@ -276,6 +277,11 @@ class AudioAligner:
         gap = round((float(pts) - self.t0) * self.rate) - self.next_sample
         if gap > self.max_gap:
             raise EncoderError("timeline-gap")
+        if gap < -self.max_gap:
+            # The engine's PTS clock restarted (a new ingest generation: the sender reconnected). Trimming would
+            # drop every chunk until the new clock caught up with the old one, minutes of silence and a video-only
+            # stream that MediaMTX drops after its read timeout. Restart the timeline instead.
+            raise EncoderError("timeline-reset")
         start = self.next_sample
         if gap > self.tolerance:
             samples = np.concatenate([np.zeros(gap, np.int16), samples])
@@ -564,6 +570,7 @@ class Encoder:
         self._aligner = AudioAligner()
         self._t0: float | None = None
         self._last_index = -1
+        self._last_pts: float | None = None
         self._attempt = 0
         self._retry_at = 0.0
         self._closed = False
@@ -627,7 +634,7 @@ class Encoder:
             self._process, self.header = process, header
             self.generation += 1
             self._aligner.reset()
-            self._t0, self._last_index = None, -1
+            self._t0, self._last_index, self._last_pts = None, -1, None
             return
         assert error is not None
         raise error
@@ -665,6 +672,10 @@ class Encoder:
         try:
             if self._t0 is None:
                 self._t0 = float(pts)
+            elif self._last_pts is not None and float(pts) < self._last_pts - TIMELINE_RESET_S:
+                raise EncoderError(
+                    "timeline-reset"
+                )  # the PTS clock jumped back: new timeline, new generation
             index = max(self._last_index + 1, round((float(pts) - self._t0) * self.settings.fps))
             items = [self._aligner.place(chunk_pts, samples) for chunk_pts, samples in chunks]
             items = [(start, samples) for start, samples in items if len(samples)]
@@ -672,7 +683,7 @@ class Encoder:
         except EncoderError as error:
             self._fail(error.code)
             return None
-        self._last_index = index
+        self._last_index, self._last_pts = index, float(pts)
         return EncodeResult(self.generation, index, float(pts), tuple(packets), self._clock() - began)
 
     def kill_worker(self) -> None:

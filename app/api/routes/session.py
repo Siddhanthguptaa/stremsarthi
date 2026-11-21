@@ -138,6 +138,8 @@ async def start_session(
             [d.model_dump(mode="json") for d in new_config.destinations], separators=(",", ":")
         ),
     }
+    if state.settings.demo_raw_preview and state.settings.lan_host is None:
+        child_overrides["DEMO_RAW_PREVIEW"] = "1"  # environment only, never argv; never with --lan
     try:
         record = await state.golive.begin(
             delay_seconds=delay,

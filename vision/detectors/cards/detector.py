@@ -60,6 +60,9 @@ CONF_SHAPE = 0.5  # the texture-only fallback (``unsure.py``): same weight as ca
 SHAPE_FALLBACK_DEFAULT = False
 CARD_BONUS = 0.06  # a real card outline was found around the number
 _HALF_NUMBER = re.compile(r"^\d{4}[ -]?\d{4}$")  # 8 digits in two groups: a 12-digit number with 4 hidden
+# a PAN with its first or last part hidden: 5 letters + 1-3 digits, letters + 4 digits + letter, or 3-4 digits + letter
+_PAN_PART = re.compile(r"^(?:[A-Z]{5}[0-9]{1,3}|[A-Z]{1,3}[0-9]{4}[A-Z]|[0-9]{3,4}[A-Z])$")
+_PAN_WORDS = ("INCOME", "TAX", "PERMANENT", "ACCOUNT")  # printed on every PAN card
 _PAN_ISH = re.compile(r"^[A-Z]{4,6}[0-9]{3,5}[A-Z]?$")
 
 
@@ -155,7 +158,9 @@ class CardsDetector:
                 continue
             card = find_card_quad(image, hit.box, boxes, whole_frame=not hit.needs_card)
             if hit.partial and card.method != "contour":
-                part = find_partial_card_quad(image, hit.box, boxes, half_number=True)
+                part = find_partial_card_quad(
+                    image, hit.box, boxes, half_number=hit.category is Category.AADHAAR
+                )
                 if part is None:
                     continue
                 card = part
@@ -167,17 +172,22 @@ class CardsDetector:
         late = ctx.deadline is not None and self._res.clock() > ctx.deadline
         if unsure and not masked_hint and not late:
             covered = [pts for _, pts in detections]
-            cands = region_candidates(image) if len(boxes) >= 1 else []
+            fh, fw = image.shape[:2]
+            at_side = any(b[:, 0].min() <= 12 or b[:, 0].max() >= fw - 12 for b in boxes)
+            # the whole-frame outline search is the costly part (~16 ms): only with enough text for card_like,
+            # or with text running to a frame side (a card cut by it)
+            cands = region_candidates(image) if len(boxes) >= 4 or at_side else []
             for pts, _count in find_card_like(image, boxes, candidates=cands):
                 if any(quad_overlap(pts, c) > 0.3 for c in covered):
                     continue
                 hit = _Hit(Category.AADHAAR, pts, CONF_CARD_LIKE, "card_like", 0.0)
                 detections.append((self._detection(frame, hit, CardQuad(pts, "card_like", 0.0)), pts))
             # a card entering or leaving through a frame side: masked whole, beyond the frame edge
+            edge_cat = self._edge_category(texts)
             for pts in find_edge_card(image, boxes, candidates=cands):
                 if any(quad_overlap(pts, c) > 0.3 for c in covered):
                     continue
-                hit = _Hit(Category.AADHAAR, pts, CONF_CARD_LIKE, "card_like", 0.0)
+                hit = _Hit(edge_cat, pts, CONF_CARD_LIKE, "card_like", 0.0)
                 det = self._detection(frame, hit, CardQuad(pts, "card_like", 0.0))
                 det.extra["expansion"] = "edge"
                 detections.append((det, pts))
@@ -192,6 +202,15 @@ class CardsDetector:
                 det.extra["bands"] = bands
                 detections.append((det, pts))
         return _dedupe(detections)
+
+    def _edge_category(self, texts: list[str]) -> Category:
+        """PAN when the visible text says so (a PAN-shaped piece or the printed header), else Aadhaar."""
+        if self._enabled(Category.PAN):
+            for t in texts:
+                compact = re.sub(r"[^A-Za-z0-9]", "", t).upper()
+                if _PAN_PART.match(compact) or find_pan(t) or any(w in t.upper() for w in _PAN_WORDS):
+                    return Category.PAN
+        return Category.AADHAAR
 
     # ------------------------------------------------------------------ hit finders
     def _aadhaar_hits(self, boxes: list[np.ndarray], texts: list[str], confs: list[float]) -> list[_Hit]:
@@ -263,6 +282,11 @@ class CardsDetector:
             compact = re.sub(r"[^A-Za-z0-9]", "", text).upper()
             if self._unsure_enabled(Category.PAN) and 8 <= len(compact) <= 11 and _PAN_ISH.match(compact):
                 hits.append(_Hit(Category.PAN, boxes[i], CONF_UNSURE, "card_shape_unsure", confs[i], True))
+            elif self._unsure_enabled(Category.PAN) and 4 <= len(compact) <= 9 and _PAN_PART.match(compact):
+                # a cut PAN: kept only when a card region holds it, the card inferred from the visible part
+                hits.append(
+                    _Hit(Category.PAN, boxes[i], CONF_UNSURE, "card_shape_partial", confs[i], True, True)
+                )
         return hits
 
     # ------------------------------------------------------------------ output

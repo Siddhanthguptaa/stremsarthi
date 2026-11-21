@@ -168,3 +168,13 @@ def test_denial_events_are_capped_across_actors(rig) -> None:  # type: ignore[no
     clock.advance(2.5)
     cmds.handle(msg("!hold", "later", "troll_x"))
     assert len([e for e in bus.of(Topic.SAFETY_EVENT) if e.detail_code == "cmd_denied"]) == 2
+
+
+def test_viewer_flood_cannot_evict_the_staff_dedupe_set(rig) -> None:  # type: ignore[no-untyped-def]
+    cmds, bus, clock = rig
+    assert cmds.handle(msg("!hold", "staff-1", "mod", is_moderator=True)).status == "accepted"  # type: ignore[union-attr]
+    for i in range(5000):  # more denied ids than the dedupe capacity
+        cmds.handle(msg("!hold", f"flood{i}", f"troll{i}"))
+    clock.advance(10)
+    assert cmds.handle(msg("!hold", "staff-1", "mod", is_moderator=True)).status == "duplicate"  # type: ignore[union-attr]
+    assert len(bus.of(Topic.HOLD)) == 1

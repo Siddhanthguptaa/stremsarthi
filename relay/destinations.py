@@ -36,7 +36,7 @@ from relay.encoder import (
     EncodeResult,
     StreamInfo,
 )
-from relay.muxer import ProcessMuxer
+from relay.muxer import MuxerError, ProcessMuxer
 from relay.tls_forwarder import TLSForwarder
 
 log = logging.getLogger("relay.destinations")
@@ -142,6 +142,11 @@ def build_destinations(
         host, port = parse_peer(entry.url_host or default_host)
         specs.append(DestinationSpec(name, entry.kind, host, port, app, SecretStr(value), None, True))
     return BuiltDestinations(tuple(specs), tuple(skipped))
+
+
+def _fixed_code(error: BaseException) -> str:
+    """``MuxerError`` carries a fixed code (``muxer-connect-failed:<ExceptionClass>``, never libav text)."""
+    return error.code if isinstance(error, MuxerError) and len(error.code) < 80 else "-"
 
 
 def _debug_traceback() -> None:
@@ -369,7 +374,14 @@ class DestinationPublisher:
             muxer = self._opener(url, entry.info)
         except Exception as error:  # noqa: BLE001 - libav text can contain the URL; keep only a fixed code
             self.busy_since = None
-            log.warning("destination %s connect failed: %s", self.spec.name, type(error).__name__)
+            log.warning(
+                "destination %s connect failed: %s (%s, attempt %d, next try in at least %.1f s)",
+                self.spec.name,
+                type(error).__name__,
+                _fixed_code(error),
+                self._attempt + 1,
+                self._backoff[min(self._attempt, len(self._backoff) - 1)],
+            )
             _debug_traceback()
             self._fail("connect-failed")
             return None
@@ -389,7 +401,12 @@ class DestinationPublisher:
             muxer.write(shifted)
         except Exception as error:  # noqa: BLE001
             self.busy_since = None
-            log.warning("destination %s write failed: %s", self.spec.name, type(error).__name__)
+            log.warning(
+                "destination %s write failed: %s (%s)",
+                self.spec.name,
+                type(error).__name__,
+                _fixed_code(error),
+            )
             _debug_traceback()
             self._fail("mux-failed")
             return False

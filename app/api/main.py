@@ -20,6 +20,7 @@ from .auth import TokenService
 from .bus import BusClient, make_bus
 from .chat_state import ChatState
 from .config_store import ConfigStore
+from .demo_preview import PreviewHub, SessionView, split_cmd
 from .enrol_service import MAX_ENROL_FRAMES, AllowlistService
 from .errors import install_error_handlers
 from .events import SafetyEventStore
@@ -33,6 +34,7 @@ from .routes import alerts as alerts_routes
 from .routes import auth_routes, control, health
 from .routes import chat as chat_routes
 from .routes import config as config_routes
+from .routes import demo as demo_routes
 from .routes import destinations as destinations_routes
 from .routes import enrol as enrol_routes
 from .routes import events as events_routes
@@ -109,6 +111,21 @@ def create_app(
         engine_settled=engine_settled,
     )
 
+    def preview_view() -> SessionView:
+        host = settings.ingest_host if settings.ingest_host not in ("0.0.0.0", "") else "127.0.0.1"  # noqa: S104
+        return SessionView(
+            state=sessions.state(hub.engine_status()),
+            host=host,
+            rtmp_port=config.ingest_port_rtmp,
+        )
+
+    demo_preview = PreviewHub(
+        preview_view,
+        split_cmd(settings.demo_ffmpeg_cmd),
+        first_frame_timeout_s=settings.demo_first_frame_timeout_s,
+        max_clients=settings.demo_max_clients,
+    )
+
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await bus.start()
@@ -124,6 +141,7 @@ def create_app(
         try:
             yield
         finally:
+            await demo_preview.shutdown()  # no ffmpeg may outlive the API
             await golive.shutdown()  # children get SIGTERM and a grace period before the bus closes
             for task in background:
                 task.cancel()
@@ -147,6 +165,7 @@ def create_app(
     app.state.sessions = sessions
     app.state.orchestrator = orchestrator
     app.state.golive = golive
+    app.state.demo_preview = demo_preview
     app.state.recorder = recorder
     app.state.risk = risk
     app.state.keys = keys
@@ -179,6 +198,7 @@ def create_app(
     app.include_router(risk_routes.router)
     app.include_router(pairing_routes.router)
     app.include_router(report_routes.router)
+    app.include_router(demo_routes.router)
     app.include_router(ws_router)
 
     # Innermost first: CORS (exact origins, Authorization only), then the security layer.

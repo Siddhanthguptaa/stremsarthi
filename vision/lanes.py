@@ -37,6 +37,11 @@ from contracts import (
 )
 
 SLOW_LANE_HZ = 1.0
+TRIGGER_MIN_INTERVAL_S = 0.2  # at most one scene-change run per this long: flashing content cannot pin a core
+CHANGE_THUMB = (48, 27)  # width, height of the change-detection thumbnail
+CHANGE_MEAN = 9.0  # mean absolute grey change (0-255) that counts as a scene cut
+CHANGE_CELLS = 0.06  # or: share of thumbnail cells that changed by more than CHANGE_CELL_DIFF (a new target)
+CHANGE_CELL_DIFF = 45.0
 RESULT_QUEUE_MAX = 256
 
 ENV_FAULT = "SS_FAULT"
@@ -164,6 +169,38 @@ class _FaultHook:
             pass
 
 
+class SceneChange:
+    """Cheap "did the picture change a lot since the last offered frame" test.
+
+    Compares a 48x27 grey thumbnail with the previous one (about 0.3 ms at 720p). True on a hard cut (large mean
+    change) and when a compact new object appears (a few percent of the cells change strongly). The FAST lane
+    uses it to run on the very next frame instead of waiting for its stride: a QR flashed between two strides, or
+    the first frame after a cut, is then seen at once. Nothing is stored but the 48x27 thumbnail."""
+
+    def __init__(self) -> None:
+        self._prev: Any = None
+
+    def reset(self) -> None:
+        self._prev = None
+
+    def update(self, image: Any) -> bool:
+        import cv2
+        import numpy as np
+
+        try:
+            gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            thumb = cv2.resize(gray, CHANGE_THUMB, interpolation=cv2.INTER_AREA).astype(np.int16)
+        except (cv2.error, AttributeError, ValueError):
+            return False
+        prev, self._prev = self._prev, thumb
+        if prev is None or prev.shape != thumb.shape:
+            return False
+        diff = np.abs(thumb - prev)
+        return bool(
+            float(diff.mean()) >= CHANGE_MEAN or float((diff > CHANGE_CELL_DIFF).mean()) >= CHANGE_CELLS
+        )
+
+
 # (frame, lane, detections of this run) -> (mask requests, aux detections). Planner/tracker hook.
 Assembler = Callable[
     [Frame, Lane, tuple[Detection, ...]], tuple[tuple[MaskRequest, ...], tuple[Detection, ...]]
@@ -241,6 +278,12 @@ class LaneWorker:
             else None
         )
         self.offered = self.skipped = self.dropped = self.completed = self.failed = 0
+        self.triggered = 0  # off-stride runs started by a scene change (FAST lane only)
+        self.trigger_suppressed = 0  # scene changes that did not start a run (rate cap or a frame waiting)
+        self._last_trigger = -1e9
+        self._change: SceneChange | None = (
+            SceneChange() if lane is Lane.FAST and schedule.stride > 1 else None
+        )
         self.last_error: dict[str, str] = {}  # detector id -> exception type name (never the message)
         self.service_seconds: deque[float] = deque(maxlen=4096)
         self.detector_seconds: dict[str, deque[float]] = {d.id: deque(maxlen=4096) for d in self.detectors}
@@ -261,9 +304,25 @@ class LaneWorker:
             self.offered += 1
             if self._fault is not None:
                 self._fault.start(frame.arrival)  # fault clock t=0: first frame offered
+            if self._change is not None:
+                changed = self._change.update(frame.image)
+            else:
+                changed = False
             if frame.seq % self.schedule.stride:
-                self.skipped += 1
-                return False
+                now = self._clock()
+                if changed and (
+                    self._latest is not None or now - self._last_trigger < TRIGGER_MIN_INTERVAL_S
+                ):
+                    self.trigger_suppressed += 1
+                if (
+                    not changed
+                    or self._latest is not None
+                    or now - self._last_trigger < TRIGGER_MIN_INTERVAL_S
+                ):
+                    self.skipped += 1
+                    return False
+                self._last_trigger = now
+                self.triggered += 1  # a cut or a new target between two strides: look at this frame now
             if self._latest is not None:
                 self.dropped += 1  # newest wins: the older waiting frame is never processed
             self._latest = frame
@@ -304,6 +363,8 @@ class LaneWorker:
             "rate_hz": self.schedule.rate_hz,
             "offered": self.offered,
             "skipped": self.skipped,
+            "triggered": self.triggered,
+            "trigger_suppressed": self.trigger_suppressed,
             "dropped": self.dropped,
             "completed": self.completed,
             "failed": self.failed,

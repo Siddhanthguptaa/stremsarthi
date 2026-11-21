@@ -48,3 +48,9 @@ classifier on `eval/data/private/chat_heldout_v2/` (gitignored; about 1,500 mess
 the Gate 4 set; the generator is kept in the same private directory). It is never read by `chat/` code, tests or
 agents, and reports carry aggregates only (recall, hard-flag-only recall, HOLD_FOR_MOD counts, by kind, language and
 difficulty). It never gates. Code: `eval/phase4_heldout.py`; tests use a toy set (`eval/tests/test_phase4_heldout_harness.py`).
+
+## Judge demo reel (SPECIMEN only)
+`bash scripts/ss.sh bash scripts/demo_assets.sh` builds `/tmp/streamsarthi-demo` (flite audio track + timeline, contact sheet, chat plan) and prints the
+run commands. Video: `python -m eval.sender.sender --script demo_reel --audio-file /tmp/streamsarthi-demo/demo_reel.wav --url ...` (90 s, ten
+captioned scenes: `eval/sender/demo_scenes.py`; the file track replaces the beep). Audio: `eval/data_gen/demo_audio.py`. Chat: `python -m eval.demo.chat_feeder`
+(mock YouTube chat + the real chat process; a drop-in for `chat.main` through `SESSION_CHAT_CMD`). Tests: `eval/tests/test_demo_*.py`.

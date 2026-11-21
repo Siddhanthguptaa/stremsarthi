@@ -1,6 +1,6 @@
 # Cost per streaming hour (T7.4)
 
-Written 2026-11-21 by a research agent from public price pages and the repo's own rates. **No live API call has ever been made** (all keys empty), so every request rate below is an assumption, not a measurement. Hosting is local (the streamer's laptop): zero cloud cost. Prices were read on 2026-11-21; re-check before quoting them to anyone.
+Written 2026-11-21 by a research agent from public price pages and the repo's own rates. Refreshed the same day: live captions (Sarvam translate) and the live chat process now exist in the repo, but neither has ever been run against a real API, so no rate or price below is measured. Prices were not re-fetched in the refresh. **No live API call has ever been made** (all keys empty), so every request rate below is an assumption, not a measurement. Hosting is local (the streamer's laptop): zero cloud cost. Prices were read on 2026-11-21; re-check before quoting them to anyone.
 
 ## 1. Prices used (source, date read)
 
@@ -66,7 +66,7 @@ The share of messages reaching the LLM is UNMEASURED: no Groq key, and STATUS sa
 
 **Groq Whisper failover** (only while Sarvam is down or rate-limited): capped at 18 requests per minute = 1,080 per hour. With the (UNVERIFIED) 10 s minimum that is 10,800 billed seconds = 3 h x USD 0.04 = USD 0.12 per hour = INR 11.5 per hour of outage, a ceiling. Not included in the totals.
 
-**Optional live captions** (Sarvam translate, off by default; in the `demo` profile IndicTrans2 runs locally and costs INR 0): speech seconds x characters per second x 2 / 1,000.
+**Optional live captions** (Sarvam translate, off by default; in the `demo` profile IndicTrans2 would run locally at INR 0, but its weights are not installed: they need a Hugging Face token and a decision about converting the model with `trust_remote_code`; one caption request per segment, no merging, so continuous speech approaches the 45 requests per minute bucket per STATUS T5.3): speech seconds x characters per second x 2 / 1,000.
 - Low: 1,080 x 12 = 12,960 chars = INR 25.92
 - Typical: 2,160 x 15 = 32,400 chars = INR 64.80
 - High: 3,240 x 18 = 58,320 chars = INR 116.64

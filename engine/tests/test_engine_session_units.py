@@ -468,7 +468,7 @@ def test_threaded_session_runs_and_stops_cleanly():
     """Real threads and real time: 1.2 s of video through a 3.0 s delay needs about 4.5 s."""
     config = cfg()
     start = time.monotonic() + 0.05
-    source = SyntheticSource(36, FPS, start=start, realtime=True, beep_at=0.2)
+    source = SyntheticSource(36, FPS, start=start, realtime=True, beep_at=0.0)
     host = FakeLaneHost(card_detector(36, CARD), latency_s=0.02)
     # the fake host stamps completion in virtual time: frame.arrival is real here, so this just works
     sink = RecordingSink()

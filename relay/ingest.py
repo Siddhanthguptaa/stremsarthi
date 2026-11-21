@@ -43,6 +43,9 @@ AUDIO_RATE = 48_000
 AUDIO_BLOCK_SAMPLES = 960  # 20 ms at 48 kHz
 HOLD_ACTOR = "relay_ingest"
 STAGE_INGEST_DECODE = "ingest_decode"
+# One line per generation: ``pts`` is the container PTS (seconds) of the first video frame, the offset between the
+# sender's stream clock and the engine's rebased frame PTS (engine pts = container pts - origin).
+STAGE_INGEST_ORIGIN = "ingest_origin"
 # MediaMTX supervisor event codes that prove the phone link (or the relay) is gone.
 TRANSPORT_LOSS_CODES = frozenset({"publisher-disconnected", "mediamtx-exit"})
 
@@ -545,6 +548,11 @@ class NetworkInput:
                         pts_abs = float(frame.pts * frame.time_base)
                         if origin is None:
                             origin = pts_abs
+                            t_origin = self._clock()
+                            self._publish(
+                                Topic.TIMING,
+                                StageTiming(STAGE_INGEST_ORIGIN, generation, pts_abs, t_origin, t_origin),
+                            )
                             while pending_audio:
                                 emit_audio(*pending_audio.popleft())
                         rel = pts_abs - origin

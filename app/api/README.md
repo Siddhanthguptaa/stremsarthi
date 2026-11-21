@@ -84,3 +84,21 @@ needs no stream key: the spawned engine publishes only the local `shielded` tap.
 enabled destination with a key. The publish URLs (`GET /api/session`, `GET /api/pairing`) use the configured
 `INGEST_PORT_RTMP` / `INGEST_PORT_SRT`. `scripts/e2e_smoke.sh` runs the whole chain (API spawns the real engine,
 synthetic SPECIMEN sender, egress tap, hold, config toggle, stop, report) with no keys; exit 0/1/2.
+
+## Demo preview (`demo_preview.py`, `routes/demo.py`)
+- `POST /api/demo/preview-token` (streamer) -> `{token, expires_in_s: 300}`: HMAC token, role `preview` (not in `ROLES`,
+  room `<room>:preview`), accepted only by the two stream routes. `GET /api/demo/status` (streamer) -> `{raw_enabled,
+  protected_available, raw_available, clients:{raw,protected}}`.
+- `GET /api/demo/preview/{raw|protected}.mjpg?t=<token>`: `multipart/x-mixed-replace` (boundary `frame`), <= 8 fps, <= 640 px,
+  no-store/no-cache. One `ffmpeg` per stream (own process group), started by the first client, SIGKILLed with the last
+  client, when the session leaves starting/waiting_ingest/live, or at API shutdown; up to `DEMO_MAX_CLIENTS` (default 4, 1..8) clients per stream; a client address that already holds a slot may overshoot by one (token refresh); a connection that stops reading for 2.5 s is evicted (keepalive part every 1 s on an idle stream).
+  Errors: 401 bad token, 409 `no_session`, 503 `stream_unavailable` (not live, no picture in `DEMO_FIRST_FRAME_TIMEOUT_S`,
+  ffmpeg missing); cap reached: 503 `preview_clients_full` + `Retry-After: 2`. Status also returns `max_clients`.
+- `protected` reads the anonymous loopback `rtmp://<ingest host>:<rtmp port>/shielded`. `raw` reads the anonymous loopback
+  `rtmp://127.0.0.1:<rtmp port>/camera`, which the relay allows only when the engine environment has `DEMO_RAW_PREVIEW=1`:
+  the orchestrator sets it (environment, never argv) only when the setting is on and the API is not on `--lan`, and strips it
+  from the inherited environment otherwise. RAW is refused unless `DEMO_RAW_PREVIEW=1` (default off) AND not `--lan` AND the
+  client is 127.0.0.1/::1 (403 `raw_preview_disabled` / `raw_preview_loopback_only`). Frames stay in RAM, ffmpeg stderr is
+  discarded, tokens and URLs are never logged.
+- Settings: `DEMO_RAW_PREVIEW`, `DEMO_MAX_CLIENTS`, `DEMO_FFMPEG_CMD` (default `ffmpeg`), `DEMO_FIRST_FRAME_TIMEOUT_S` (8).
+- Tests: `tests/test_api_demo_preview.py` with `tests/fake_ffmpeg.py` (POSIX only: process groups).

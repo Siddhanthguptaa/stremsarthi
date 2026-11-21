@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
 log = logging.getLogger("streamsarthi.api.orchestrator")
+RAW_PREVIEW_ENV = "DEMO_RAW_PREVIEW"
 
 ProcState = Literal["not_started", "running", "exited", "failed", "stopped"]
 IS_WINDOWS = sys.platform == "win32"
@@ -198,6 +199,9 @@ class Orchestrator:
 
     def _env(self, extra: Mapping[str, str]) -> dict[str, str]:
         env = dict(os.environ if self._base_env is None else self._base_env)
+        # The raw preview opens an unmasked read path in the relay: it is never inherited from the API's own
+        # environment by accident, only passed explicitly (see routes/session.py).
+        env.pop(RAW_PREVIEW_ENV, None)
         env.update(extra)
         return env
 

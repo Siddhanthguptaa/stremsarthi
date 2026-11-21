@@ -65,6 +65,34 @@ def unrtl(text: str) -> str:
     return _RLO.sub(lambda m: m.group(1)[::-1], text)
 
 
+_TOKEN = re.compile(r"\S+")
+# a space in front of a vowel sign, virama or anusvara can never be real: "गा ंडू" is "गांडू"
+_INDIC_MARK_GAP = re.compile(r"\s+(?=[ऀ-ःऺ-ॏॕ-ॣঁ-ঃ়-্ଁ-ଃ଼-୍ఀ-ఄా-ౖಁ-ಃ಼-್])")
+_SEP_CHARS = "._-*|"
+
+
+def _dejoin(m: re.Match[str]) -> str:
+    """``w.h.e.r.e`` -> ``where``: a token whose every second character is one and the same separator."""
+    tok = m.group(0)
+    n = len(tok)
+    if n < 5 or n % 2 == 0 or tok[1] not in _SEP_CHARS:
+        return tok
+    sep = tok[1]
+    if any(tok[i] != sep for i in range(1, n, 2)):
+        return tok
+    chars = tok[0::2]
+    if chars.isdigit() or not any(c.isalnum() for c in chars):
+        return tok
+    return chars
+
+
+def dejoin_tokens(text: str) -> str:
+    """Join tokens spelled one character at a time with a consistent separator (also for ``: / ? =`` inside)."""
+    if not any(c in text for c in _SEP_CHARS):
+        return text
+    return _TOKEN.sub(_dejoin, text)
+
+
 def clean_chars(text: str) -> str:
     """NFKC-folded text with invisibles removed, display order restored and look-alikes mapped to Latin/ASCII."""
     import unicodedata
@@ -73,19 +101,24 @@ def clean_chars(text: str) -> str:
     t = unrtl(t)
     t = _INVISIBLE.sub("", t)
     t = _COMBINING.sub("", t)
-    return t.translate(CONFUSABLES)
+    t = t.translate(CONFUSABLES)
+    if not t.isascii():
+        t = _INDIC_MARK_GAP.sub("", t)
+    return dejoin_tokens(t)
 
 
 # --- long messages -----------------------------------------------------------------------------------
 
 WINDOW = 2000
-MAX_WINDOWS = 8
+MAX_WINDOWS = 5
+HARD_CAP = 600_000
 _OVERLAP = 120
 
 
 def squeeze_whitespace(text: str) -> str:
-    """Invisible characters removed and every whitespace run collapsed to one space (cheap, regex only)."""
-    return _WS.sub(" ", _INVISIBLE.sub("", text)).strip()
+    """Invisible characters removed and every whitespace run collapsed to one space (C-speed string operations)."""
+    t = " ".join(text.split())
+    return _INVISIBLE.sub("", t) if _INVISIBLE.search(t) else t
 
 
 def windows(text: str) -> list[str]:
@@ -94,6 +127,8 @@ def windows(text: str) -> list[str]:
     Work is capped at ``MAX_WINDOWS * WINDOW`` characters, whatever the input length. Neighbouring slices overlap
     so a word on a boundary is not cut.
     """
+    if len(text) > HARD_CAP:  # platforms allow a few hundred characters; beyond this only the ends are read
+        text = text[: HARD_CAP // 2] + " " + text[-HARD_CAP // 2 :]
     t = squeeze_whitespace(text)
     n = len(t)
     if n <= WINDOW:

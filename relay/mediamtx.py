@@ -88,6 +88,7 @@ def render_config(
     *,
     srt_latency_ms: int = 120,
     srt_passphrase: str | None = None,
+    demo_raw_preview: bool = False,
 ) -> str:
     """Render the stdin config. Contains credentials, so it is returned, never written to disk.
 
@@ -102,7 +103,7 @@ def render_config(
         passphrase_line = f"    srtPublishPassphrase: {json.dumps(validate_passphrase(srt_passphrase))}"
     template = Template(CONFIG_TEMPLATE.read_text(encoding="utf-8"))
     return template.substitute(
-        users_json=json.dumps(mediamtx_users(address, phone, internal)),
+        users_json=json.dumps(mediamtx_users(address, phone, internal, demo_raw_preview=demo_raw_preview)),
         api_port=address.api_port,
         rtsp_port=address.rtsp_port,
         bind_host=address.host,
@@ -243,6 +244,7 @@ class MediaMTXSupervisor:
         internal: Credentials | None = None,
         srt_latency_ms: int = 120,
         srt_passphrase: str | None = None,
+        demo_raw_preview: bool = False,
         binary: Path | str | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
         backoff: tuple[float, ...] = BACKOFF_SECONDS,
@@ -256,6 +258,7 @@ class MediaMTXSupervisor:
         self.internal = internal or Credentials.generate()
         self.srt_latency_ms = srt_latency_ms
         self.srt_passphrase = srt_passphrase
+        self.demo_raw_preview = demo_raw_preview
         self.binary = Path(binary) if binary is not None else verified_binary()
         self.classifier = LogClassifier(on_event)
         self._backoff = tuple(backoff)
@@ -280,6 +283,7 @@ class MediaMTXSupervisor:
             self.internal,
             srt_latency_ms=srt_latency_ms,
             srt_passphrase=srt_passphrase,
+            demo_raw_preview=demo_raw_preview,
         )
 
     # --- URLs for in-process users (memory only; never log them) ---
@@ -357,6 +361,7 @@ class MediaMTXSupervisor:
             self.internal,
             srt_latency_ms=self.srt_latency_ms,
             srt_passphrase=self.srt_passphrase,
+            demo_raw_preview=self.demo_raw_preview,
         ).encode("utf-8")
         proc = self._popen(
             [str(self.binary), "/dev/stdin"],

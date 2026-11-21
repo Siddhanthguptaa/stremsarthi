@@ -9,15 +9,20 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, code: str, detail: str = "") -> None:
+    def __init__(
+        self, status: int, code: str, detail: str = "", headers: dict[str, str] | None = None
+    ) -> None:
         super().__init__(code)
         self.status = status
         self.code = code
         self.detail = detail
+        self.headers = headers
 
 
-def error_response(status: int, code: str, detail: str = "") -> JSONResponse:
-    return JSONResponse({"error": code, "detail": detail}, status_code=status)
+def error_response(
+    status: int, code: str, detail: str = "", headers: dict[str, str] | None = None
+) -> JSONResponse:
+    return JSONResponse({"error": code, "detail": detail}, status_code=status, headers=headers)
 
 
 _STATUS_CODES = {
@@ -35,7 +40,7 @@ _STATUS_CODES = {
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(_: Request, exc: ApiError) -> JSONResponse:
-        return error_response(exc.status, exc.code, exc.detail)
+        return error_response(exc.status, exc.code, exc.detail, exc.headers)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:

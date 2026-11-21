@@ -245,7 +245,10 @@ class CaptionRenderer:
     def add(self, event: CaptionEvent) -> None:
         """Queue a caption. Shaping happens here when captions are on, so the frame path never shapes."""
         with self._lock:
-            if event.pts_end < self._newest_pts - LATE_PRUNE_S:
+            replaces = any(abs(e.event.pts_start - event.pts_start) < 1e-6 for e in self._entries)
+            if event.pts_end < self._newest_pts - LATE_PRUNE_S and not replaces:
+                # a stale event is dropped, but NEVER a replacement: a redaction (often a zero-length event)
+                # for a caption that started long ago and is still on screen must take effect at once
                 self.stats["late"] += 1
                 return
             self._serial += 1

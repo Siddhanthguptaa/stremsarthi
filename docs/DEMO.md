@@ -1,185 +1,188 @@
-# Stream Sarthi: demo script and run book (T7.4)
+# Stream Sarthi: demo script and run book (T7.4, refreshed)
 
-Written 2026-11-21 against commit 8a1e6e3 plus the uncommitted tree. Every number is from `docs/STATUS.md` with its caveats. Nothing here has been rehearsed on the RTX 5050 demo laptop, and **no live YouTube, Twitch, Sarvam or Groq call has ever been made** (all keys in `.env` are empty).
+Refreshed 2026-11-21 against the uncommitted tree after Phases 5 and 6 landed and against `docs/STATUS.md`. Every number is from STATUS with its caveats. **Nothing has been verified live**: no Sarvam, Groq, YouTube or Twitch call has ever been made (all keys in `.env` are empty), the demo laptop (RTX 5050) has not been used, and no full demo rehearsal has happened. Most tasks are "built, reviewer pending" and builder-reported.
 
-## 0. Read first: what can be shown today
+## 0. What can be shown today
 
-The plan's end-to-end go-live flow (T6.1 to T6.3, Phase 5, T6.4) is **not built yet**. Each scene below is tagged:
+Tags: **RUNS** (entry point exists and was run by a builder, locally, no keys), **PARTS** (built and tested on fakes/mocks/synthetic data; live wiring unproven), **NOT BUILT**.
 
-- **RUNS**: the entry point exists in the repo and was run by a builder (builder-reported unless noted).
-- **PARTS**: the module and tests exist but the live wiring or the screen is missing; show it through the fallback listed.
-- **NOT BUILT**: do not demo live; show the recording, the test report or say so.
-
-| Piece | Tag | What is missing |
+| Piece | Tag | Evidence and gap |
 |---|---|---|
-| Engine: ingest, 4 s delay buffer, mask compositor, hold slate, fail-safe | RUNS | G1 not passing yet (STATUS); egress to real YouTube/Twitch never tried |
-| Relay: MediaMTX, x264/NVENC encoder, RTMPS egress | RUNS (loopback sink only) | no real destination |
-| Video detectors: cards, UPI QR, text/signboards, faces + allowlist, plates, OTP and game IDs | RUNS in offline eval; live in-engine run is G1-scoped (cards only measured end to end) | see section 5.2 for recall |
-| Audio PII mute and mouth blur | PARTS | measured only with an oracle recogniser, never real speech-to-text |
-| Chat shield and moderator console | PARTS | `python -m chat.main` (live process, OAuth, ZeroMQ client) is not built; chat runs only against fakes and mocks |
-| Strike guard (music, profanity, risk meter) | NOT BUILT per STATUS | `guard/` exists untracked (music, risk, profanity files), no STATUS entry, not in `runtime.modules`, no reviewer sign-off |
-| Live captions | NOT BUILT | `audio/captions/` has translate, redact, langs, timing; T5.3 pending; `engine/captions.py` renderer exists, no live path measured |
-| Go-live page, safety report page | NOT BUILT | `app/web/app/(streamer)/go-live/page.tsx` and `(report)/report/[sessionId]/page.tsx` are placeholders. The data exists: `GET /api/events` and `/api/events/summary` |
-| Hotkey helper, Moblin pairing QR, phone ingest | NOT BUILT | `scripts/hold_hotkey_win.py` and `relay/pairing.py` do not exist. Hold works from the web button and `POST /api/hold` |
-| App: `/live` (hold, status, alerts), `/enrol`, `/controls`, `/mod` | RUNS (jsdom and API tests; no browser, camera or axe run: T6.5 pending) | |
+| Go-live from the web app: `/go-live` page, `POST /api/session/start` (spawns the real engine, and `chat.main` only if chat is enabled), stop, session chip | RUNS (keyless) | `scripts/e2e_smoke.sh` passed 30 of 30 on its second full run, dev profile, no keys (the first run was 29 of 30: one privacy-scan hit that could not be reproduced). The web `/go-live` screen itself: jsdom tests only, no browser run |
+| Rehearsal mode (keyless: no YouTube/Twitch, output only to the local `shielded` tap) | RUNS | `POST /api/session/start` with `{"rehearsal": true}`. There is no web toggle for it: call the API with the streamer token |
+| Relay, delay buffer, mask compositor, fail-safe, slate | RUNS | G1 main and fail-safe legs pass on a quiet machine (section 8); real YouTube/Twitch egress never tried (loopback sink and tap only) |
+| Hold | RUNS | Web button on `/live` (and `H` key on the page), `POST /api/hold`, chat `!hold` (code and tests; the live chat process has only run on fakes). Slate and audio silence verified; the G1 hold leg's two alignment checks are still failing (timing-log alignment, not behaviour) |
+| Windows global hotkey | **NOT BUILT** | `scripts/hold_hotkey_win.py` does not exist. The API side exists (`POST /api/auth/hotkey-token`); no helper uses it. Say "hold button, API and chat command" |
+| Video PII (faces + allowlist, Aadhaar, PAN, UPI QR, plates, signboards, phone/PIN/UPI/email, OTP, game IDs, tracking) | PARTS | Offline scoring, synthetic SPECIMEN, CPU. Only the cards detector has been measured end to end through the engine (G1, e2e smoke) |
+| Audio PII mute, mouth blur | PARTS | Oracle recogniser and English TTS stand-in only; real speech-to-text never run. The real audio host does heartbeat inside the engine (e2e smoke) |
+| Chat shield, moderator console | PARTS | `python -m chat.main` exists (live YouTube/Twitch connectors, its own ZeroMQ bus) but ran only against fakes and the real engine broker in a throwaway run. OAuth, live chat, live deletes: NOT VERIFIED. `/mod` has the polish round (keyboard shortcuts, stale-list notices); no browser run |
+| Strike guard: risk meter, music, profanity | PARTS | Loaded by the engine through `runtime.extras` (`guard.risk.service:build`, `guard.music:build`); risk meter and captions control are on `/live`; `GET /api/risk`. Music only on SYNTHETIC songs (the user's Bollywood clips are not there); the engine feeds audio to the music service through a non-blocking tap, tested with fakes (a real `guard.music:build` run inside the engine is not recorded) |
+| Live captions | PARTS | `audio/captions` (Sarvam translate, never called live) plus the renderer `engine/captions.py` (5 scripts, shaping checked against our own goldens and an independent Pillow+raqm raster). IndicTrans2 (demo profile) has NO weights: needs a Hugging Face token and a `trust_remote_code` conversion decision |
+| Safety report | RUNS (keyless) | `/report/[sessionId]` page, `GET /api/report`, `/api/report/{id}`, `/printable`, `/export?format=json|html`; built in the e2e smoke (50 to 76 events, privacy scan clean). The page was built to the spec's shape and its reconciliation with the real API shape was still assigned |
+| Phone ingest (Moblin or Larix) | PARTS | `GET /api/pairing` (RTMP/SRT URLs, Moblin import URL, no keys), QR PNGs at `/api/pairing/rtmp.png` and `/api/pairing/srt.png`, `relay/pairing.py`, SRT presets and passphrase (`relay/srt.py`), hold on transport loss measured on loopback. No real phone, no 4G, mirrored networking and the firewall rule are user admin steps not done (WSL is on NAT) |
+| Red-team suites | RUNS | `python -m eval.run redteam-video`, `redteam-audio`, `redteam-chat`; reports in `eval/reports/2026-11-21-redteam-*.md` |
+| Gates | G0 PASS, G1 FAIL on 2 alignment checks only, G2 FAIL at clean+light, G3 and G5 pass on synthetic/oracle data, G4 pass on the gate set but below target on the blind set, G6 and Final do not exist | `scripts/gate_phase0.sh` to `gate_phase5.sh`; there is no `gate_phase6.sh` or `gate_final.sh` |
 
-If the team cannot finish the NOT BUILT rows before the demo, the pitch must say "built and tested offline" for them. Sections 7 and 8 list what may be claimed.
-
-## 1. The 5-minute story (target flow; skip scenes that are not live)
+## 1. The 5-minute story
 
 | Time | Scene | Say | Show |
 |---|---|---|---|
-| 0:00 | Problem | One frame, one spoken number or one chat message is enough to dox a streamer. Existing tools are English-first, desktop-first, and do not know Aadhaar, PAN, UPI. (Use 2 to 3 real, sourced incidents; the user still has to supply these, none are in the repo.) | Slide |
-| 0:30 | Architecture | A broadcast delay (4 s) on audio and video, kept in sync. Detection finishes before anything goes out. Anything not yet checked goes out masked. | Architecture slide, then the `/live` page showing delay and engine status |
-| 1:00 | Video | SPECIMEN Aadhaar, PAN, UPI QR, plate, OTP phone screen, BGMI room ID, Hindi signboard. Viewer-side output is blurred. A SPECIMEN face of an enrolled teammate stays visible, a stranger is blurred. | Left: raw OBS source. Right: delayed stream (tap or the YouTube unlisted viewer) |
-| 2:15 | Audio | Teammate says a SPECIMEN phone number in Hinglish ("mera number hai nau aath ..."). Viewers hear a mute, the mouth is blurred. | Output audio and video, plus the alert feed |
-| 3:00 | Chat | Teammate posts Hinglish abuse and a fake UPI link. Hidden from the streamer overlay, appears in the moderator queue. | `/mod` console next to the streamer overlay |
-| 3:45 | Hold | Press HOLD. Slate covers the video and audio is muted within a frame; the last 3 s of buffered frames are masked too (retro hold). | `/live` HOLD button, then output |
-| 4:15 | Strike guard, captions (only if built) | Play a library track: risk meter rises. Switch captions on in Hindi or Tamil. | Risk meter, caption overlay |
-| 4:30 | Proof and cost | The section 8 table with caveats; cost per hour from `docs/COST.md` (typical about INR 24 per hour with captions off, all assumptions unmeasured). Safety report timeline: category, time, confidence, never images or text. | `GET /api/events/summary` JSON or the report page if built |
+| 0:00 | Problem | One frame, one spoken number or one chat message is enough to dox a streamer. Existing tools are English-first and do not know Aadhaar, PAN, UPI. (2 to 3 real, sourced incidents: the user must supply them; none are in the repo.) | Slide |
+| 0:30 | Architecture | A 4 s broadcast delay on audio and video, kept in sync. Detection finishes before anything goes out; anything not yet checked goes out masked. | Slide, then `/go-live` and `/live` (delay, engine chip, session state) |
+| 1:00 | Video | SPECIMEN Aadhaar, PAN, UPI QR, plate, OTP screen, game ID, signboard on the source feed. The delayed output is blurred. An enrolled teammate stays visible, a stranger is masked. | Source preview next to the output tap or an unlisted YouTube viewer |
+| 2:15 | Audio | A teammate says a made-up phone number in Hinglish; output goes silent over it, the mouth is blurred. (Only with live STT working: otherwise use the fail-safe mode, section 6.) | Output plus the alert feed on `/live` |
+| 3:00 | Chat | A teammate posts Hinglish abuse and a fake UPI link; hidden from the overlay, visible in `/mod`. (Only if the live chat process works with a key; otherwise show the tests and the blind-set numbers.) | `/mod` beside `/live` |
+| 3:45 | Hold | Press HOLD on `/live` (or type `!hold` as broadcaster in chat). The slate covers the output; the last 3 s of buffered frames are masked too. | HOLD button, output |
+| 4:15 | Guard and captions | Risk meter on `/live` reacts to a library song and to profanity; captions on/off with the language picker. | Risk meter, caption overlay |
+| 4:30 | Proof | The section 8 table with its caveats, `docs/COST.md` (typical INR 24 per hour, captions off, assumed rates), then the safety report page: category, time, confidence, never images or text. | `/report/<session id>` |
 
-## 2. Pre-flight checklist (do the day before and 30 min before)
+## 2. Pre-flight checklist
 
-In every command below, `SS` stands for the wrapper, run from Git Bash on Windows:
+`SS` below means the wrapper, run from Git Bash on Windows:
 `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh`
-(do not put `$VARS` or Windows paths inside the command; see `docs/AGENT_BRIEF.md`).
+(no `$VARS` or Windows paths inside the command; see `docs/AGENT_BRIEF.md`). Run heavy jobs one at a time: the wrapper caps memory at 3.5 GB per command and a runaway test once froze WSL.
 
-1. **Hardware**: demo laptop is the RTX 5050 one, plugged in, power mode performance, second display or phone for the viewer side. Open nothing heavy: the G1 numbers were taken on a loaded machine and the delay maximum was tight.
-2. **WSL**: `C:\Users\siddh\.wslconfig` has `memory=6GB`, `swap=8GB`, `vmIdleTimeout=-1` (HANDOFF). Networking is still NAT: mirrored mode and the Hyper-V firewall rule for UDP 8890 and TCP 1935 are user admin steps not yet done (STATUS open items). Without them a phone cannot reach the engine; OBS on the same laptop can (loopback).
-3. **Environment**: `SS python scripts/doctor.py --profile demo --gpu` (exit 0 ok, 1 warnings, 2 blocking). Last recorded dev result: exit 1, warnings only (NAT, empty keys, `fpcalc` and `espeak-ng` missing). Re-run on the demo laptop: ONNX Runtime on sm_120 (RTX 5050) is untested (STATUS open items); the first CUDA run JIT-compiles and is slow, so warm it up before the demo. If the CUDA provider fails, use `dev` (CPU).
-4. **Models and MediaMTX**: `SS python -m models.prepare --verify-only` (hash check, no network). `.tmp/tools/mediamtx-v1.21.4/mediamtx` must exist (`bash scripts/fetch_tools.sh` fetches it; needs network, run before the demo day).
-5. **Keys** in `.env` (never print them): `GROQ_API_KEY`, `SARVAM_API_KEY`, `SECRET_KEY` (any long random string), `YOUTUBE_STREAM_KEY`, `YOUTUBE_OAUTH_CLIENT_ID/SECRET`, `TWITCH_CLIENT_ID`, `TWITCH_STREAM_KEY`. Optional: `INGEST_PUBLISH_USER` and `INGEST_PUBLISH_PASSWORD` (letters, digits, `_`, `-` only) so OBS keeps one login across restarts (otherwise random per run; they are supported by `relay/runtime.py` but missing from `.env.example`). YouTube live must be enabled on the channel at least 24 h earlier; test with an unlisted stream. YouTube chat OAuth consent screen with the streamer as a test user (refresh tokens last 7 days in Testing status).
-6. **Live API spike, once, before demo day**: `SS python -m audio.spikes.stt_spike` with the keys exported fills in Sarvam and Groq latency (never measured; D-36 also needs the first live call to settle `saaras:v4` codemix mode).
-7. **Run the suites that exist** (each in its own process, never all at once: a runaway test once froze WSL): `SS bash scripts/mem_check.sh contracts/tests engine vision models audio chat app/api`.
-8. **Gate reports** to have open on the laptop: `eval/reports/2026-11-21-phase2-offline-d48.md`, `eval/reports/2026-11-21-phase3.md`, `eval/reports/2026-11-21-phase4.md`.
-9. **SPECIMEN inputs** (section 4) generated and open on a second screen. A recorded backup of the whole run exists and is on the desktop (NOT YET RECORDED).
-10. Confirm the hackathon rules on pre-built code and AI-tool disclosure (open user item, PLAN section 9).
+1. **Hardware**: the RTX 5050 laptop, plugged in, performance power mode. Nothing else heavy open: delay maximums were within 0.2 s of the limit even on a quiet machine.
+2. **WSL**: `.wslconfig` has `memory=6GB`, `swap=8GB`, `vmIdleTimeout=-1`. Mirrored networking and the Hyper-V firewall rules for UDP 8890 and TCP 1935 are user admin steps (docs/PLAN.md section 9) and not done; without them a phone cannot reach the engine. OBS on the same laptop works through loopback.
+3. **Doctor**: `SS python scripts/doctor.py --profile demo --gpu` (exit 0 ok, 1 warnings, 2 blocking). Dev result: exit 1, warnings only (NAT, empty keys, `fpcalc` and `espeak-ng` missing). ONNX Runtime on sm_120 (RTX 5050) is untested; the first CUDA run JIT-compiles slowly: warm it up. If CUDA fails, run `dev`.
+4. **Tools and models**: `SS python -m models.prepare --verify-only`; `.tmp/tools/mediamtx-v1.21.4/mediamtx` present (`SS bash scripts/fetch_tools.sh`, needs network, do it before demo day).
+5. **Smoke test with no keys**: `SS bash scripts/e2e_smoke.sh --duration 45` (about 45 s plus about 30 s engine start; exit 0 all pass, 1 a check failed, 2 environment). Run it on the demo laptop first.
+6. **Keys** in `.env` (never printed): `SECRET_KEY` (long random string), `SARVAM_API_KEY`, `GROQ_API_KEY`, `YOUTUBE_STREAM_KEY`, `TWITCH_STREAM_KEY`, `YOUTUBE_OAUTH_CLIENT_ID/SECRET`, `TWITCH_CLIENT_ID`; stream keys can also be typed on `/go-live` (RAM only). Demo captions with IndicTrans2 additionally need `HF_TOKEN` and the model terms accepted, plus the lead's decision on converting it (`trust_remote_code`). YouTube live must be enabled on the channel at least 24 h before; keep an unlisted test stream. For YouTube chat, the OAuth consent screen needs the streamer as a test user (7-day refresh tokens). `python -m chat.main --login` prints the consent URL or device code (the only thing it prints).
+7. **Live API spike, once**: `SS python -m audio.spikes.stt_spike` with the keys exported (fills in Sarvam and Groq latency, and settles D-36: `saaras:v4` codemix mode).
+8. **Suites**, one directory per process: `SS bash scripts/mem_check.sh contracts/tests engine vision models audio chat app/api`.
+9. **Reports to have open**: `eval/reports/2026-11-21-phase2-offline-d48.md`, `-phase3.md`, `-phase4.md`, `-phase5.md`, `-redteam-video.md`, `-redteam-audiochat.md`.
+10. **Backup recording** of a full run on the desktop: NOT YET RECORDED.
+11. Hackathon rules on pre-built code and AI-tool disclosure: open user item.
 
-## 3. Start sequence (four terminals inside WSL, or four `SS` commands)
+## 3. Start sequence
 
 ```
-# 1. engine (ingest, delay, masks, egress, ZeroMQ bus); demo profile runs under the GPU lock
-SS bash scripts/run_engine.sh demo          # or: dev
-# 2. API (prints http://127.0.0.1:3000/#token=<streamer token>; run with SECRET_KEY in the environment or .env)
+# 1. API (prints http://127.0.0.1:3000/#token=<streamer token>; SECRET_KEY from the environment or .env)
 SS python -m app.api.main
-# 3. web app (Next.js dev server on 3000, API expected at http://127.0.0.1:8000)
+# 2. web app (Next.js dev server on 3000, API at http://127.0.0.1:8000)
 SS bash scripts/web.sh run dev
-# 4. source: OBS on the laptop, or the synthetic sender (section 4)
 ```
 
-Open the printed URL once in the browser (the token is in the URL fragment). Then `/live` shows the hold button, engine chip and alert feed; `/enrol`, `/controls`, `/mod` exist. `POST /api/session/start` exists but the go-live page that calls it does not (placeholder): start via the API, or let the engine run directly. There is no `run_api` or `run_chat` script; `python -m chat.main` does not exist yet.
+Open the printed URL (the token is in the fragment). On `/go-live` pick the profile (`dev` or `demo`), the delay (3.0 to 5.0 s, default 4.0), YouTube and/or Twitch (a destination needs its key: "Key set / Key missing" chip), and press Start. By default the API spawns the engine (`python -m engine.main --profile <p>`, which builds relay, vision, audio and the extras guard_risk, captions, guard_music) and, if `chat.enabled`, the chat process. `SESSION_SPAWN=false` stops it spawning; then run the engine by hand: `SS bash scripts/run_engine.sh demo` (or `dev`; `demo` runs under the GPU lock). Engine start takes about 30 s to reach `waiting_ingest`.
 
-**OBS settings** (desktop path; the phone path is NOT BUILT): output to MediaMTX on the laptop, `srt://127.0.0.1:8890?streamid=publish:camera:<user>:<password>` (builder in `relay/security.py`), or RTMP `rtmp://127.0.0.1:1935/camera?user=<user>&pass=<password>`. 720p30, x264, keyframe 2 s, no B-frames. The engine reads from MediaMTX over loopback RTMP (D-40).
+**Keyless rehearsal** (no stream keys; output only to the local tap): `POST /api/session/start` with body `{"rehearsal": true}` and header `Authorization: Bearer <streamer token>`.
+
+**Source**: the `/go-live` ingest card shows RTMP and SRT URLs (login per session unless `INGEST_PUBLISH_USER` and `INGEST_PUBLISH_PASSWORD` are set in `.env`; letters, digits, `_`, `-`) and a QR for Moblin; the same data is at `GET /api/pairing`. OBS: 720p30, x264, keyframe 2 s, no B-frames, to the SRT or RTMP URL shown. Synthetic source instead of a camera: `SS python -m eval.sender.sender --url "<the SRT url from the ingest card>" --script card_static:60,card_moving:30,card_absent:20` (scenes: `card_static`, `card_moving`, `card_hold`, `card_absent`, `many_targets`, `idle`). The pairing host must be loopback, LAN-private or Tailscale; a wildcard host is refused (422).
+
+Pages: `/go-live`, `/live` (hold, status, alerts, risk meter, captions on/off and language), `/enrol`, `/controls` (category toggles; no hold button there), `/mod` (moderator token via `POST /api/auth/mod-invite`), `/report/<session id>`.
 
 ## 4. SPECIMEN inputs (synthetic, visibly marked, never real data)
 
-All generators are seeded and deterministic. Every card carries a SPECIMEN watermark; Aadhaar numbers are Verhoeff-valid and start with 0 or 1; PAN 4th letter is X; UPI IDs look like `zz-specimen-<hex>@...` (`eval/README.md`).
+Seeded and deterministic. Every card carries a SPECIMEN watermark; Aadhaar numbers are Verhoeff-valid and start with 0 or 1; PAN 4th letter X; UPI IDs `zz-specimen-<hex>@...` (`eval/README.md`).
 
-- Cards, QR codes (already generated): `eval/data/generated/specimen_v0_seed1234/` holds `aadhaar_000x.png`, `pan_000x.png`, `upi_qr_000x.png`, `qr_negative_000x.png`. Regenerate: `SS python -m eval.run gen-specimen --out /tmp/specimen --n 5`. Show on a second monitor or phone held to the camera, or play as an OBS image source.
-- Full video suite (plates, signboards in 5 scripts, OTP and BGMI/Free Fire screens, faces, clips): `SS python -m eval.run gen-video --out /tmp/video --n 40 --clips 2` (about 600 MB; needs network the first time for the SHA-checked face portraits). Pick images and clips from its buckets; the truth files say what is in each.
-- Faces: the eval face set is NASA public-domain portraits (user confirmed 2026-11-21, D-48; `eval/data/generated/faces/ATTRIBUTION.md`). For the live enrolment demo use **consenting teammates only** and enrol 5 to 12 frames at `/enrol` (RAM only, 12 h TTL). Frontal well-lit data: `face_match_cos` still has to be re-tuned on teammate footage (STATUS T2.6).
-- Synthetic stream with optical timestamp (fallback source): `SS python -m eval.sender.sender --url "srt://127.0.0.1:8890?streamid=publish:camera:<user>:<password>" --script card_static:60,card_moving:30,card_absent:20`. Scenes: `card_static`, `card_moving`, `card_hold`, `card_absent`, `many_targets`, `idle`.
-- Phone-number audio: the spoken-PII test audio is `eval/data/generated/audio/clips/*.flac` (English flite TTS: regional speech is an English phonemiser, not real Hindi or Tamil). For the live scene a teammate reads a made-up 10-digit number starting with 9, never a real number. Real Hinglish speech has never been run through the pipeline (STATUS T3.1).
-- Chat: messages are typed by a teammate; use made-up UPI handles (`zz-specimen-1a2b@oksbi`) and Hinglish abuse of the teammate's own choosing. Do not use real names, numbers or addresses. Chat datasets: `SS python -m eval.data_gen.chat --out DIR`.
-- Music: the demo fingerprint library needs 5 Bollywood clips only the user can supply (`guard/music/library/` is empty). Without them the music scene cannot run.
+- Cards and QR stills, already generated: `eval/data/generated/specimen_v0_seed1234/` (`aadhaar_000x.png`, `pan_000x.png`, `upi_qr_000x.png`, `qr_negative_000x.png`). Regenerate: `SS python -m eval.run gen-specimen --out /tmp/specimen --n 5`. Hold them in an OBS image source or on a phone screen.
+- Full video suite (plates, signboards in 5 scripts, OTP and BGMI/Free Fire screens, faces, clips): `SS python -m eval.run gen-video --out /tmp/video --n 40 --clips 2` (about 600 MB; needs network the first time for the SHA-checked face portraits).
+- Faces: the eval set is NASA public-domain portraits (user-confirmed, D-48, `eval/data/generated/faces/ATTRIBUTION.md`). For the live enrolment use consenting teammates only: `/enrol`, 8 frames over about 3 s, RAM only, 12 h TTL. `face_match_cos` still needs a re-tune on teammate footage.
+- Phone number for the audio scene: a teammate reads a MADE-UP 10-digit number starting with 9. Never a real one. Test audio from the generator: `eval/data/generated/audio/clips/*.flac` (English flite TTS, an English phonemiser for the other languages).
+- Chat: typed by a teammate with made-up handles (`zz-specimen-1a2b@oksbi`) and abuse of their own wording. More: `SS python -m eval.data_gen.chat --out DIR`.
+- Music: the library has 5 SYNTHETIC songs only. Real Bollywood clips (user-supplied, local only) go through `guard/music/build_library.py`; until then the "Bollywood track" scene cannot be real.
 
 ## 5. Per-feature run book
 
-Each row: what to do, what viewers see, the honest status, the fallback.
-
-### 5.1 Relay and hold
-- Do: start engine, point OBS or the synthetic sender at the `camera` path, watch `/live` go from waiting to live. Press HOLD (button, or `H` key on the page, or `POST /api/hold` with `{"active": true}` and the streamer token). Release.
-- See: slate (English and Hindi text) within one frame (measured: hold to slate <= 1 frame, T1.1); the last `retro_seconds` (3.0) of buffered frames and audio masked as well (D-23). Delay is a config knob: `delay_seconds` 4.0 in both profiles, range 3.0 to 5.0.
-- Measured: delay p95 4.71 s CPU / 4.72 s GPU, max 5.44 / 5.50 s against a 5.5 s limit, 31 fps, slate fraction 3.3 to 4.1 % (limit 10 %), 0 card leaks, in a 45 s leg on a loaded laptop after the D-43 fix. Gate G1 is still FAIL overall (full 120 s run and soak not done, hold-leg alignment open). Viewer-side YouTube latency is not gated and not measured.
-- Fail-safe demo: `SS bash scripts/gate_phase1.sh --help`; `--plan` prints legs. The fail-safe leg (vision lane hangs, 0 card frames after the hang, 1,129 slate frames) passed in an earlier run.
-- Fallback: if egress to YouTube fails, show the `shielded` tap or the loopback sink (`SS python -m eval.run loopback --seconds 60`).
-- Hotkey: not built. Use the button or the API. Chat `!hold` (broadcaster and moderators) exists in `chat/commands` but needs the live chat process.
+### 5.1 Relay, delay, hold
+- Do: start a session, publish the source, watch `/live` reach `live`. Press HOLD (button, `H`, `POST /api/hold` with `{"active": true}`, or `!hold` in chat as broadcaster or moderator; `!unhold` is broadcaster only). Release.
+- See: slate (English and Hindi) within one frame; the last `retro_seconds` (3.0, clamped to delay minus 0.5) of buffered frames and audio masked as well; audio silent during the hold (max -120 dBFS in G1).
+- Measured (G1, full run, quiet machine, CPU / GPU RTX 3050): capture-to-tap delay p95 4.458 / 4.435 s (limit 5.0), max 5.318 / 4.99 s (limit 5.5), 30.4 fps, recall 1.0 on 2,178 / 2,297 card-visible frames, 0 Verhoeff-valid reads, slate 6.7 % / 2.9 % (limit 10 %). Fail-safe leg (a lane hangs): 0 card frames, 1,052 slate frames. The e2e smoke (real engine, no keys) saw delay p50 4.68 s / p95 4.85 s and 0 leaks over 162 card-visible frames. NOT run: soak, 30 min, live YouTube, RTX 5050. G1 is FAIL only on the hold leg's two alignment checks.
+- Hotkey: **not built** (`scripts/hold_hotkey_win.py` does not exist). Say so; use the button.
+- Fallback: show the local tap or `SS python -m eval.run loopback --seconds 60` if egress fails.
 
 ### 5.2 Video PII
-- Do: show each SPECIMEN on the source feed; compare with the delayed output. Toggle categories at `/controls` (turning off Aadhaar, PAN or UPI QR asks for confirmation).
-- See and measured (offline, CPU, synthetic SPECIMEN, clean+light levels only per D-48; heavy level reported separately): Aadhaar, PAN, UPI QR, signboard, phone, UPI ID, email, game IDs, plates, faces masked 1.000 on stills and clips at clean+light; PIN 0.912, OTP 0.917 on stills. Failing even at clean+light: allowlisted faces visible 0.208 on stills and 0.750 on clips; accurate-lane p95 530 ms vs 450 ms budget. Gate G2 = FAIL. Heavy level (blur, heavy JPEG, dark): plates about 4.5 %, OTP 0 %, game IDs about 5 %, Aadhaar clips 0.55, phone clips 0.33.
-- Face allowlist: enrolled teammate visible (settled 99.4 %, steady 94.0 % below the 95 % target; first about 1 s after the face appears is masked on purpose); a stranger masked 97.2 % with 0 runs showing a stranger (8 NASA people, async embedding). The face release path was changed late (`vision/planner.py`) and is marked "reviewer must check: privacy-affecting".
-- UPI QR: payment QR recall 100 % (72) with 98.6 % precision; the payload is never logged. A non-payment QR is not masked.
-- Signboards: all text is masked (script-agnostic), so a Hindi/Tamil/Kannada signboard goes dark without being read. It also masks some text-free scenes and plain signage.
-- Fallback: if the live path is unstable show the per-category table in `eval/reports/2026-11-21-phase2-offline-d48.md` and the stills/clips, and run `SS bash scripts/gate_phase2.sh --plan`. If the machine lags, the engine masks instead of leaking (slate), which is visible as more black frames: say so. Moving a card slowly in `card_moving` shows tracking.
+- Do: show each SPECIMEN on the source and the output; toggle categories at `/controls` (switching off Aadhaar, PAN or UPI QR asks for confirmation).
+- Offline, synthetic, CPU, clean and light levels only (D-48): faces, Aadhaar, PAN, UPI QR, signboard, phone, UPI ID, email, game IDs and plates masked 1.000; PIN 0.912; OTP 0.917 on stills. Failing at clean+light in the report: allowlisted faces visible (0.208 on stills, 0.750 clips settled; a later round reports 22/24 = 0.917 stills and 0.968 clips in the builder's harness, not re-run through the gate) and the ACCURATE lane p95 (530 ms on the shared machine, 453 ms on a quiet machine, budget 450 ms). G2 is FAIL until re-run.
+- Heavy level (blur, heavy JPEG, dark; stress only, D-48): plates about 4.5 % to 7 %, OTP 0 to 31 %, game IDs about 5 to 13 %, Aadhaar clips 0.55, phone clips 0.33, even after the T7.5 mask-when-unsure fallbacks (OTP banner 0/16 to 5/16, BGMI 3/31 to 4/31).
+- Video red team (quick subset: 46 cases, 727 frames, one seed): control 0/27 leaks; angle, distance, glare, screen-of-screen, photo-of-photo 0 leaks; leaks in `enter_leave` (a card entering or leaving the frame), `motion` (pans), `occlusion`, `flash`, `scene_cut`. The one confirmed leak (a card 40 % occluded from the left) was fixed (9/9 to 0/9 cases). Still open: card entering fast (7 of 35 frames leak after the fix), a card at the frame edge showing 35 % (100 % leak), QR entering or flashing, scene cuts, fast pans, a PAN occluded from the top. The full grid, more seeds and GPU were not run.
+- Faces: stranger masked 97.2 % with 0 runs showing a stranger; allowlisted visible about 94 to 99 % once settled; the first ~1 s after a face appears is masked on purpose. The planner's allow-release was reviewed (APPROVE).
+- Signboards: mask-all-text, so signage goes dark unread; it also masks text-heavy screens. Keep `signboard.enabled=false` for gaming and screen scenes.
+- Fallback: show the per-category report `eval/reports/2026-11-21-phase2-offline-d48.md` and the stills; `SS bash scripts/gate_phase2.sh --plan`.
 
-### 5.3 Audio PII: mute and mouth blur
-- Do: teammate reads the made-up number while an enrolled face is on camera. Output audio drops during the number; the mouth region is blurred for the muted span; the alert feed shows an audio event.
-- Measured (G3, oracle recogniser built from truth words with seeded errors, English TTS stand-in for 6 languages, so this tests timing, VAD, rules and mute application, NOT real recognition): PII mute coverage 95.6 % (target 90), digit coverage 98.6 % (95), over-mute 12.7 % (15), pipeline p95 2.49 s (3.3), mouth blur 98.2 % (95), API-down fail-safe: PII muted 100 % and all voiced speech 99.99 %. Local-only fallback PII 90.2 % (70). Weak: spoken UPI IDs about 85 %, hard-negative number phrases muted 18.6 % (not gated). A blind held-out audio set is not built.
-- Not verified: real Sarvam or Groq latency (no keys), real Hinglish speech, mute granularity on Sarvam (segment-level, up to 1.5 s plus padding, D-4/D-36).
-- Fallback if Wi-Fi or Sarvam is down: the audio host races Sarvam against local faster-whisper (base on CPU in `dev`, small on GPU in `demo`) and mutes every voiced segment with no verdict (fail-safe, `failsafe_mute_voiced`). Say "the demo will sound choppy when the API is down; that is the safe direction". Offline proof: `SS bash scripts/gate_phase3.sh --plan`, report above.
+### 5.3 Audio PII mute and mouth blur
+- Do: the teammate reads the made-up number with an enrolled face on camera. Output audio drops; the mouth is blurred for the muted span; an audio event appears in the alerts.
+- Measured (G3, ORACLE recogniser built from truth words with seeded errors, English TTS, so timing, VAD, rules and mute application only; NOT recognition accuracy): PII mute coverage 95.95 % (target 90), digits 98.8 % (95), over-mute 14.4 % (limit 15, at the edge), pipeline p95 2.49 s (3.3), mouth blur 98.3 %, API-down PII 100 %, API-down all voiced speech 99.99 %, local fallback PII 91.6 % (70).
+- Audio red team (oracle, record-only): after fixes an empty transcript with no error now mutes the segment (it leaked 100 % before). Still above the author's ceilings: letter-by-letter spelling 21.5 % (ceiling 10), ASR drops 17.5 %, phonetic UPI 16.7 %, overlapping speakers 18.6 %, fast speech 26.7 % (Silero does not detect 2.4x sped-up speech). A UPI id spelt letter by letter cannot be recognised within the ~2.5 s the delay allows.
+- Not verified: real Sarvam or Groq latency, real Hinglish or regional speech, any real-STT accuracy. Mutes are segment-level (up to 1.5 s plus padding) because Sarvam gives no word times.
+- Fallback with no network or no key: the audio host races Sarvam against local faster-whisper (base on CPU in `dev`) and mutes every voiced segment that has no verdict, so speech is choppy but safe. The engine also mutes all audio if the audio host stops heartbeating (grace clamped to delay minus 0.5 s).
 
 ### 5.4 Chat shield and moderator console
-- Do (if the live chat process is wired by then): teammate posts Hinglish abuse ("bc ... " style, their own wording) and a fake UPI link in the chat; streamer overlay shows the hidden counter only; `/mod` queue shows the item with approve, delete, timeout, dismiss.
-- Today: the classifier, mod queue, overlay feed, Twitch/YouTube connectors and platform actions are tested against fakes and mock servers (`eval/mock_platforms/`, `chat/testing/`); there is no runnable `python -m chat.main`. Do not present `/mod` as a live feed. Show instead `SS python -m pytest chat -q` (779 passed, 1 live skip at last report) and `chat/classify/README.md` (taxonomy and policy), and the report `eval/reports/2026-11-21-phase4.md`.
-- Measured: gate set (templated, written with the chat author's visibility: optimistic) 100 % on abuse, scam, fake UPI, doxxing, 0/698 clean false positives, p95 0.75 ms. **Blind held-out set** (1,513 messages, rules only, no LLM): abuse 82.1 % (target 85; hard-flag only 42.7 %, the rest are holds for the moderator), scam 95.8 %, fake UPI 80.8 % (target 98), doxxing 88.7 % (hard only 75.3 %), clean false positives 1.9 % (13 of 667). Abuse and doxxing need the Groq stage to close the gap; it cannot be measured without a key.
-- Policy to warn about: real profanity used as banter ("bc kya clutch tha") is held for moderation even in friendly framing, so a streamer in Indian gaming chat will see many holds (`ALLOW_PROFANE_BANTER` flips it).
-- Platform actions: delete works on both platforms in the mock; YouTube timeouts cost 200 units each and are off by default; quota 10,000 per day supports about 3 to 4 streamed hours (see `docs/COST.md`). Live endpoints UNVERIFIED.
-- Fallback: with no network, run only the classifier tests and show the mod console UI against test fixtures (UI tests only, say so).
+- Do (needs the live chat process and keys): the teammate posts Hinglish abuse and a fake UPI link. The streamer overlay shows only a hidden counter; `/mod` shows the queue with approve, delete, timeout, dismiss (keys D, T, J, K; staff messages cannot be deleted or timed out). Start the chat process through the session (`chat.enabled`), or by hand `SS python -m chat.main --login` (`--login` runs the OAuth flows when no token is stored; `--remember` keeps refresh tokens in the OS keyring).
+- Today's evidence is fakes, mocks and the real engine broker: `SS python -m pytest chat -q` (about 940 passed, 2 live-key skips at last report) and `eval/reports/2026-11-21-phase4.md`.
+- Gate set (templated, written with the author's visibility: optimistic) 100 % on abuse, scam, fake UPI, doxxing, clean false positives 0/698, p95 1.1 ms. **Blind held-out set** (1,513 messages, rules only, no LLM, the honest figure; not re-run after the red-team fixes): abuse 82.1 % (target 85; hard-flag only 42.7 %, the rest are holds for the moderator), scam 95.8 %, fake UPI 80.8 % (target 98), doxxing 88.7 % (hard only 75.3 %), clean false positives 1.9 % (13 of 667). Abuse and doxxing need the Groq stage, which cannot be measured without a key.
+- Chat red team (rules-level, obedient-LLM stand-in): after fixes homoglyph, mixed script, visual tricks, URL obfuscation, UPI confusables, padding dilution and prompt injection are under their ceilings; still failing: split words 47.5 % bypass (ceiling 15) and leetspeak 24 % (15); encoding tricks (base64, hex, rot13) about 93 % pass (informational); a slur hidden in the middle of a long message of only unique words can still be missed. Viewer `!hold` spam no longer floods events; no `!hold` from non-staff or spoofed roles.
+- Policy: real profanity in friendly banter ("bc kya clutch tha") is held for the moderator (`ALLOW_PROFANE_BANTER` flips it); expect many holds in Indian gaming chat.
+- Platform actions: deletes and timeouts exist; YouTube timeouts cost 200 of 10,000 daily units and are off by default; one key supports about 3 to 4 streamed hours a day (`docs/COST.md`). Live endpoints: NOT VERIFIED.
+- Fallback with no network: classifier tests and blind-set numbers only; do not present `/mod` as a live feed.
 
-### 5.5 Strike guard and risk meter (NOT BUILT per STATUS)
-- Do not demo live unless the lead has finished T5.1/T5.2 and wired `guard` into the engine. `guard/music/` and `guard/risk/` exist as untracked files; `guard/tests/test_guard_risk_profanity.py` exists. `guard/music/library/` is empty, so music matching needs the user's 5 clips (`guard/music/build_library.py`). YAMNet weights are in `models/weights/yamnet.onnx`. Never claim Content ID equivalence: it detects music and fingerprint-matches a small demo library.
-- Gate 5 has not been written or run (no `scripts/gate_phase5.sh`).
+### 5.5 Strike guard and risk meter
+- Do: the risk meter on `/live` (`GET /api/risk`: ok, watch, warn, danger) reacts to music and profanity. A library song raises it; a fingerprint match goes red.
+- Measured on SYNTHETIC audio (G5 passes on it): music recall 28/30 = 0.933, speech false positives 0/20; **music-ON latency p95 4.5 s vs the 2 s in the spec** (informational, the gate checks the meter's reaction to an injected signal, 0.0 s); fingerprint 40/40 correct on 10 dB noise plus MP3, 0 wrong ids, 0/10 false matches, but 0/8 at +15 % tempo; profanity Hinglish recall 0.971 on 140 phrasings written by the eval author (clean false positives 0/48); regional lexicon is small (8/12). Real music and real speech: NOT VERIFIED. Not Content ID: it detects music and matches a small demo library.
 
-### 5.6 Live captions (NOT BUILT)
-- Planned: Sarvam Mayura or sarvam-translate through the API (about INR 65 per hour typical, `docs/COST.md`) or IndicTrans2 locally in `demo`. Muted spans appear as `▮▮▮` so PII is never burned in (D-30). Renderer: `engine/captions.py` with Noto fonts and libraqm; shaping goldens are checked by eye. Not wired live; T5.3 pending. IndicTrans2 needs a Hugging Face token with the model terms accepted.
+### 5.6 Live captions
+- Do: `/live` captions control (on/off, 10 languages). Captions are burned in on the delayed timeline; muted or fail-safe words appear as `▮▮▮` so PII is never shown.
+- Built: Sarvam translate adapters (never called live), renderer for Devanagari, Kannada, Tamil, Telugu, Bengali (5/5 match an independent raster; Latin uses Atkinson, other scripts need their Noto font), redaction with a re-publish if a mute arrives late (the reviewer's blocker was fixed, re-review pending), timing 0/23 late with a stand-in translator. Cost via Sarvam about INR 65 per hour typical. IndicTrans2 for `demo`: no weights, needs an HF token and a trust decision. Live end to end: NOT VERIFIED.
 
 ### 5.7 Safety report
-- Page is a placeholder. Show the data: `GET /api/events/summary` and `GET /api/events` (streamer token, filters by modality, category, since, until). Records hold category, timestamp, confidence and bounding box; the contracts forbid free text and images (`contracts/privacy.py`, `test_no_free_text.py`). The alerts view is allowlisted (no bbox, source, pts).
+- Do: end the session; open `/report/<session id>` (also `GET /api/report/{id}`, `/printable`, `/export?format=json` or `html`; the viewer-readonly token can read; moderator tokens get 403). Totals, category timeline with hold bands, event table, guard warnings, chat counts, delay and fps.
+- Privacy: only SafetyEvent fields, hold intervals, guard warnings, chat counts and timing. `validate_report` rejects strings over 64 characters, images, base64 and phone, email, UPI, Aadhaar, PAN or URL patterns on every build. Reports live in RAM (6 h, at most 8); `DELETE /api/session/{id}/data` erases one. A privacy scan of the e2e smoke's report found nothing.
 
 ## 6. Fallbacks (decide before going on stage)
 
 | Failure | Do |
 |---|---|
-| Wi-Fi or venue network down | Everything video runs locally. Audio falls back to local faster-whisper then fail-safe mute; chat classifier runs rules only (no LLM; unserved borderline messages go to HOLD_FOR_MOD after 10 s). Streaming to YouTube is impossible: show the `shielded` tap or loopback sink on a local player. |
-| Sarvam or Groq key rejected or rate-limited | Race and failover are automatic (Sarvam, then local; Groq Whisper is failover only; Groq cap is 20 to 30 requests per minute). Expect more over-muting. |
-| GPU or ONNX Runtime CUDA fails on the 5050 | `bash scripts/run_engine.sh dev` (CPU, stride 3). CPU is the default path and was used for most measurements. |
-| Engine overloaded (fps drops, many slates) | Close other apps; `dev` profile; lower OBS to 720p30 exactly; stride is a config key (`detect.stride`), not code. |
-| YouTube rejects the stream or live not enabled | Use Twitch, or the local sink. Always keep an unlisted test stream ready. |
-| Phone ingest | Not built (no pairing QR, firewall rule pending). Use OBS on the laptop and say the phone path is on the roadmap. |
-| Anything else | Play the recorded backup (to be recorded; not yet done) and walk through the reports. |
+| Venue network down | Everything video runs locally: use rehearsal mode and the local tap. Audio falls back to local faster-whisper then fail-safe mute; chat runs rules only (no LLM; unserved borderline messages are held for the moderator after 10 s). Streaming to YouTube is not possible. |
+| Sarvam or Groq key rejected or rate-limited | Automatic: Sarvam, then local; Groq Whisper is failover only. Expect more over-muting. Groq limits are unclear (`docs/COST.md` section 2): never rely on the Groq stage on stage. |
+| GPU or ONNX Runtime CUDA fails on the 5050 | `dev` profile (CPU, stride 3); CPU is the default path and produced most numbers. |
+| Overloaded engine (more slates) | Close other apps, `dev`, OBS exactly 720p30. Failures appear as more masking, not leaks. |
+| YouTube rejects the stream or live not enabled | Twitch, or rehearsal mode with the local tap. |
+| Phone ingest fails | Mirrored networking and firewall rules are not done: use OBS on the laptop and say the phone path is built but untested on a real phone and 4G. |
+| Hotkey | Not built; use the button, API or `!hold`. |
+| Anything else | Play the recorded backup (not yet recorded) and walk through the reports. |
 
-Two profiles, same code: `config/profiles/dev.yaml` (CPU, stride 3, GPU cap 3.5 GB, local STT base, captions via Sarvam) and `demo.yaml` (GPU on, stride 2, 7 GB cap, local STT small on CUDA, captions via local IndicTrans2). The engine's own fail-safe (mask or mute when unsure, slate on a missed deadline) is the real fallback: failures show up as extra masking, not leaks.
+Two profiles, same code (`config/profiles/dev.yaml`: CPU, stride 3, GPU cap 3.5 GB, local STT base, captions via Sarvam; `demo.yaml`: GPU on, stride 2, 7 GB cap, local STT small on CUDA, captions via local IndicTrans2).
 
 ## 7. Likely judge questions and honest answers
 
-1. **How do you blur a number after it has been said?** A 4 s delay on both audio and video; detection finishes before output, like a TV broadcast delay. The delay is a setting (3 to 5 s). Capture-to-egress delay p95 was 4.7 s on a loaded laptop with the max 5.4 to 5.5 s. Viewer-side YouTube latency adds its own 3 to 5 s and is not measured.
-2. **What if it misses an Aadhaar card?** It fails safe: slate when a lane is late, tracking holds masks, `mask_when_unsure`, retro hold masks the last 3 s, and the hold button. On synthetic SPECIMEN cards at clean and light quality it masked 100 %; at heavy degradation (blur, compression, dark) recall is far lower (Aadhaar clips 0.55, plates about 4.5 %, OTP 0 %, game IDs about 5 %). All numbers are synthetic and optimistic; none are from real phone footage or real cards.
-3. **Show me precision and recall.** Gate 2 reports per category with confidence intervals, plus the blind chat set. Gate 2 and Gate 1 are still failing on some rows (allowlisted-face visibility, ACCURATE lane latency, delay maximum). We report them as failing.
-4. **Is it real-time?** Delay and fps held on a loaded laptop (31 fps, p95 delay 4.7 s) for 45 s legs; the full 120 s gate, a 30 min soak and the SRT 4G network test have not been run.
-5. **Does the audio really work in Hindi?** Not proven. The audio gate used an oracle recogniser with seeded errors and an English synthetic voice; real Sarvam and Groq calls are untested. Rules cover Hindi, Kannada, Tamil, Telugu and Bengali number words, but spellings are unverified on real speech.
-6. **Doesn't YouTube already moderate chat?** Their filters are blocklist-based and English-first. Our rules alone catch about 82 % of Hinglish abuse and 96 % of scam links on a blind set, and hold the rest for a moderator; abuse and doxxing need the Groq stage, which we could not measure without a key. Fake UPI recall is 80.8 % against a 98 % target.
-7. **Do you store faces, streams or chat?** No. Embeddings are RAM-only with a 12 h TTL (opt-in encrypted persistence), no frames or audio are written, event logs keep category, time, confidence and box only, flagged chat text is never logged, moderator queue is RAM-only with a TTL. This is enforced by contract tests, not only by convention.
-8. **Do you send streamers' audio to third parties?** Only audio chunks (speech segments) go to Sarvam or Groq, and chat text to Groq; video never leaves the machine. Nothing is stored by us. A local fallback (rules plus faster-whisper) exists, but its quality on Hindi is poor (a spotting fallback).
-9. **Is this just PrivaStream or IRL Shield?** We reused tested parts (credited in `docs/THIRD_PARTY.md`: relay, engine, detectors, audio PII, web components) and added the Indian layer, the audio mute with mouth blur, the chat shield and the product. Offleak (AGPL) was not copied.
-10. **Music and copyright?** Detect music and fingerprint-match a small demo library. Not Content ID. (Not built yet.)
-11. **Who pays, what does it cost?** Local processing, so no hosting. API cost about INR 24 per streaming hour typical (INR 10 to 63), INR 89 typical with API captions; every request rate is an assumption and no key has been used (`docs/COST.md`). Business model (free tier, creator agencies, esports organisers) is an idea, not validated.
-12. **Licences?** Ultralytics (AGPL) and InsightFace weights (non-commercial) are optional adapters off the default path (YuNet and SFace are used); marked "replace before commercial release". The NASA public-domain portraits are the test faces.
-13. **What about phones?** The phone relay is not built (no pairing QR, mirrored networking pending). Desktop OBS works.
-14. **Why are there so many chat holds?** Policy: profanity in any framing, vague threats and sexual comments go to the moderator rather than being silently allowed.
+1. **How do you blur a number after it has been said?** A 4 s delay on audio and video, like a TV broadcast delay; detection finishes before output. Delay p95 at the egress tap was 4.46 s with max 5.3 s on a quiet laptop (45 to 120 s legs); YouTube adds its own 3 to 5 s, not measured.
+2. **What if it misses an Aadhaar card?** It fails safe: slate when a lane is late, tracking, mask-when-unsure, 3 s retro hold, hold button, audio auto-mute when the audio host dies. On synthetic SPECIMEN cards at clean and light quality it masked 100 %; the red team found real misses on cards entering the frame fast, at the frame edge and during scene cuts (listed in 5.2); at heavy blur or darkness recall is far lower. Numbers are synthetic and optimistic, never from real cards or phone footage.
+3. **Show precision and recall.** Gate 2 per-category reports; the blind chat set; red-team reports. Gates that still fail are reported as failing: G2 (allowlisted faces and ACCURATE-lane latency), G1 hold-alignment checks, blind-set abuse (82.1 % vs 85) and fake UPI (80.8 % vs 98).
+4. **Is it real time?** 30 fps and p95 delay 4.46 s on a quiet laptop (CPU and RTX 3050), 4.85 s in the real end-to-end smoke. The 30-minute soak, a 4G network test through `scripts/netem_4g.sh` (loopback `tc netem` ran at builder level) and the RTX 5050 have not been done.
+5. **Does the audio work in Hindi and other languages?** Not proven. The audio gate used an oracle recogniser and an English synthetic voice. Real Sarvam and Groq calls have never been made. Number-word rules cover five Indian languages but spellings are unverified on real speech.
+6. **Doesn't YouTube already moderate chat?** Their filters are blocklists and English-first. On a blind set of 1,513 messages our rules alone flag 82 % of abuse (43 % hard-hidden, the rest held for a moderator) and 96 % of scam links, with 1.9 % false positives; the Groq stage meant to close the abuse and doxxing gap is unmeasured. Evasion tricks (split words 47.5 %, leetspeak 24 %, encodings) still get through.
+7. **Do you store faces, streams or chat?** No images or raw PII at runtime; embeddings RAM-only with a 12 h TTL; flagged chat text never logged; the report has categories, times and confidences only, validated on every build; a privacy review approved the privacy-affecting parts (captions blocker, watchdog and QR fixes landed, re-review pending). Not an audit.
+8. **Do you send audio to third parties?** Only audio segments (Sarvam, or Groq as failover) and chat text (Groq); video never leaves the machine. A local fallback exists but is poor on Hindi.
+9. **Is this PrivaStream or IRL Shield?** Reused parts are credited in `docs/THIRD_PARTY.md`; the Indian layer, audio mute with mouth blur, chat shield, guard, captions and product are new. Offleak (AGPL) was not copied.
+10. **Music and copyright?** It detects music and fingerprint-matches a small demo library; not Content ID. Tested only on synthetic songs.
+11. **Cost?** Local processing, no hosting. API about INR 24 per streaming hour typical (INR 10 to 63), INR 89 typical with Sarvam captions; all request rates are assumptions and no key has been used (`docs/COST.md`).
+12. **Licences?** Ultralytics (AGPL) and InsightFace weights (non-commercial) are optional adapters off the default path; marked "replace before commercial release". Test faces are NASA public-domain portraits.
+13. **Phones?** Pairing QR and URLs, SRT presets and hold-on-drop are built and measured on loopback; no real phone, no 4G, networking admin steps pending.
+14. **Why so many chat holds?** Policy: profanity in any framing, vague threats and sexual comments go to a moderator instead of being silently allowed.
+15. **What is still open?** Hold-leg alignment in G1, G2 re-run, ACCURATE-lane latency, real-STT and real-chat verification, card-entry and edge leaks, split-word and leetspeak chat evasion, letter-spelled UPI audio, captions on the RTX 5050 (IndicTrans2), Playwright and accessibility checks (T6.5), `gate_phase6.sh` and the final gate.
 
-## 8. Verified vs not verified
+## 8. Verified vs not verified (nothing is verified live)
 
 | Item | Status | Evidence and caveat |
 |---|---|---|
-| Delay <= 5 s p95, fps >= 29 | PARTLY (45 s legs, loaded dev laptop, CPU and GPU) | p95 4.71 / 4.72 s, max 5.44 / 5.50 s (limit 5.5), 31 fps. Full 120 s gate, soak and RTX 5050: NOT RUN |
-| Fail-safe (no unmasked frames when a lane dies) | YES (G1 fail-safe leg, earlier run) | 0 card frames after the hang |
-| Hold within one frame, retro hold | YES in engine tests (<= 1 frame); eval hold leg alignment OPEN | |
-| Relay encode to RTMPS | YES to a local loopback sink only | h264 720p30, AAC 48 kHz, 0 dropped in a 60 s soak, builder-reported, reviewer pending. Real YouTube/Twitch: NOT VERIFIED |
-| Video recall per category | YES offline, synthetic, CPU, clean+light | G2 still FAIL on allowlisted faces and the ACCURATE lane latency; heavy level well below target |
-| Faces allowlist | PARTLY | privacy-affecting planner change awaits reviewer; 8 NASA people, no teammate footage |
-| Audio PII mute, mouth blur | PARTLY | oracle recogniser, English TTS; real STT NOT RUN |
-| Sarvam and Groq calls | NOT VERIFIED | no keys |
-| Chat classifier | PARTLY | gate set optimistic; blind set abuse 82.1 % and fake UPI 80.8 % below target; Groq stage unmeasured |
-| YouTube and Twitch live chat, deletes, timeouts, OAuth | NOT VERIFIED | mocks only; live chat process not built |
-| Moderator console | PARTLY | API and jsdom tests; no browser, no live feed |
-| Strike guard, captions | NOT BUILT (STATUS) | files exist, unreviewed |
-| Safety report page | NOT BUILT | events API exists |
-| Phone ingest, hotkey | NOT BUILT | |
-| Web app in a real browser, mobile viewport, accessibility | NOT VERIFIED | Playwright and axe are T6.5 |
+| Local end-to-end chain with no keys (API spawns engine, sender, tap, hold, stop, report) | YES, builder-reported | `scripts/e2e_smoke.sh`, 30/30 on the second run, dev profile, 45 s |
+| Delay p95 <= 5 s, fps >= 29 | YES locally, quiet machine, CPU and RTX 3050 | G1 main leg 4.458 / 4.435 s, 30.4 fps; max 5.318 s (limit 5.5). 30 min soak, RTX 5050: NOT RUN |
+| Fail-safe (lane hang, audio host death) | YES | G1 fail-safe leg 0 card frames; engine watchdog tests |
+| Hold behaviour (slate, silence, retro) | YES behaviour; G1 alignment checks FAIL (n/a) | |
+| Video recall per category | OFFLINE, synthetic, CPU, clean+light | G2 FAIL on allowlisted faces and ACCURATE lane p95; heavy level far below target |
+| Video red team | PARTLY | quick subset only; open leaks in 5.2 |
+| Audio PII mute and mouth blur | ORACLE ONLY | G3 passes on an oracle and English TTS; red-team leaks open |
+| Sarvam, Groq, YouTube, Twitch calls (STT, LLM, translate, chat, quota, OAuth, stream egress) | NOT VERIFIED | no keys |
+| Chat classifier | PARTLY | blind set abuse 82.1 %, fake UPI 80.8 % below target; Groq stage unmeasured; red-team split-word and leetspeak failing |
+| Moderator console and web app | UNIT/JSDOM ONLY | no browser, Playwright, axe or mobile viewport (T6.5 pending) |
+| Strike guard | SYNTHETIC ONLY | G5 passes on synthetic data; music-ON p95 4.5 s vs 2 s spec |
+| Captions | BUILT, NOT LIVE | Sarvam never called; IndicTrans2 has no weights; re-review pending |
+| Safety report | YES locally | e2e smoke, privacy scan clean; page-to-API shape reconciliation was still assigned |
+| Phone ingest, pairing QR | LOOPBACK ONLY | no phone, no 4G, networking admin steps pending |
+| Windows hotkey | NOT BUILT | `scripts/hold_hotkey_win.py` missing |
 | RTX 5050 and sm_120 | NOT VERIFIED | |
-| Cost per hour | ESTIMATE only | `docs/COST.md` |
-| Red team, 30 min soak, 4G netem | NOT RUN | Phase 7 |
+| Cost per hour | ESTIMATE | `docs/COST.md` |
+| Gate 6 and the final gate | DO NOT EXIST | `scripts/gate_phase6.sh`, `scripts/gate_final.sh` |
 
 ## 9. Rehearsal log (fill in)
 
@@ -187,4 +190,4 @@ Two profiles, same code: `config/profiles/dev.yaml` (CPU, stride 3, GPU cap 3.5 
 |---|---|---|---|---|
 | | | | | |
 
-The plan requires three full runs on the RTX 5050 before the demo (PLAN section 5, Phase 7).
+The plan requires three full runs on the RTX 5050 before the demo.

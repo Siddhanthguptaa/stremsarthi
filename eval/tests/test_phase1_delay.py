@@ -412,3 +412,48 @@ def test_card_stats_with_no_frames_has_every_key_the_gate_reads():
     for key in ("visible_frames", "unreadable_recall", "ocr_valid_reads", "ocr_checked", "leaked_frames"):
         assert key in s
     assert s["visible_frames"] == 0 and s["unreadable_recall"] is None
+
+
+# ---------------------------------------------------------------- real engine: stamp counter + ingest origin
+
+
+def test_alignment_by_stamp_counter_and_ingest_origin(tmp_path):
+    """The tap PTS is rebased by the relay and MediaMTX (unknown offset), so the real engine is aligned by the
+    stamp counter and the relay's ingest_origin line: engine seq = round(counter - origin * fps)."""
+    from eval.delay import ingest_origin_s
+
+    first, origin = 91, 91 / FPS  # the engine joined at sender frame 91 (RTMP: container PTS = counter / fps)
+    engine_lines, relay_lines, frames = [], [], []
+    for k in range(300):
+        c = first + k
+        capture = T0 + c / FPS
+        arrival = capture + 0.05
+        emitted = arrival + 4.0
+        engine_lines.append(
+            {"stage": "engine_delay", "seq": k, "pts": k / FPS, "t_start": arrival, "t_end": emitted}
+        )
+        relay_lines.append(
+            {
+                "stage": "egress_write",
+                "seq": k + 7,
+                "pts": k / FPS,
+                "t_start": emitted,
+                "t_end": emitted + 0.1,
+            }
+        )
+        # tap PTS has an unrelated offset (121 frames) from the encoder index
+        frames.append(
+            TapFrame(c, emitted + 0.2, "live", emitted + 0.2 - capture, (k - 121) / FPS, "card_static")
+        )
+    origin_line = {"stage": "ingest_origin", "seq": 1, "pts": origin, "t_start": T0, "t_end": T0}
+    p = tmp_path / "engine.jsonl"
+    p.write_text("\n".join(json.dumps(x) for x in [origin_line, *engine_lines, *relay_lines]) + "\n")
+    log = read_engine_timing(p)
+    assert ingest_origin_s(log) == pytest.approx(origin)
+    # an origin that still carries a 1.4 s container base (the SRT/MPEG-TS case) is rejected, not trusted
+    assert not align_to_engine(frames, engine_frames(log), origin_s=origin + 1.4)["valid"]
+    info = align_to_engine(frames, engine_frames(log), origin_s=origin)
+    assert info["valid"] and info["matched"] == 300
+    assert info["ingest_s_median"] == pytest.approx(0.05, abs=1e-3)
+    egress = egress_delays(frames, log, origin_s=origin)
+    assert egress and max(egress) == pytest.approx(4.15, abs=1e-3)

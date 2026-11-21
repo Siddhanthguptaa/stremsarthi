@@ -40,6 +40,7 @@ from .delay import (
     engine_frames,
     fps_stats,
     gap_stats,
+    ingest_origin_s,
     live_frames,
     read_engine_timing,
     write_tap_timing,
@@ -61,6 +62,8 @@ FAILSAFE_FAULT = "lane:accurate:hang@t=20s"
 FAILSAFE_SECONDS = 50.0
 HOLD_SCRIPT = "card_absent:10,card_hold:60"
 HOLD_SECONDS = 58.0
+#: first PTS of an MPEG-TS stream from the sender (ffmpeg mpegts muxer, default muxdelay 0.7 s, applied twice)
+MPEGTS_PTS_BASE_S = 1.4
 SOAK_SCRIPT = "card_hold:40,card_moving:20,card_absent:10"
 LIVE_SCRIPT = "card_absent:10,card_static:60,card_hold:60,card_absent:50"
 LIVE_SECONDS = 180.0
@@ -93,8 +96,13 @@ def _pct(values: Sequence[float], q: float) -> float | None:
 def common_measurements(res: ChainResult, warmup_s: float = 1.0) -> dict[str, Any]:
     frames = res.tap.frames
     eng_log = read_engine_timing(res.engine_timing_path)
-    align = align_to_engine(frames, engine_frames(eng_log), enc_map=encoder_pts_map(eng_log))
-    egress = egress_delays(frames, eng_log, warmup_s=warmup_s)
+    origin_s = ingest_origin_s(eng_log)
+    if origin_s is not None and res.spec.transport == "srt":
+        origin_s -= MPEGTS_PTS_BASE_S  # the sender's MPEG-TS muxer starts its PTS at 2 x muxdelay (0.7 s)
+    align = align_to_engine(
+        frames, engine_frames(eng_log), enc_map=encoder_pts_map(eng_log), origin_s=origin_s
+    )
+    egress = egress_delays(frames, eng_log, warmup_s=warmup_s, origin_s=origin_s)
     stamped = [f for f in frames if f.kind == "live"]
     window = [f for f in frames if stamped and stamped[0].t_read <= f.t_read <= stamped[-1].t_read]
     slates = sum(1 for f in window if f.kind == "slate")

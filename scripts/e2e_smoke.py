@@ -311,12 +311,11 @@ def main() -> int:
             ses = cl.get("/api/session").json()
             check("session state live while publishing", ses["state"] == "live", ses["state"])
             risk = cl.get("/api/risk")
+            rj = risk.json() if risk.status_code == 200 else {}
             check(
-                "GET /api/risk",
-                risk.status_code == 200,
-                json.dumps({k: risk.json().get(k) for k in ("level", "meter_level", "score")})
-                if risk.status_code == 200
-                else str(risk.status_code),
+                "GET /api/risk non-error snapshot",
+                risk.status_code == 200 and {"level", "meter_level", "score"} <= set(rj),
+                json.dumps({k: rj.get(k) for k in ("level", "meter_level", "score", "basis")}),
             )
             al = cl.get("/api/alerts")
             check("GET /api/alerts", al.status_code == 200, str(al.status_code))
@@ -361,8 +360,13 @@ def main() -> int:
                 live = [f for f in res.frames if f.kind == "live"]
                 check(
                     "egress frames flowing",
+                    st["decoded"] > 100,
+                    f"decoded={st['decoded']} live={len(live)} err={res.errors[:1]}",
+                )
+                check(
+                    "egress not starved (live frames reach the tap)",
                     len(live) > 100,
-                    f"live={len(live)} decoded={st['decoded']} err={res.errors[:1]}",
+                    f"live={len(live)} of decoded={st['decoded']}, slate={st['slate_frames']}",
                 )
                 check(
                     "card masked at the egress",
@@ -376,6 +380,39 @@ def main() -> int:
                         round(delays[len(delays) // 2], 2),
                         round(delays[int(len(delays) * 0.95)], 2),
                     ]
+                # audio must not be muted forever: 1 s bins of peak level at the egress (the sender's beep track
+                # puts a 1 kHz burst in every second; a hold mutes it on purpose, healthy audio must be audible)
+                if res.audio:
+                    t_a0 = res.audio[0][0]
+                    bins: dict[int, float] = {}
+                    for t_a, dbfs in res.audio:
+                        b = int(t_a - t_a0)
+                        bins[b] = max(bins.get(b, -200.0), dbfs)
+                    span = [bins.get(b, -200.0) for b in range(6, max(bins) + 1)]
+                    audible = [v > -40.0 for v in span]
+                    cur = best = 0
+                    for a in audible:
+                        cur = 0 if a else cur + 1
+                        best = max(best, cur)
+                    live_bins = {int(f.t_read - t_a0) for f in live}
+                    in_live = [bins.get(b, -200.0) > -40.0 for b in sorted(live_bins) if b >= 6]
+                    live_frac = sum(in_live) / len(in_live) if in_live else None
+                    total = sum(audible)
+                    result["audio_level"] = {
+                        "bins": len(span),
+                        "audible_s": total,
+                        "longest_silent_s": best,
+                        "audible_frac_in_live_video_bins": live_frac,
+                    }
+                    # a hold or fail-safe mutes on purpose; the blocker pattern is silence while video is live
+                    check(
+                        "audio not muted forever at the egress",
+                        total >= 5 and (live_frac is None or len(in_live) < 3 or live_frac >= 0.6),
+                        f"audible {total}/{len(audible)} s, longest silent run {best} s, "
+                        f"audible in live-video seconds {live_frac}",
+                    )
+                else:
+                    check("audio not muted forever at the egress", False, "no audio frames at the tap")
                 result["tap"] = {
                     "stamp": st,
                     "card": {k: cs[k] for k in ("visible_frames", "leaked_frames", "unreadable_recall")},
@@ -426,6 +463,11 @@ def main() -> int:
                 f"{pt.status_code} {ex.status_code} {exh.status_code}",
             )
             allbody = blob + pt.text + ex.text + exh.text
+            allbody = re.sub(
+                r'"(?:event_id|session_id|wall_ts|start_ts|end_ts|started_at|ended_at|ts)":\s*"[^"]*"',
+                '"id":""',
+                allbody,
+            )
             bad = [
                 n
                 for n, pat in {
@@ -463,6 +505,33 @@ def main() -> int:
             result["engine_warnings"] = [mask(w)[:200] for w in warn[:40]]
             result["engine_exception_classes"] = classes
             NOTES.append(f"engine log warnings/errors: {len(warn)}; exception classes: {classes}")
+            ex = dict(re.findall(r"extra (\w+): (started|skipped|failed[^" + chr(10) + "]*)", text))
+            result["extras"] = ex
+            for name in ("guard_risk", "captions", "guard_music"):
+                check(f"extra {name} started", ex.get(name) == "started", ex.get(name, "no log line"))
+            m = re.search(
+                r"audio counters: audio_unvouched=(\S+) audio_beats_rejected=(\S+) audio_heartbeats=(\S+) audio_watchdog=(\S+)",
+                text,
+            )
+            if m:
+                unv, rej, beats, wd = (int(x) if x.isdigit() else -1 for x in m.groups())
+                result["audio_counters"] = {
+                    "unvouched": unv,
+                    "beats_rejected": rej,
+                    "heartbeats": beats,
+                    "watchdog": wd,
+                }
+                check(
+                    "audio counters near zero",
+                    rej <= 3 and wd == 0 and unv <= 150 and beats > 20,
+                    f"unvouched={unv} rejected={rej} heartbeats={beats} watchdog={wd}",
+                )
+            else:
+                check(
+                    "audio counters near zero",
+                    False,
+                    "no 'audio counters' log line (engine did not shut down cleanly?)",
+                )
             check("engine log has no Traceback", "Traceback" not in text, f"{len(warn)} warn/error lines")
             rc = 0 if all(c_["ok"] for c_ in CHECKS) else 1
             return rc

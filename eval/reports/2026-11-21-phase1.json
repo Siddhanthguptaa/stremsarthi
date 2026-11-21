@@ -1,0 +1,634 @@
+{
+  "banner": "",
+  "baseline": null,
+  "checks": [
+    {
+      "name": "step: preflight",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "step: main leg (cpu)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "step: main leg (gpu)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "step: fail-safe (lane hang)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "step: hold (bus, retro, fence)",
+      "note": "",
+      "op": "==",
+      "passed": false,
+      "target": 0.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "step: soak",
+      "note": "not run: pass --minutes N",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "",
+      "value": 0.0
+    },
+    {
+      "name": "main-cpu: engine alive at end of run",
+      "note": "exit=None",
+      "op": "==",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "main-cpu: [cpu] delay p95 at tap",
+      "note": "n=2944",
+      "op": "<=",
+      "passed": true,
+      "target": 5.0,
+      "unit": "s",
+      "value": 4.4579
+    },
+    {
+      "name": "main-cpu: [cpu] delay max at tap",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 5.5,
+      "unit": "s",
+      "value": 5.3184
+    },
+    {
+      "name": "main-cpu: [cpu] delay p95 at egress socket (D-1)",
+      "note": "n=2944",
+      "op": "<=",
+      "passed": true,
+      "target": 5.0,
+      "unit": "s",
+      "value": 2.3838
+    },
+    {
+      "name": "main-cpu: [cpu] delay max at egress socket",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 5.5,
+      "unit": "s",
+      "value": 2.433
+    },
+    {
+      "name": "main-cpu: [cpu] output fps",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 29.0,
+      "unit": "fps",
+      "value": 30.394
+    },
+    {
+      "name": "main-cpu: [cpu] card-visible frames scored",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 600.0,
+      "unit": "frames",
+      "value": 2178.0
+    },
+    {
+      "name": "main-cpu: [cpu] card unreadable, frame recall",
+      "note": "CI [0.9982, 1.0]",
+      "op": ">=",
+      "passed": true,
+      "target": 0.98,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "main-cpu: [cpu] Verhoeff-valid OCR reads of the card",
+      "note": "75 OCR checks",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "reads",
+      "value": 0.0
+    },
+    {
+      "name": "main-cpu: [cpu] OCR checks run",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 10.0,
+      "unit": "frames",
+      "value": 75.0
+    },
+    {
+      "name": "main-cpu: [cpu] A/V offset max",
+      "note": "n=100",
+      "op": "<=",
+      "passed": true,
+      "target": 40.0,
+      "unit": "ms",
+      "value": 0.479
+    },
+    {
+      "name": "main-cpu: [cpu] stamp unreadable (not slates)",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 0.01,
+      "unit": "",
+      "value": 0.002807
+    },
+    {
+      "name": "main-cpu: [cpu] protect (slate) fraction while live",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.066584
+    },
+    {
+      "name": "main-gpu: engine alive at end of run",
+      "note": "exit=None",
+      "op": "==",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "main-gpu: [gpu] delay p95 at tap",
+      "note": "n=3043",
+      "op": "<=",
+      "passed": true,
+      "target": 5.0,
+      "unit": "s",
+      "value": 4.4349
+    },
+    {
+      "name": "main-gpu: [gpu] delay max at tap",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 5.5,
+      "unit": "s",
+      "value": 4.9905
+    },
+    {
+      "name": "main-gpu: [gpu] delay p95 at egress socket (D-1)",
+      "note": "n=3043",
+      "op": "<=",
+      "passed": true,
+      "target": 5.0,
+      "unit": "s",
+      "value": 2.3619
+    },
+    {
+      "name": "main-gpu: [gpu] delay max at egress socket",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 5.5,
+      "unit": "s",
+      "value": 2.4177
+    },
+    {
+      "name": "main-gpu: [gpu] output fps",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 29.0,
+      "unit": "fps",
+      "value": 30.383
+    },
+    {
+      "name": "main-gpu: [gpu] card-visible frames scored",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 600.0,
+      "unit": "frames",
+      "value": 2297.0
+    },
+    {
+      "name": "main-gpu: [gpu] card unreadable, frame recall",
+      "note": "CI [0.9983, 1.0]",
+      "op": ">=",
+      "passed": true,
+      "target": 0.98,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "main-gpu: [gpu] Verhoeff-valid OCR reads of the card",
+      "note": "76 OCR checks",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "reads",
+      "value": 0.0
+    },
+    {
+      "name": "main-gpu: [gpu] OCR checks run",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 10.0,
+      "unit": "frames",
+      "value": 76.0
+    },
+    {
+      "name": "main-gpu: [gpu] A/V offset max",
+      "note": "n=103",
+      "op": "<=",
+      "passed": true,
+      "target": 40.0,
+      "unit": "ms",
+      "value": 0.479
+    },
+    {
+      "name": "main-gpu: [gpu] stamp unreadable (not slates)",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 0.01,
+      "unit": "",
+      "value": 0.009257
+    },
+    {
+      "name": "main-gpu: [gpu] protect (slate) fraction while live",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 0.1,
+      "unit": "",
+      "value": 0.029102
+    },
+    {
+      "name": "failsafe: engine alive at end of run",
+      "note": "exit=None",
+      "op": "==",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "failsafe: fault activation recorded (hooks present)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "failsafe: non-slate frames captured > 1.0 s after the first missed deadline",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "frames",
+      "value": 0.0
+    },
+    {
+      "name": "failsafe: frames showing the card after the fault",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "frames",
+      "value": 0.0
+    },
+    {
+      "name": "failsafe: frames showing the card (whole run, after warm-up)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "frames",
+      "value": 0.0
+    },
+    {
+      "name": "failsafe: slate frames seen after the fault",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 30.0,
+      "unit": "frames",
+      "value": 1052.0
+    },
+    {
+      "name": "hold: engine alive at end of run",
+      "note": "exit=None",
+      "op": "==",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "hold: live frames emitted after the hold command (slate within 1 frame)",
+      "note": "engine timing log did not align with the tap (needs engine_delay stage, frame PTS preserved)",
+      "op": "<=",
+      "passed": false,
+      "target": 1.0,
+      "unit": "frames",
+      "value": null
+    },
+    {
+      "name": "hold: frames captured before the hold shown live after release (fence)",
+      "note": "engine timing log did not align with the tap (needs engine_delay stage, frame PTS preserved)",
+      "op": "==",
+      "passed": false,
+      "target": 0.0,
+      "unit": "frames",
+      "value": null
+    },
+    {
+      "name": "hold: live frames captured in the last 3 s before the hold",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "frames",
+      "value": 0.0
+    },
+    {
+      "name": "hold: audio frames measured during the hold",
+      "note": "",
+      "op": ">=",
+      "passed": true,
+      "target": 20.0,
+      "unit": "frames",
+      "value": 533.0
+    },
+    {
+      "name": "hold: audio level during the hold (max)",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": -50.0,
+      "unit": "dBFS",
+      "value": -120.0
+    },
+    {
+      "name": "hold: LIVE again after release (seconds to first live frame)",
+      "note": "",
+      "op": "<=",
+      "passed": true,
+      "target": 10.0,
+      "unit": "s",
+      "value": 4.1337
+    },
+    {
+      "name": "hold: a slate appeared after the hold command",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 1.0,
+      "unit": "",
+      "value": 1.0
+    },
+    {
+      "name": "hold: frames showing the card (whole run, after warm-up)",
+      "note": "",
+      "op": "==",
+      "passed": true,
+      "target": 0.0,
+      "unit": "frames",
+      "value": 0.0
+    }
+  ],
+  "date": "2026-11-21",
+  "failing_ids": [],
+  "header": {
+    "commands": [
+      "python -m eval.run phase1 --leg preflight --engine real --out eval/runs/phase1-20261121-095832",
+      "python -m eval.run phase1 --engine real --out eval/runs/phase1-20261121-095832 --leg main",
+      "flock -E 2 -w 1800 /tmp/streamsarthi-gpu.lock env SS_GPU_LOCK_HELD=1 python -m eval.run phase1 --engine real --out eval/runs/phase1-20261121-095832 --leg main --gpu",
+      "python -m eval.run phase1 --engine real --out eval/runs/phase1-20261121-095832 --leg failsafe",
+      "python -m eval.run phase1 --engine real --out eval/runs/phase1-20261121-095832 --leg hold",
+      "(check)"
+    ],
+    "delay_definition": "D-1: capture (optical stamp) to the egress; tap-side and egress_write values reported",
+    "git_rev": "0aaadeddab5e",
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
+    },
+    "legs_run": [
+      "failsafe",
+      "hold",
+      "main-cpu",
+      "main-gpu"
+    ],
+    "profile": "dev",
+    "seed": 1234
+  },
+  "notes": [
+    "fail-safe: {\"deadline_miss_capture_s\": 17818.086618, \"first_live_after_window_counter\": null, \"leaked_frames_after_fault\": 0, \"live_frames_after_window\": 0, \"slate_frames_after_fault\": 1052, \"t_fault_monotonic\": 17817.686618}",
+    "hold: {\"audio_frames_in_hold\": 533, \"audio_max_dbfs_in_hold\": -120.0, \"engine_alignment_valid\": false, \"first_live_read_after_release_s\": 4.1337, \"first_slate_read_after_hold_s\": 0.1105, \"live_frames_in_retro_window\": 0, \"retro_window_s\": 3.0, \"t_hold\": 17933.379686582, \"t_release\": 17941.314019257}",
+    "main-cpu: engine timing log did not align with the tap (egress-socket delay and hold timing need engine_delay and PTS)",
+    "main-gpu: engine timing log did not align with the tap (egress-socket delay and hold timing need engine_delay and PTS)"
+  ],
+  "passed": false,
+  "phase": "phase1",
+  "tables": [
+    {
+      "columns": [
+        "step",
+        "raw exit",
+        "gate exit",
+        "seconds"
+      ],
+      "rows": [
+        [
+          "preflight",
+          0,
+          0,
+          2.2
+        ],
+        [
+          "main leg (cpu)",
+          0,
+          0,
+          150.5
+        ],
+        [
+          "main leg (gpu)",
+          0,
+          0,
+          181.6
+        ],
+        [
+          "fail-safe (lane hang)",
+          0,
+          0,
+          88.3
+        ],
+        [
+          "hold (bus, retro, fence)",
+          1,
+          1,
+          96.8
+        ],
+        [
+          "soak",
+          0,
+          0,
+          0.0
+        ]
+      ],
+      "title": "Gate steps"
+    },
+    {
+      "columns": [
+        "leg",
+        "tap p50",
+        "tap p95",
+        "tap max",
+        "egress p50",
+        "egress p95",
+        "egress max"
+      ],
+      "rows": [
+        [
+          "main-cpu",
+          4.4384,
+          4.4579,
+          5.3184,
+          2.3688,
+          2.3838,
+          2.433
+        ],
+        [
+          "main-gpu",
+          4.4122,
+          4.4349,
+          4.9905,
+          2.3434,
+          2.3619,
+          2.4177
+        ]
+      ],
+      "title": "Delay (seconds, capture to tap / to egress socket)"
+    },
+    {
+      "columns": [
+        "leg",
+        "fps",
+        "CPU mean cores",
+        "CPU peak cores",
+        "VRAM peak over baseline MB",
+        "protect fraction",
+        "card frames scored",
+        "card recall"
+      ],
+      "rows": [
+        [
+          "main-cpu",
+          30.394,
+          6.715,
+          9.142,
+          null,
+          0.066584,
+          2178,
+          1.0
+        ],
+        [
+          "main-gpu",
+          30.383,
+          2.332,
+          4.324,
+          962.0,
+          0.029102,
+          2297,
+          1.0
+        ]
+      ],
+      "title": "Perf"
+    },
+    {
+      "columns": [
+        "stage",
+        "main-cpu",
+        "main-gpu"
+      ],
+      "rows": [
+        [
+          "compose",
+          "2.621 / 12.672 / 44.73",
+          "2.907 / 14.972 / 55.457"
+        ],
+        [
+          "egress_write",
+          "0.425 / 1.773 / 858.644",
+          "0.46 / 2.05 / 907.703"
+        ],
+        [
+          "emit_lag",
+          "2.091 / 4.137 / 42.074",
+          "2.111 / 4.094 / 57.49"
+        ],
+        [
+          "encode",
+          "8.638 / 14.466 / 29.497",
+          "10.398 / 19.862 / 41.756"
+        ],
+        [
+          "engine_delay",
+          "4056.665 / 4088.713 / 4124.243",
+          "4028.455 / 4062.715 / 4100.662"
+        ],
+        [
+          "ingest_decode",
+          "1.556 / 4.188 / 43.627",
+          "1.522 / 5.45 / 46.626"
+        ],
+        [
+          "lane_accurate",
+          "432.234 / 573.008 / 637.783",
+          "271.75 / 436.183 / 655.102"
+        ],
+        [
+          "lane_fast",
+          "20.531 / 28.005 / 88.143",
+          "18.65 / 37.465 / 64.316"
+        ],
+        [
+          "sink_write",
+          "0.433 / 0.846 / 5.058",
+          "0.42 / 0.981 / 4.95"
+        ]
+      ],
+      "title": "Per-stage latency from the engine timing log (ms, p50 / p95 / max)"
+    }
+  ]
+}

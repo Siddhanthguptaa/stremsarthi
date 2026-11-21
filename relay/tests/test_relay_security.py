@@ -115,3 +115,46 @@ def test_redact_removes_urls_and_keys(line):
     cleaned = redact(line)
     for secret in ("hunter2", "abcd-efgh-ijkl-mnop", "youtube.com", "bob"):
         assert secret not in cleaned
+
+
+def _raw_read_entries(users):
+    return [
+        u for u in users if any(p.get("path") == "camera" and p["action"] == "read" for p in u["permissions"])
+    ]
+
+
+def test_raw_preview_entry_is_absent_by_default():
+    address = RelayAddress("192.168.1.20")
+    phone, internal = Credentials.generate(), Credentials.generate()
+    users = mediamtx_users(address, phone, internal)
+    assert len(users) == 4
+    assert [u["user"] for u in _raw_read_entries(users)] == [internal.user], (
+        "only the engine login reads camera"
+    )
+
+
+def test_raw_preview_entry_is_loopback_read_of_camera_only():
+    address = RelayAddress("192.168.1.20")
+    phone, internal = Credentials.generate(), Credentials.generate()
+    users = mediamtx_users(address, phone, internal, demo_raw_preview=True)
+    assert len(users) == 5
+    extra = users[-1]
+    assert extra == {
+        "user": "any",
+        "ips": ["127.0.0.1"],
+        "permissions": [{"action": "read", "path": "camera"}],
+    }
+    assert users[:4] == mediamtx_users(address, phone, internal), "nothing else changes"
+    anonymous = [u for u in users if u["user"] == "any"]
+    assert all(u["ips"] == ["127.0.0.1"] for u in anonymous), "never non-loopback"
+    perms = {(p["action"], p.get("path")) for u in anonymous for p in u["permissions"]}
+    assert perms == {("read", "shielded"), ("api", None), ("read", "camera")}
+    assert not any(a == "publish" for a, _ in perms), "no anonymous publish on any path"
+
+
+def test_runtime_turns_the_preview_on_only_for_env_value_1(caplog):
+    from relay import runtime
+
+    assert runtime.ENV_DEMO_RAW_PREVIEW == "DEMO_RAW_PREVIEW"
+    source = open(runtime.__file__, encoding="utf-8").read()
+    assert 'env.get(ENV_DEMO_RAW_PREVIEW) == "1"' in source and source.count("demo_raw_preview: enabled") == 1

@@ -397,6 +397,41 @@ def region_candidates(image: np.ndarray) -> list[np.ndarray]:
     return _dedupe(card_candidates(small, (0, 0, small.shape[1], small.shape[0]), min_area))
 
 
+PAPER_V, PAPER_S = 215, 25  # card paper: bright and nearly colourless
+EDGE_MIN_AREA_FRAC = 0.03  # a card cut by a frame side still shows at least 3 % of the frame
+PAPER_MIN_BOXES = 3  # a paper region has no outline of its own: it must hold real text
+
+
+def _paper_edge_quads(image: np.ndarray) -> list[np.ndarray]:
+    """Bright low-saturation regions glued to one left/right frame side (half-resolution frame coordinates).
+
+    A card sliding in beside a building or a table can have no closed outline of its own (the contour search
+    merges it with what is behind it) but its paper is still a clean block against the frame side. The block
+    is grown upward and downward to take in the coloured header band and footer strip around the paper."""
+    small = cv2.resize(image, None, fx=_LIKE_SCALE, fy=_LIKE_SCALE, interpolation=cv2.INTER_AREA)
+    sh, sw = small.shape[:2]
+    hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
+    paper = ((hsv[..., 2] >= PAPER_V) & (hsv[..., 1] <= PAPER_S)).astype(np.uint8)
+    paper = cv2.morphologyEx(paper, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    paper = cv2.morphologyEx(paper, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+    n, _lab, stats, _ = cv2.connectedComponentsWithStats(paper, connectivity=4)
+    out: list[np.ndarray] = []
+    for i in range(1, n):
+        x, y, bw, bh, area = stats[i]
+        if not (0.12 * sh <= bh <= 0.6 * sh) or bw < 0.1 * bh or area < 0.6 * bw * bh:
+            continue
+        if not (x <= 1 or x + bw >= sw - 1) or (x <= 1 and x + bw >= sw - 1):
+            continue
+        grow_up, grow_dn = 0.2 * bh, 0.06 * bh  # header band above, footer strip below
+        out.append(
+            np.array(
+                [[x, y - grow_up], [x + bw, y - grow_up], [x + bw, y + bh + grow_dn], [x, y + bh + grow_dn]],
+                np.float32,
+            )
+        )
+    return out
+
+
 def find_edge_card(
     image: np.ndarray,
     text_boxes: list[np.ndarray],
@@ -413,13 +448,20 @@ def find_edge_card(
     the overshoot so the mask stays on the card as it slides). Never a quad on two sides, a screen filling
     the frame or a page of text."""
     h, w = image.shape[:2]
+    if not text_boxes:
+        return []  # no text, no card: skip every costly search
     cands = region_candidates(image) if candidates is None else candidates
-    centres = np.array([b.mean(axis=0) for b in text_boxes], np.float32) if text_boxes else None
+    paper = _paper_edge_quads(image)
+    cands = [*cands, *paper]
+    n_paper = len(paper)
+    centres = np.array([b.mean(axis=0) for b in text_boxes], np.float32)
     out: list[np.ndarray] = []
-    if centres is None:
-        return out
-    for q_small in cands:
+    for ci, q_small in enumerate(cands):
+        is_paper = ci >= len(cands) - n_paper
         q = q_small / _LIKE_SCALE
+        if is_paper:  # exact to the frame side: the grid snap of the half-size block may stop 1 px short
+            q[q[:, 0] <= 3, 0] = 0.0
+            q[q[:, 0] >= w - 3, 0] = float(w)
         sides = {
             "left": bool((q[:, 0] <= 4).any()),
             "right": bool((q[:, 0] >= w - 4).any()),
@@ -437,9 +479,11 @@ def find_edge_card(
             not (0.16 * h <= height <= 0.8 * h)
             or depth < 0.12 * height
             or depth >= ID1_ASPECT * height * 0.97
+            or depth * height < EDGE_MIN_AREA_FRAC * h * w  # a thin strip or small block is not a card
+            or height > 6.0 * depth  # (e.g. a barcode stamp in a corner)
         ):
             continue
-        if edge_contrast(image, q) < 0.4:
+        if not is_paper and edge_contrast(image, q) < 0.4:
             continue
         contour = q.reshape(-1, 1, 2).astype(np.float32)
         inside = [
@@ -453,7 +497,11 @@ def find_edge_card(
             wide[wide[:, 0] >= w - 4, 0] += 24.0
         else:
             wide[wide[:, 0] <= 4, 0] -= 24.0
-        if len(inside) < min_boxes or fill > max_fill or _straddling(wide, text_boxes):
+        if len(inside) < (PAPER_MIN_BOXES if is_paper else min_boxes) or fill > (
+            0.6 if is_paper else max_fill
+        ):
+            continue
+        if _straddling(wide, text_boxes):
             continue
         reach = ID1_ASPECT * height - depth  # how far the card runs on beyond the frame
         pad = 0.03 * height

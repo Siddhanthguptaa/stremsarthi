@@ -18,6 +18,7 @@ import numpy as np
 
 STAGES = (
     "ingest_decode",
+    "ingest_origin",
     "lane_fast",
     "lane_accurate",
     "motion",

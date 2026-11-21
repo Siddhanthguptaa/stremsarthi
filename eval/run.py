@@ -12,6 +12,7 @@
     python -m eval.run phase2 --leg preflight|offline|rescore|perf --data D --out O   # one gate-2 leg (eval/phase2/)
     python -m eval.run phase2-report --dir O --results R.json   # eval/reports/<date>-phase2.md from the legs in O
     python -m eval.run redteam-video [--quick] [--attacks A ...] [--selftest]   # T7.1 video red team (eval/redteam/video/)
+    python -m eval.run final-report [--report-dir D] [--since EPOCH] [--results R.json]   # T7.6 <date>-final.md/.json
 
 Exit codes: 0 pass, 1 a criterion failed, 2 environment error (nothing measured).
 """
@@ -412,6 +413,12 @@ def main(argv: list[str] | None = None) -> int:
         from .redteam.video import cli as redteam_video
 
         return redteam_video.main(argv[1:])
+    if (
+        argv and argv[0] == "final-report"
+    ):  # T7.6 final report (eval/final_report.py): options forwarded untouched
+        from . import final_report
+
+        return final_report.main(argv[1:])
     p = build_parser()
     a = p.parse_args(argv)
     if a.selftest and a.cmd is None:

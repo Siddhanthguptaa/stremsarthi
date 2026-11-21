@@ -50,6 +50,7 @@ from contracts import (
     Resources,
 )
 
+from .edge import find_edge_qr
 from .scan import Found, _bbox, bbox_iou, expand_quad, scan
 
 log = logging.getLogger("vision.upi_qr")
@@ -124,6 +125,12 @@ class UpiQrDetector:
             find_undecodable=conf.mask_when_unsure,
             budget_s=SOFT_BUDGET_S,
         )
+        if conf.mask_when_unsure and (time.perf_counter() - t0) < SOFT_BUDGET_S + 0.004:
+            # a code cut by a left/right frame side cannot be decoded: mask the inferred whole square
+            gray = cv2.cvtColor(frame.image, cv2.COLOR_BGR2GRAY)
+            for quad in find_edge_qr(gray):
+                if all(bbox_iou(quad, f.quad) < 0.3 for f in found):
+                    found.append(Found(quad, False, None, "edge"))
         self.last_ms = (time.perf_counter() - t0) * 1000.0
         mask_all = conf.sensitivity >= ALL_QR_SENSITIVITY
         found = self._apply_benign_memory(found, frame.pts)

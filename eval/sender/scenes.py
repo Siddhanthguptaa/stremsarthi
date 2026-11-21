@@ -21,6 +21,9 @@ from ..data_gen.video.qr import render_qr_poster
 from .stamp import CANVAS_H, CANVAS_W, STAMP_EXCLUSION
 
 STAMP_MARGIN = 16
+#: moving/held targets keep this many px below the stamp band: a planner sweep of a held, moving track reaches up to
+#: ~100 px beyond the card, and a (correct) mask must never reach the optical stamp
+STAMP_CLEARANCE = 120
 MARGIN = 24
 SCENE_SEED = 1234
 SCENE_NAMES = ("card_static", "card_moving", "card_hold", "card_absent", "many_targets", "idle")
@@ -166,7 +169,7 @@ class CardMoving(Scene):
         self.s = sprites().aadhaar
         self.h, self.w = self.s.shape[:2]
         self.x_range = (MARGIN, CANVAS_W - self.w - MARGIN)
-        self.y_range = (STAMP_EXCLUSION[3] + STAMP_MARGIN + 8, CANVAS_H - self.h - MARGIN)
+        self.y_range = (STAMP_EXCLUSION[3] + STAMP_CLEARANCE, CANVAS_H - self.h - MARGIN)
 
     def _xy(self, t: float) -> tuple[int, int]:
         # Lissajous path, ~0.4 Hz horizontally: a hand slowly moving the card
@@ -198,7 +201,7 @@ class CardHold(Scene):
     def setup(self) -> None:
         self.s = sprites().aadhaar
         self.h, self.w = self.s.shape[:2]
-        self.pos = (420, 200)
+        self.pos = (420, 250)  # moves +-60 px and tilts +-25 deg: stays >= STAMP_CLEARANCE below the stamp
         self.centre = (self.pos[0] + self.w / 2.0, self.pos[1] + self.h / 2.0)
 
     def _phase(self, t: float) -> tuple[str, float]:
@@ -313,11 +316,22 @@ _SCENES: dict[str, type[Scene]] = {
 }
 
 
+#: named scripts a ``--script`` value can be (``demo_reel`` is added by ``demo_scenes``)
+PRESETS: dict[str, str] = {}
+
+
+def register_scene(cls: type[Scene]) -> type[Scene]:
+    """Add a scene class to the table ``parse_script`` and ``ScenePlayer`` use (the demo reel scenes)."""
+    _SCENES[cls.name] = cls
+    return cls
+
+
 def parse_script(script: str) -> list[tuple[str, float]]:
     """``"card_absent:10,card_static:40"`` -> [("card_absent", 10.0), ("card_static", 40.0)].
 
-    A bare scene name uses the default duration (40 s).
+    A bare scene name uses the default duration (40 s). A preset name (``demo_reel``) expands to its script.
     """
+    script = PRESETS.get(script.strip(), script)
     out: list[tuple[str, float]] = []
     for part in (p.strip() for p in script.split(",") if p.strip()):
         name, _, dur = part.partition(":")
@@ -364,3 +378,6 @@ class ScenePlayer:
         """Scene name and ground-truth targets of frame `index`, without rendering pixels."""
         name, t_in = self.locate(index / self.fps)
         return name, self._scene(name).targets_at(t_in)
+
+
+from . import demo_scenes as _demo_scenes  # noqa: E402,F401  (registers the demo reel scenes and preset)

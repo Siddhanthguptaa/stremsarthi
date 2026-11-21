@@ -59,3 +59,36 @@ def test_edge_card_ignores_a_big_screen_and_a_card_in_the_middle() -> None:
     img = _scene()
     cv2.rectangle(img, (400, 190), (940, 535), (240, 244, 245), -1)  # whole card, not on a side
     assert find_edge_card(img, [_box(500, 300, 700, 340)]) == []
+
+
+def test_cut_pan_pieces_and_edge_card_category() -> None:
+    from contracts import Category, Config, DetectorConfig, Device
+    from vision.detectors.cards import DETECTOR
+    from vision.detectors.cards.detector import _PAN_PART
+    from vision.resources import VisionResources
+
+    for piece in ("ABCDE12", "ABCDE1", "AB1234F", "1234F"):
+        assert _PAN_PART.match(piece), piece
+    for other in ("ABCDEFGHIJ", "HELLO", "1234", "ABCDE1234F"):
+        assert not _PAN_PART.match(other), other
+    cfg = Config(profile="dev", _env_file=None)
+    det = DETECTOR()
+    det.configure(DetectorConfig(categories=cfg.categories, device=Device.CPU), VisionResources(cfg))
+    assert det._edge_category(["INCOME TAX DEPARTMENT", "NAME"]) is Category.PAN
+    assert det._edge_category(["ABCDE12"]) is Category.PAN
+    assert det._edge_category(["SPECIMEN", "ADDRESS LINE"]) is Category.AADHAAR
+
+
+def test_cut_pan_partial_covers_the_whole_true_card() -> None:
+    """PAN pieces take the aspect-only growth (no 12-digit estimate): the quad must still cover the whole card."""
+    img = _scene()
+    cv2.rectangle(img, (370, 190), (910, 530), (240, 244, 245), -1)
+    cv2.rectangle(img, (370, 190), (910, 235), (150, 120, 60), -1)
+    cv2.rectangle(img, (330, 150), (586, 570), (130, 160, 205), -1)  # hides the left 40 %
+    num = _box(580, 300, 780, 345)  # "ABCDE12": the rest of the PAN is hidden
+    texts = [_box(583, 196, 811, 230), _box(576, 250, 702, 285), _box(578, 380, 700, 410), num]
+    card = find_partial_card_quad(img, num, texts, half_number=False)
+    assert card is not None
+    truth = np.array([[370, 190], [910, 190], [910, 530], [370, 530]], np.float32)
+    inter, _ = cv2.intersectConvexConvex(card.pts, truth)
+    assert inter / cv2.contourArea(truth) >= 0.9
