@@ -64,7 +64,7 @@ def test_leading_digits_of_the_next_segment_are_muted_through_the_carry():
     spans = SpanPlanner().leading_numbers(Carry(1.8, Category.SPOKEN_PHONE, 0.9), window(ws, new_from=1))
     assert len(spans) == 1 and (spans[0].pts_start, spans[0].pts_end) == (1.95, 2.3)
     assert SpanPlanner().leading_numbers(None, window(ws, 1)) == []
-    far = [w("aath", 3.5, 3.9, 2)]  # more than 1 s after the carry: not a continuation
+    far = [w("aath", 4.5, 4.9, 2)]  # more than 2 s after the carry: not a continuation
     assert SpanPlanner().leading_numbers(Carry(1.8, Category.SPOKEN_PHONE, 0.9), window(far)) == []
 
 

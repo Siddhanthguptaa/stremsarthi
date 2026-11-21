@@ -10,7 +10,8 @@ import { useLanguage } from "@/components/shell/language-provider"
 const KNOWN_CATEGORIES = new Set<string>(CATEGORIES)
 const KNOWN_ACTIONS = new Set(["masked", "muted", "hidden", "held", "deleted", "timed_out", "warned", "failsafe"])
 const KNOWN_MODALITIES = new Set(["video", "audio", "chat", "guard", "system"])
-const KNOWN_LEVELS = new Set(["green", "yellow", "orange", "red"])
+const KNOWN_LEVELS = new Set(["ok", "watch", "warn", "danger"])
+const KNOWN_NOTES = new Set(["partial_report_session_live", "events_file_unavailable", "timeline_truncated"])
 
 export interface ReportText {
   lang: Lang
@@ -20,6 +21,8 @@ export interface ReportText {
   action: (code: string) => string
   modality: (code: string) => string
   level: (code: string) => string
+  /** Server notes are fixed codes: known ones become a sentence, anything else is shown as it is. */
+  note: (code: string) => string
 }
 
 /** Labels for the report: shared names from `lib/i18n.ts` where they exist, the plain code otherwise. */
@@ -32,6 +35,7 @@ export function useReportText(): ReportText {
       category: (code) => (KNOWN_CATEGORIES.has(code) ? t(`category.${code}` as I18nKey) : code),
       action: (code) => (KNOWN_ACTIONS.has(code) ? t(`safety.${code}` as I18nKey) : code),
       modality: (code) => (KNOWN_MODALITIES.has(code) ? reportText(lang, `report.modality.${code}` as ReportTextKey) : code),
+      note: (code) => (KNOWN_NOTES.has(code) ? reportText(lang, `report.note.${code}` as ReportTextKey) : code),
       level: (code) => (KNOWN_LEVELS.has(code) ? reportText(lang, `report.level.${code}` as ReportTextKey) : code),
     }),
     [lang, t],

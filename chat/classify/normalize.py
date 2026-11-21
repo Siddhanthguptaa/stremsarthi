@@ -21,20 +21,8 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from .fold import clean_chars
 from .links import blank_urls, refang
-
-# Zero-width / bidi / soft-hyphen characters (spec: U+200B-200F, U+2060, U+FEFF) plus bidi controls.
-_ZERO_WIDTH = re.compile("[​-‏⁠﻿­‪-‮⁦-⁩͏]")
-
-# Cyrillic / Greek look-alikes of Latin letters.
-_HOMOGLYPHS = str.maketrans(
-    {
-        "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x",
-        "у": "y", "і": "i", "ј": "j", "ѕ": "s", "ԁ": "d", "ɡ": "g",
-        "ο": "o", "α": "a", "ν": "v", "ι": "i", "ρ": "p", "τ": "t",
-        "κ": "k", "υ": "u", "ı": "i",
-    }
-)  # fmt: skip
 
 _LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
 _LEET_CHARS = frozenset("013457@$")
@@ -44,9 +32,13 @@ _LEET_CHARS = frozenset("013457@$")
 TOKEN_RE = re.compile(r"[a-z0-9*ऀ-ॣ०-९ॱ-ൿ]+")
 
 _RUNS = re.compile(r"([a-z])\1{2,}")
-_SEPS = r"[\s.\-_*|/,+]{1,2}"
-_SINGLES = re.compile(rf"(?<![a-z0-9])[a-z](?:{_SEPS}[a-z](?![a-z0-9]))+(?![a-z0-9])")
+_SEPS = r"[\s.\-_*|/,+]{1,3}"
+_SING = "[a-z013457@$]"  # a letter, or a digit or symbol that stands for one (b h 3 n c h 0 d)
+_SINGLES = re.compile(rf"(?<![a-z0-9@$])[a-z](?:{_SEPS}{_SING}(?![a-z0-9]))+(?![a-z0-9])")
 _SEP_STRIP = re.compile(_SEPS)
+# Indic text spelled one code point at a time (consonants, vowel signs, viramas): "च.ू.त.ि.य.ा"
+_INDIC = "[ऀ-෿]"
+_INDIC_SINGLES = re.compile(rf"(?<!{_INDIC}){_INDIC}(?:{_SEPS}{_INDIC})+(?!{_INDIC})")
 _SPACES = re.compile(r"\s+")
 
 
@@ -227,26 +219,53 @@ class Normalized:
     text: str
     roman: str
     glued: str = ""
-    fanged: bool = (
-        False  # the link view differs from the text as written: link or UPI-ID obfuscation was undone
-    )
+    fanged: bool = False  # the link view differs from the text as written: obfuscation was undone
+    blobs: tuple[str, ...] = ()  # runs of single letters joined into one word (``b.h.e.n.c.h.o.d``)
 
 
 def link_view(text: str) -> str:
     """Case-preserving NFKC view without zero-width characters (for URL and UPI regexes), links refanged."""
-    return refang(_ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text)))
+    return refang(_strip_latin_marks(clean_chars(text)))
+
+
+def lexicon_view_ex(text: str) -> tuple[str, list[str]]:
+    """The lexicon form of ``text`` and the runs of single letters that were joined (``b h e n c h o d``)."""
+    t = _strip_latin_marks(clean_chars(text)).lower()
+    t = _native_clean(t)
+    t = _symbol_leet(_SPACES.sub(" ", t).strip())
+    t = _leet_tokens(t)
+    t = _RUNS.sub(r"\1\1", t)
+    joined: list[str] = []
+    if len(t) > 2 and any(ch in " .-_*|/,+" for ch in t):
+
+        def _join(m: re.Match[str]) -> str:
+            out = _SEP_STRIP.sub("", m.group(0))
+            joined.append(out)
+            return out
+
+        t = _SINGLES.sub(_join, t)
+        t = _INDIC_SINGLES.sub(_join, t)
+        if joined:
+            t = _leet_tokens(t)
+    return t, joined
 
 
 def lexicon_view(text: str) -> str:
     """The lexicon form of ``text``. Used for both messages and lexicon terms so they always agree."""
-    t = _ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text))
-    t = _strip_latin_marks(t.translate(_HOMOGLYPHS)).lower()
-    t = _native_clean(t)
-    t = _leet_tokens(_SPACES.sub(" ", t).strip())
-    t = _RUNS.sub(r"\1\1", t)
-    if len(t) > 2 and any(ch in " .-_*|/,+" for ch in t):
-        t = _SINGLES.sub(lambda m: _SEP_STRIP.sub("", m.group(0)), t)
-    return t
+    return lexicon_view_ex(text)[0]
+
+
+_SYMBOL_LEET = {"!": "i", "|": "l", "(": "c", "[": "c"}
+_SYMBOL_INNER = re.compile(r"(?<=[a-z0-9])[!|(\[](?=[a-z0-9])")
+_SYMBOL_LEAD = re.compile(r"(?<![a-z0-9!|(\[])[(|\[](?=[a-z]{2})")
+
+
+def _symbol_leet(text: str) -> str:
+    """``ch!ut!ya``, ``(hutiya``, ``|und``: symbols that stand for a letter, only inside or at the start of a word."""
+    if not any(c in text for c in "!|(["):
+        return text
+    text = _SYMBOL_INNER.sub(lambda m: _SYMBOL_LEET[m.group(0)], text)
+    return _SYMBOL_LEAD.sub(lambda m: _SYMBOL_LEET[m.group(0)], text)
 
 
 _INWORD = re.compile(r"(?<=[a-z])[_.\-'`·•](?=[a-z])")
@@ -254,10 +273,16 @@ _INWORD = re.compile(r"(?<=[a-z])[_.\-'`·•](?=[a-z])")
 
 def normalize(text: str) -> Normalized:
     link = link_view(text)
-    fanged = link != _ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text))
-    lex = lexicon_view(blank_urls(link))
+    fanged = link != _strip_latin_marks(clean_chars(text))
+    lex, blobs = lexicon_view_ex(blank_urls(link))
     roman = transliterate_devanagari(lex) if has_devanagari(lex) else ""
     glued = _INWORD.sub("", lex) if any(c in lex for c in "_.-'`·•") else ""
     return Normalized(
-        raw=text, link_text=link, text=lex, roman=roman, glued=glued if glued != lex else "", fanged=fanged
+        raw=text,
+        link_text=link,
+        text=lex,
+        roman=roman,
+        glued=glued if glued != lex else "",
+        fanged=fanged,
+        blobs=tuple(b for b in blobs if len(b) >= 5),
     )

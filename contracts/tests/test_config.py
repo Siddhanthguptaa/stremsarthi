@@ -188,7 +188,11 @@ def test_relay_ingest_settings_and_secrets(monkeypatch):
 
 def test_engine_audio_watchdog_defaults_and_limits():
     c = make()
-    assert (c.engine.audio_watchdog_s, c.engine.audio_grace_s) == (3.0, 10.0)
+    assert (c.engine.audio_watchdog_s, c.engine.audio_grace_s, c.engine.audio_heartbeat_lag_s) == (
+        3.0,
+        2.5,
+        2.0,
+    )
     assert make(engine={"audio_watchdog_s": 0}).engine.audio_watchdog_s == 0  # 0 turns it off
     with pytest.raises(ValidationError):
         make(engine={"audio_watchdog_s": -1})

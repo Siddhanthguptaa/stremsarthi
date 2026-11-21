@@ -15,7 +15,8 @@ vi.mock("@/components/shell/auth-provider", () => ({
   useAuth: () => auth,
   RequireToken: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
-vi.mock("@/components/ui/use-toast", () => ({ toast: vi.fn() }))
+const toastMock = vi.hoisted(() => vi.fn())
+vi.mock("@/components/ui/use-toast", () => ({ toast: toastMock }))
 
 import { ReportPage, ReportView } from "@/components/report/report-page"
 
@@ -93,22 +94,66 @@ describe("ReportView", () => {
     expect(within(screen.getByTestId("report-categories")).getByText("चेहरा")).toBeTruthy()
   })
 
-  it("downloads the sanitised JSON and prints", async () => {
-    const created: Blob[] = []
-    URL.createObjectURL = vi.fn((b: Blob) => (created.push(b), "blob:x")) as unknown as typeof URL.createObjectURL
-    URL.revokeObjectURL = vi.fn()
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
-    const print = vi.fn()
-    vi.stubGlobal("print", print)
+  describe("export", () => {
+    const created: { blob: Blob; name: string }[] = []
+    let click: ReturnType<typeof vi.spyOn>
+    beforeEach(() => {
+      created.length = 0
+      URL.createObjectURL = vi.fn((b: Blob) => (created.push({ blob: b, name: "" }), "blob:x")) as unknown as typeof URL.createObjectURL
+      URL.revokeObjectURL = vi.fn()
+      click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+        created[created.length - 1].name = this.download
+      })
+    })
+
+    it("downloads the server's JSON export as a file", async () => {
+      fetchMock.mockResolvedValue(new Response('{"schema_version":1,"session_id":"sess-abc_123"}', { status: 200 }))
+      renderIn(<ReportView report={report} />)
+      await userEvent.setup().click(screen.getByRole("button", { name: /Download JSON/ }))
+      await waitFor(() => expect(click).toHaveBeenCalledTimes(1))
+      expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/report\/sess-abc_123\/export\?format=json$/)
+      expect(created[0].name).toBe("stream-sarthi-report-sess-abc_123.json")
+      expect(JSON.parse(await created[0].blob.text()).session_id).toBe("sess-abc_123")
+    })
+
+    it("downloads the HTML export", async () => {
+      fetchMock.mockResolvedValue(new Response("<html></html>", { status: 200 }))
+      renderIn(<ReportView report={report} />)
+      await userEvent.setup().click(screen.getByRole("button", { name: /printable page/ }))
+      await waitFor(() => expect(click).toHaveBeenCalledTimes(1))
+      expect(fetchMock.mock.calls[0][0]).toMatch(/format=html$/)
+      expect(created[0].name).toBe("stream-sarthi-report-sess-abc_123.html")
+    })
+
+    it("saves the cleaned JSON from the page when the server cannot be reached", async () => {
+      fetchMock.mockRejectedValue(new TypeError("down"))
+      renderIn(<ReportView report={report} />)
+      await userEvent.setup().click(screen.getByRole("button", { name: /Download JSON/ }))
+      await waitFor(() => expect(click).toHaveBeenCalledTimes(1))
+      expect(JSON.parse(await created[0].blob.text()).timeline).toHaveLength(4)
+    })
+
+    it("says so, and saves nothing, when the server refuses the download", async () => {
+      fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: "not_found" }), { status: 404 }))
+      renderIn(<ReportView report={report} />)
+      await userEvent.setup().click(screen.getByRole("button", { name: /Download JSON/ }))
+      await waitFor(() => expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })))
+      expect(click).not.toHaveBeenCalled()
+    })
+
+    it("prints", async () => {
+      const print = vi.fn()
+      vi.stubGlobal("print", print)
+      renderIn(<ReportView report={report} />)
+      await userEvent.setup().click(screen.getByRole("button", { name: /Print or save as PDF/ }))
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("explains known server notes and shows the live level in words", () => {
     renderIn(<ReportView report={report} />)
-    const user = userEvent.setup()
-    await user.click(screen.getByRole("button", { name: /Download JSON/ }))
-    expect(click).toHaveBeenCalledTimes(1)
-    const text = await created[0].text()
-    expect(JSON.parse(text).session_id).toBe("sess-abc_123")
-    await user.click(screen.getByRole("button", { name: /Print or save as PDF/ }))
-    expect(print).toHaveBeenCalledTimes(1)
-    click.mockRestore()
+    expect(screen.getByTestId("report-notes").textContent).toContain("still live, so this report is partial")
+    expect(screen.getByText("Warning")).toBeTruthy() // risk max_level "warn"
   })
 })
 

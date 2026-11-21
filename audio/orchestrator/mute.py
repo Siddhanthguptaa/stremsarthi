@@ -15,6 +15,8 @@ from contracts.speech import PiiSpan, TranscriptWindow, Word
 NUMBER_WORDS = frozenset(
     """zero oh one two three four five six seven eight nine ten double triple
     shunya ek do teen char chaar paanch panch chhe chhah che saat sat aath ath nau das sau hazaar hazar lakh dabal tripal
+    ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen
+    twenty thirty forty fourty fifty sixty seventy eighty ninety
     sonne ondu eradu mooru naalku aidu aaru elu entu ombattu poojyam onru irandu moondru naangu ainthu ezhu ettu onbathu
     sunna okati rendu moodu naalugu enimidi tommidi shunyo dui tin choy shat aat noy
     शून्य ज़ीरो एक दो तीन चार पांच पाँच छह छः छे सात आठ नौ दस सौ हज़ार हजार लाख डबल ट्रिपल

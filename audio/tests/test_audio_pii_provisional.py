@@ -189,3 +189,59 @@ def test_span_ending_on_the_marker_waits_for_the_handle():
 def test_letter_word_helper_and_marker_words():
     assert is_letter_word("D") and not is_letter_word("do") and not is_letter_word("5")
     assert {"at", "rate", "of"} <= AT_WORDS
+
+
+# ------------------------------------------------------------------ red-team fixes
+def test_letter_for_word_spelling_is_one_letter():
+    toks = prepare(words("m for mango r for rose t for tiger two"))
+    assert [t.text for t in toks] == ["mrt", "two"]
+    (r,) = id_runs(toks)
+    assert r.letters == 3 and r.digits == 1
+    assert [s.category for s in spans("m for mango r for rose t for tiger two")] == [
+        Category.SPOKEN_OTHER_PII
+    ]
+
+
+def test_for_after_a_non_matching_word_is_left_alone():
+    assert [t.text for t in prepare(words("m for tiger"))] == ["m", "for", "tiger"]
+
+
+def test_english_two_digit_number_words_form_a_run():
+    runs = number_runs(prepare(words("ninety eight seventy six fifty four")))
+    assert [r.digits for r in runs] == ["987654"]
+    assert covered_words("ninety eight seventy six fifty four") == [
+        "ninety",
+        "eight",
+        "seventy",
+        "six",
+        "fifty",
+        "four",
+    ]
+    assert [r.digits for r in number_runs(prepare(words("twenty thirteen")))] == ["2013"]
+    assert spans("it took twenty five minutes") == []  # one pair alone is a quantity
+
+
+def test_digit_groups_separated_by_long_pauses_stay_one_run():
+    ws = [*words("nau aath", 0.0), *words("saat chhe", 2.5), *words("paanch char", 5.0)]
+    runs = number_runs(prepare(ws), gap_s=2.0)
+    assert [r.digits for r in runs] == ["987654"]
+    far = [*words("nau aath", 0.0), *words("saat chhe", 4.0)]
+    assert len(number_runs(prepare(far), gap_s=2.0)) == 2
+
+
+def test_carry_bridges_a_pause_of_one_and_a_half_seconds():
+    ws = [Word("nau", 1.0, 1.3, False, 1), Word("aath", 2.8, 3.1, False, 2)]
+    win_ = TranscriptWindow(tuple(ws), 1.0, 3.1, 1)
+    (s,) = SpanPlanner().leading_numbers(Carry(1.3, Category.SPOKEN_PHONE, 0.9), win_)
+    assert s.pts_start == pytest.approx(2.8)
+
+
+def test_two_misheard_digits_in_a_row_are_bridged_but_three_are_not():
+    assert [r.digits for r in number_runs(prepare(words("nau aath kya kuch saat chhe")))] == ["98??76"]
+    assert len(number_runs(prepare(words("nau aath kya kuch bhi saat chhe")))) == 2
+
+
+def test_three_letters_make_a_spelling_and_two_do_with_a_cue():
+    assert [s.category for s in spans("q w z")] == [Category.SPOKEN_OTHER_PII]
+    assert spans("q w") == []
+    assert [s.category for s in spans("gpay karo q w")] == [Category.SPOKEN_OTHER_PII]

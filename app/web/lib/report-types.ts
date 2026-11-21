@@ -53,6 +53,8 @@ export interface SafetyReport {
   profile: string | null
   delay_seconds: number | null
   totals: {
+    /** All events (the timeline itself may be cut at 10,000). */
+    events: number
     by_category: Record<string, ReportCategoryTotal>
     by_action: Record<string, number>
     by_modality: Record<string, number>
@@ -91,7 +93,7 @@ export function safeCode(value: unknown, max = MAX_CODE): string {
   if (typeof value !== "string") return ""
   const v = value.trim()
   if (v.length === 0 || v.length > max) return ""
-  return /^[A-Za-z0-9_.:\-/ ]+$/.test(v) && !looksEncoded(v) ? v : ""
+  return /^[A-Za-z0-9_.:+\-/ ]+$/.test(v) && !looksEncoded(v) ? v : ""
 }
 
 /** Long unbroken runs of base64/hex characters (an embedded image or a secret), or a data URI. */
@@ -193,7 +195,7 @@ function deriveTotals(timeline: readonly ReportEvent[]): SafetyReport["totals"] 
   }
   const by_category: Record<string, ReportCategoryTotal> = {}
   for (const [k, s] of Object.entries(sums)) by_category[k] = { count: s.n, mean_confidence: s.n ? s.total / s.n : 0 }
-  return { by_category, by_action, by_modality }
+  return { events: timeline.length, by_category, by_action, by_modality }
 }
 
 function parseTotals(raw: unknown, timeline: readonly ReportEvent[]): SafetyReport["totals"] {
@@ -203,7 +205,12 @@ function parseTotals(raw: unknown, timeline: readonly ReportEvent[]): SafetyRepo
     const code = safeCode(key)
     if (code && isObj(v)) by_category[code] = { count: count(v.count), mean_confidence: unit(v.mean_confidence) }
   }
-  return { by_category, by_action: countMap(raw.by_action), by_modality: countMap(raw.by_modality) }
+  return {
+    events: count(raw.events) || timeline.length,
+    by_category,
+    by_action: countMap(raw.by_action),
+    by_modality: countMap(raw.by_modality),
+  }
 }
 
 /**

@@ -272,8 +272,12 @@ def test_empty_transcript_for_voiced_speech_is_muted_as_unverified_not_passed():
 
     t0, pipe, bus, end = run_virtual(main)
     spans = spans_of(bus)
-    assert spans and all(s.granularity == "failsafe" and s.category is Category.SPOKEN_UNVERIFIED for s in spans)
-    assert intervals_cover([(s.pts_start, s.pts_end) for s in spans], 0.0, end) == pytest.approx(end, abs=1e-6)
+    assert spans and all(
+        s.granularity == "failsafe" and s.category is Category.SPOKEN_UNVERIFIED for s in spans
+    )
+    assert intervals_cover([(s.pts_start, s.pts_end) for s in spans], 0.0, end) == pytest.approx(
+        end, abs=1e-6
+    )
     assert pipe.stats["thin_transcript"] == pipe.stats["voiced"] > 0
     for s in spans:  # decided as soon as the empty answer arrives: well inside the delay window
         assert s.completed_at <= t0 + s.pts_end - 0.1 + D - 0.3 + 1e-6

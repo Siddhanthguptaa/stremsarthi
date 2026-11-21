@@ -30,7 +30,7 @@ FAKES = {
 
 
 def fake_config(**kw) -> Config:
-    return Config(_env_file=None, delay_seconds=3.0, runtime={"modules": FAKES}, **kw)
+    return Config(_env_file=None, delay_seconds=3.0, runtime={"modules": FAKES, "extras": {}}, **kw)
 
 
 # ------------------------------------------------------------------ loading

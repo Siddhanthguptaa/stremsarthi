@@ -188,7 +188,17 @@ def collapse_for_words(toks: Sequence[Tok], max_gap_s: float = 0.6) -> list[Tok]
             and toks[i + 1].t0 - t.t1 < max_gap_s
             and toks[i + 2].t0 - toks[i + 1].t1 < max_gap_s
         ):
-            out.append(Tok(t.text, t.t0, toks[i + 2].t1, t.approx or toks[i + 2].approx, t.seg_id, t.widx0, toks[i + 2].widx1))
+            out.append(
+                Tok(
+                    t.text,
+                    t.t0,
+                    toks[i + 2].t1,
+                    t.approx or toks[i + 2].approx,
+                    t.seg_id,
+                    t.widx0,
+                    toks[i + 2].widx1,
+                )
+            )
             i += 3
         else:
             out.append(t)
@@ -260,6 +270,31 @@ def _digit_token(t: Tok, v: Vocab) -> bool:
     return digit_value(t.text, v) is not None or t.text in v.repeat or t.text in v.ninety
 
 
+def _bridge_len(toks: Sequence[Tok], i: int, last: int, v: Vocab, gap: float, singles: int) -> int:
+    """Number of short unknown tokens (1 or 2) starting at ``i`` that sit between the run's last token and the next
+    digit token, or 0. Connectors (``aur``) and long or widely spaced tokens never count."""
+    prev_t1 = toks[last].t1
+    for k in (
+        1,
+        2,
+    ):  # two in a row only inside a run that already has two digits: "ek baar fir ..." is not a number
+        if k == 2 and singles < 2:
+            return 0
+        j = i + k - 1
+        if j >= len(toks):
+            return 0
+        t = toks[j]
+        if t.t0 - prev_t1 >= gap or t.t1 - t.t0 > BRIDGE_MAX_S or t.text in BRIDGE_STOP:
+            return 0
+        if digit_value(t.text, v) is not None or t.text in v.repeat or t.text in v.compound:
+            return 0
+        nxt = toks[j + 1] if j + 1 < len(toks) else None
+        if nxt is not None and _digit_token(nxt, v) and nxt.t0 - t.t1 < gap:
+            return k
+        prev_t1 = t.t1
+    return 0
+
+
 def number_runs(toks: Sequence[Tok], gap_s: float = 1.0, vocab: Vocab | None = None) -> list[NumRun]:
     """Maximal runs of number tokens whose gaps are below ``gap_s`` (a run continues across segments).
 
@@ -328,18 +363,11 @@ def number_runs(toks: Sequence[Tok], gap_s: float = 1.0, vocab: Vocab | None = N
                 )
                 i += 1
                 continue
-            if (
-                cur
-                and i + 1 < n
-                and t.t0 - toks[cur[-1]].t1 < gap_s * 0.6
-                and t.t1 - t.t0 <= BRIDGE_MAX_S
-                and t.text not in BRIDGE_STOP
-                and _digit_token(toks[i + 1], v)
-                and toks[i + 1].t0 - t.t1 < gap_s * 0.6
-            ):  # mis-heard digit between two digits: keep the run whole
-                cur_digits.append("?")
-                cur.append(i)
-                i += 1
+            skip = _bridge_len(toks, i, cur[-1], v, min(gap_s, 1.0) * 0.6, singles) if cur else 0
+            if skip:  # one or two mis-heard digits between two digits: keep the run whole
+                cur_digits.extend("?" * skip)
+                cur.extend(range(i, i + skip))
+                i += skip
                 continue
             close()
             i += 1

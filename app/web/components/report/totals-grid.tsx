@@ -35,7 +35,7 @@ function CountList({ title, rows }: { title: string; rows: { key: string; label:
 export function TotalsGrid({ report, span }: { report: SafetyReport; span: Span }) {
   const x = useReportText()
   const rows = categoryRows(report)
-  const events = report.timeline.length
+  const events = report.totals.events
   const failsafe = (report.failsafe.protect_seconds ?? 0) + (report.failsafe.audio_failsafe_seconds ?? 0)
   return (
     <Card>

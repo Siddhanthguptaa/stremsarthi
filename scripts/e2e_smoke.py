@@ -206,8 +206,15 @@ def main() -> int:
             check("whoami streamer", cl.get("/api/auth/whoami").status_code in (200, 404))
 
             # ---- (2) start with spawning on
-            r = cl.post("/api/session/start", json={"destinations": [], "rehearsal": True, "delay_seconds": args.delay})
-            check("POST /api/session/start (rehearsal, delay %.1f)" % args.delay, r.status_code == 200, f"{r.status_code} {mask(r.text)[:120]}")
+            r = cl.post(
+                "/api/session/start",
+                json={"destinations": [], "rehearsal": True, "delay_seconds": args.delay},
+            )
+            check(
+                f"POST /api/session/start (rehearsal, delay {args.delay:.1f})",
+                r.status_code == 200,
+                f"{r.status_code} {mask(r.text)[:120]}",
+            )
             if r.status_code != 200:
                 return 1
             sid = r.json()["session_id"]
@@ -223,12 +230,22 @@ def main() -> int:
                 if eng.get("state") in ("exited", "failed"):
                     break
                 time.sleep(1.0)
-            check("engine heartbeat ready (waiting_ingest)", ready, f"{time.monotonic() - t0:.0f}s state={hs.get('state')}")
+            check(
+                "engine heartbeat ready (waiting_ingest)",
+                ready,
+                f"{time.monotonic() - t0:.0f}s state={hs.get('state')}",
+            )
             result["health_ready"] = {k: hs.get(k) for k in ("state", "ready", "engine", "chat")}
             chat = hs.get("chat") or {}
-            check("chat disabled path clean", chat.get("enabled") is False and chat.get("process") == "disabled", json.dumps(chat))
+            check(
+                "chat disabled path clean",
+                chat.get("enabled") is False and chat.get("process") == "disabled",
+                json.dumps(chat),
+            )
             if not ready:
-                print("engine log tail:\n" + "\n".join(engine_log.read_text(errors="ignore").splitlines()[-25:]))
+                print(
+                    "engine log tail:\n" + "\n".join(engine_log.read_text(errors="ignore").splitlines()[-25:])
+                )
                 return 1
             kids = descendants(api.pid)
             result["children_started"] = len(kids)
@@ -243,10 +260,17 @@ def main() -> int:
             check("GET /api/pairing", pr.status_code == 200, str(pr.status_code))
             pj = pr.json()
             rtmp_url, srt_url = pj["rtmp"]["url"], pj["srt"]["url"]
-            check("pairing carries the configured ports", f":{ports['rtmp']}/" in rtmp_url and f":{ports['srt']}?" in srt_url)
+            check(
+                "pairing carries the configured ports",
+                f":{ports['rtmp']}/" in rtmp_url and f":{ports['srt']}?" in srt_url,
+            )
             check("pairing has no stream key", "key" not in json.dumps(pj).lower().replace("streamid", ""))
             se = cl.get("/api/session").json()
-            check("GET /api/session ingest urls", bool(se["ingest"]["srt_url"]) and bool(se["ingest"]["rtmp_url"]), f"state={se['state']}")
+            check(
+                "GET /api/session ingest urls",
+                bool(se["ingest"]["srt_url"]) and bool(se["ingest"]["rtmp_url"]),
+                f"state={se['state']}",
+            )
 
             script = "card_static:12,card_moving:12,card_static:12,card_absent:9"
             dur = args.duration
@@ -272,7 +296,10 @@ def main() -> int:
             # ---- (4) exercise the API while it runs
             ws_out: dict[str, Any] = {}
             ws_thread = threading.Thread(
-                target=lambda: asyncio.run(ws_collect(f"ws://127.0.0.1:{api_port}/api/ws", token, 12.0, ws_out)), name="ws"
+                target=lambda: asyncio.run(
+                    ws_collect(f"ws://127.0.0.1:{api_port}/api/ws", token, 12.0, ws_out)
+                ),
+                name="ws",
             )
 
             def at(offset: float) -> None:
@@ -284,7 +311,13 @@ def main() -> int:
             ses = cl.get("/api/session").json()
             check("session state live while publishing", ses["state"] == "live", ses["state"])
             risk = cl.get("/api/risk")
-            check("GET /api/risk", risk.status_code == 200, json.dumps({k: risk.json().get(k) for k in ("level", "meter_level", "score")}) if risk.status_code == 200 else str(risk.status_code))
+            check(
+                "GET /api/risk",
+                risk.status_code == 200,
+                json.dumps({k: risk.json().get(k) for k in ("level", "meter_level", "score")})
+                if risk.status_code == 200
+                else str(risk.status_code),
+            )
             al = cl.get("/api/alerts")
             check("GET /api/alerts", al.status_code == 200, str(al.status_code))
             ev = cl.get("/api/events/summary")
@@ -301,10 +334,18 @@ def main() -> int:
             check("POST /api/hold release", rr.status_code == 200, str(rr.status_code))
             at(28.0)
             pr1 = cl.patch("/api/config", json={"categories": {"plate": {"enabled": False}}})
-            check("PATCH /api/config category off", pr1.status_code == 200 and pr1.json()["categories"]["plate"]["enabled"] is False, str(pr1.status_code))
+            check(
+                "PATCH /api/config category off",
+                pr1.status_code == 200 and pr1.json()["categories"]["plate"]["enabled"] is False,
+                str(pr1.status_code),
+            )
             time.sleep(1.0)
             pr2 = cl.patch("/api/config", json={"categories": {"plate": {"enabled": True}}})
-            check("PATCH /api/config category on", pr2.status_code == 200 and pr2.json()["categories"]["plate"]["enabled"] is True, str(pr2.status_code))
+            check(
+                "PATCH /api/config category on",
+                pr2.status_code == 200 and pr2.json()["categories"]["plate"]["enabled"] is True,
+                str(pr2.status_code),
+            )
 
             # wait for the sender, then the delay window
             sender.wait(timeout=dur + 60)
@@ -318,17 +359,34 @@ def main() -> int:
             else:
                 st, cs = stamp_stats(res), card_stats(res.frames)
                 live = [f for f in res.frames if f.kind == "live"]
-                check("egress frames flowing", len(live) > 100, f"live={len(live)} decoded={st['decoded']} err={res.errors[:1]}")
-                check("card masked at the egress", cs["visible_frames"] > 30 and cs["leaked_frames"] == 0,
-                      f"visible={cs['visible_frames']} leaked={cs['leaked_frames']} recall={cs['unreadable_recall']}")
+                check(
+                    "egress frames flowing",
+                    len(live) > 100,
+                    f"live={len(live)} decoded={st['decoded']} err={res.errors[:1]}",
+                )
+                check(
+                    "card masked at the egress",
+                    cs["visible_frames"] > 30 and cs["leaked_frames"] == 0,
+                    f"visible={cs['visible_frames']} leaked={cs['leaked_frames']} recall={cs['unreadable_recall']}",
+                )
                 check("hold produced a slate", st["slate_frames"] > 5, f"slate_frames={st['slate_frames']}")
                 delays = sorted(f.delay_s for f in live if getattr(f, "delay_s", None) is not None)
                 if delays:
-                    result["delay_p50_p95_s"] = [round(delays[len(delays) // 2], 2), round(delays[int(len(delays) * 0.95)], 2)]
-                result["tap"] = {"stamp": st, "card": {k: cs[k] for k in ("visible_frames", "leaked_frames", "unreadable_recall")}}
+                    result["delay_p50_p95_s"] = [
+                        round(delays[len(delays) // 2], 2),
+                        round(delays[int(len(delays) * 0.95)], 2),
+                    ]
+                result["tap"] = {
+                    "stamp": st,
+                    "card": {k: cs[k] for k in ("visible_frames", "leaked_frames", "unreadable_recall")},
+                }
             result["ws"] = ws_out
             c = ws_out.get("counts", {})
-            check("websocket delivered events", sum(v for k, v in c.items() if not k.startswith("ctl:")) > 0, json.dumps(c))
+            check(
+                "websocket delivered events",
+                sum(v for k, v in c.items() if not k.startswith("ctl:")) > 0,
+                json.dumps(c),
+            )
 
             # ---- (5) stop, report
             ts = time.monotonic()
@@ -342,7 +400,12 @@ def main() -> int:
                 time.sleep(0.5)
             check("session ended (drained)", final == "ended", f"{final} after {time.monotonic() - ts:.1f}s")
             procs = cl.get("/api/session").json()["processes"]
-            check("engine stopped by SIGTERM, not killed", (procs.get("engine") or {}).get("state") == "stopped" and (procs.get("engine") or {}).get("exit_code") in (0, -15), json.dumps(procs.get("engine")))
+            check(
+                "engine stopped by SIGTERM, not killed",
+                (procs.get("engine") or {}).get("state") == "stopped"
+                and (procs.get("engine") or {}).get("exit_code") in (0, -15),
+                json.dumps(procs.get("engine")),
+            )
             left = [p for p in kids if alive(p)]
             check("no child process left", not left, f"left={left}")
             rep = cl.get(f"/api/report/{sid}")
@@ -357,28 +420,45 @@ def main() -> int:
             pt = cl.get(f"/api/report/{sid}/printable")
             ex = cl.get(f"/api/report/{sid}/export", params={"format": "json"})
             exh = cl.get(f"/api/report/{sid}/export", params={"format": "html"})
-            check("printable + export json/html", pt.status_code == 200 and ex.status_code == 200 and exh.status_code == 200, f"{pt.status_code} {ex.status_code} {exh.status_code}")
+            check(
+                "printable + export json/html",
+                pt.status_code == 200 and ex.status_code == 200 and exh.status_code == 200,
+                f"{pt.status_code} {ex.status_code} {exh.status_code}",
+            )
             allbody = blob + pt.text + ex.text + exh.text
-            bad = [n for n, pat in {
-                "image": r"data:image|base64,|\.png|\.jpe?g",
-                "digits12": r"\b\d{4}\s?\d{4}\s?\d{4}\b",
-                "phone": r"(?<!\d)[6-9]\d{9}(?!\d)",
-                "email": r"[\w.+-]+@[\w-]+\.[\w.]+",
-                "upi": r"upi://|@oksbi|@okaxis|@ybl",
-                "script": r"<script",
-                "login": r"(pass=|streamid=publish)",
-            }.items() if re.search(pat, allbody)]
+            bad = [
+                n
+                for n, pat in {
+                    "image": r"data:image|base64,|\.png|\.jpe?g",
+                    "digits12": r"\b\d{4}\s?\d{4}\s?\d{4}\b",
+                    "phone": r"(?<!\d)[6-9]\d{9}(?!\d)",
+                    "email": r"[\w.+-]+@[\w-]+\.[\w.]+",
+                    "upi": r"upi://|@oksbi|@okaxis|@ybl",
+                    "script": r"<script",
+                    "login": r"(pass=|streamid=publish)",
+                }.items()
+                if re.search(pat, allbody)
+            ]
             ctx = ""
-            if "phone" in bad:  # show the neighbourhood with digits blanked, to tell a real number from a counter
+            if (
+                "phone" in bad
+            ):  # show the neighbourhood with digits blanked, to tell a real number from a counter
                 m = re.search(r"(?<!\d)[6-9]\d{9}(?!\d)", allbody)
                 if m:
-                    ctx = re.sub(r"\d", "#", allbody[max(0, m.start() - 50) : m.end() + 20]).replace("
-", " ")
-            check("report privacy scan (no image, PII, script, login)", not bad, "hits=" + ",".join(bad) + (f" ctx={ctx!r}" if ctx else ""))
+                    ctx = re.sub(r"\d", "#", allbody[max(0, m.start() - 50) : m.end() + 20]).replace(
+                        chr(10), " "
+                    )
+            check(
+                "report privacy scan (no image, PII, script, login)",
+                not bad,
+                "hits=" + ",".join(bad) + (f" ctx={ctx!r}" if ctx else ""),
+            )
 
             # ---- engine log: exception class names and warning codes only (no message text)
             text = engine_log.read_text(errors="ignore")
-            warn = [ln for ln in text.splitlines() if " WARNING " in ln or " ERROR " in ln or "Traceback" in ln]
+            warn = [
+                ln for ln in text.splitlines() if " WARNING " in ln or " ERROR " in ln or "Traceback" in ln
+            ]
             classes = sorted(set(re.findall(r"\b([A-Z][A-Za-z]+(?:Error|Exception))\b", text)))
             result["engine_warnings"] = [mask(w)[:200] for w in warn[:40]]
             result["engine_exception_classes"] = classes

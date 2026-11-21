@@ -1,0 +1,4194 @@
+{
+  "attacks": {
+    "control": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "control",
+      "params": {
+        "aadhaar": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "phone": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "qr": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "distance_card": {
+      "checked": 3,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.5615
+        ],
+        "k": 0,
+        "n": 3,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "distance",
+      "params": {
+        "w06": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "distance_qr": {
+      "checked": 3,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.5615
+        ],
+        "k": 0,
+        "n": 3,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "distance",
+      "params": {
+        "w06": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "enter_leave_card": {
+      "checked": 17,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.1843
+        ],
+        "k": 0,
+        "n": 17,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.4815,
+          0.7414
+        ],
+        "k": 31,
+        "n": 50,
+        "rate": 0.62,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "enter_leave",
+      "params": {
+        "edge_hold35": {
+          "checked": 5,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.4345
+            ],
+            "k": 0,
+            "n": 5,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.7961,
+              1.0
+            ],
+            "k": 15,
+            "n": 15,
+            "rate": 1.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.7961,
+              1.0
+            ],
+            "k": 15,
+            "n": 15,
+            "rate": 1.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 5
+        },
+        "fast": {
+          "checked": 12,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.2425
+            ],
+            "k": 0,
+            "n": 12,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.3047,
+              0.6181
+            ],
+            "k": 16,
+            "n": 35,
+            "rate": 0.45714285714285713,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.3047,
+              0.6181
+            ],
+            "k": 16,
+            "n": 35,
+            "rate": 0.45714285714285713
+          },
+          "src_readable": 4,
+          "src_unreadable": 2
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.4815,
+          0.7414
+        ],
+        "k": 31,
+        "n": 50,
+        "rate": 0.62
+      },
+      "src_readable": 4,
+      "src_unreadable": 7,
+      "tags": {}
+    },
+    "enter_leave_qr": {
+      "checked": 11,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2588
+        ],
+        "k": 0,
+        "n": 11,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.7928,
+          0.9821
+        ],
+        "k": 29,
+        "n": 31,
+        "rate": 0.9354838709677419,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "enter_leave",
+      "params": {
+        "fast": {
+          "checked": 11,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.2588
+            ],
+            "k": 0,
+            "n": 11,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.7928,
+              0.9821
+            ],
+            "k": 29,
+            "n": 31,
+            "rate": 0.9354838709677419,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.7928,
+              0.9821
+            ],
+            "k": 29,
+            "n": 31,
+            "rate": 0.9354838709677419
+          },
+          "src_readable": 0,
+          "src_unreadable": 10
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.7928,
+          0.9821
+        ],
+        "k": 29,
+        "n": 31,
+        "rate": 0.9354838709677419
+      },
+      "src_readable": 0,
+      "src_unreadable": 10,
+      "tags": {}
+    },
+    "face_edge": {
+      "checked": 0,
+      "confirmed": {
+        "ci": [
+          0.0,
+          1.0
+        ],
+        "k": 0,
+        "n": 0,
+        "rate": null
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "face",
+      "params": {
+        "edge50": {
+          "checked": 0,
+          "confirmed": {
+            "ci": [
+              0.0,
+              1.0
+            ],
+            "k": 0,
+            "n": 0,
+            "rate": null
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "face_occluded": {
+      "checked": 0,
+      "confirmed": {
+        "ci": [
+          0.0,
+          1.0
+        ],
+        "k": 0,
+        "n": 0,
+        "rate": null
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "face",
+      "params": {
+        "mask": {
+          "checked": 0,
+          "confirmed": {
+            "ci": [
+              0.0,
+              1.0
+            ],
+            "k": 0,
+            "n": 0,
+            "rate": null
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "sunglasses": {
+          "checked": 0,
+          "confirmed": {
+            "ci": [
+              0.0,
+              1.0
+            ],
+            "k": 0,
+            "n": 0,
+            "rate": null
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "face_small": {
+      "checked": 0,
+      "confirmed": {
+        "ci": [
+          0.0,
+          1.0
+        ],
+        "k": 0,
+        "n": 0,
+        "rate": null
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "face",
+      "params": {
+        "w10": {
+          "checked": 0,
+          "confirmed": {
+            "ci": [
+              0.0,
+              1.0
+            ],
+            "k": 0,
+            "n": 0,
+            "rate": null
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "face_turned": {
+      "checked": 0,
+      "confirmed": {
+        "ci": [
+          0.0,
+          1.0
+        ],
+        "k": 0,
+        "n": 0,
+        "rate": null
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "face",
+      "params": {
+        "yaw65": {
+          "checked": 0,
+          "confirmed": {
+            "ci": [
+              0.0,
+              1.0
+            ],
+            "k": 0,
+            "n": 0,
+            "rate": null
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "flash_card": {
+      "checked": 7,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3543
+        ],
+        "k": 0,
+        "n": 7,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1546
+        ],
+        "k": 0,
+        "n": 21,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "flash",
+      "params": {
+        "f15": {
+          "checked": 5,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.4345
+            ],
+            "k": 0,
+            "n": 5,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2039
+            ],
+            "k": 0,
+            "n": 15,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2039
+            ],
+            "k": 0,
+            "n": 15,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "f6": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1546
+        ],
+        "k": 0,
+        "n": 21,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {
+        "visible": {
+          "checked": 7,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.3543
+            ],
+            "k": 0,
+            "n": 7,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.1546
+            ],
+            "k": 0,
+            "n": 21,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.1546
+            ],
+            "k": 0,
+            "n": 21,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      }
+    },
+    "flash_qr": {
+      "checked": 2,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.6576
+        ],
+        "k": 0,
+        "n": 2,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0301,
+          0.5635
+        ],
+        "k": 1,
+        "n": 6,
+        "rate": 0.16666666666666666,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "flash",
+      "params": {
+        "f6": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0301,
+          0.5635
+        ],
+        "k": 1,
+        "n": 6,
+        "rate": 0.16666666666666666
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {
+        "visible": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      }
+    },
+    "frame_drops": {
+      "checked": 15,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2039
+        ],
+        "k": 0,
+        "n": 15,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.0432
+        ],
+        "k": 0,
+        "n": 85,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "frame_drops",
+      "params": {
+        "burst15": {
+          "checked": 15,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.2039
+            ],
+            "k": 0,
+            "n": 15,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.0787
+            ],
+            "k": 0,
+            "n": 45,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.0787
+            ],
+            "k": 0,
+            "n": 45,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "slots": {
+          "checked": 0,
+          "confirmed": {
+            "ci": [
+              0.0,
+              1.0
+            ],
+            "k": 0,
+            "n": 0,
+            "rate": null
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.0876
+            ],
+            "k": 0,
+            "n": 40,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.0876
+            ],
+            "k": 0,
+            "n": 40,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.0432
+        ],
+        "k": 0,
+        "n": 85,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "glare_card": {
+      "checked": 3,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.5615
+        ],
+        "k": 0,
+        "n": 3,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "glare",
+      "params": {
+        "s100": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "glare_qr": {
+      "checked": 3,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.5615
+        ],
+        "k": 0,
+        "n": 3,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "glare",
+      "params": {
+        "s95": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "mixed_script": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "mixed_script",
+      "params": {
+        "hi_deva_digits": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "mixed_in_number": {
+          "checked": 6,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.1759
+            ],
+            "k": 0,
+            "n": 18,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.1759
+            ],
+            "k": 0,
+            "n": 18,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "motion_pan_card": {
+      "checked": 10,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2775
+        ],
+        "k": 0,
+        "n": 10,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.8865,
+          1.0
+        ],
+        "k": 30,
+        "n": 30,
+        "rate": 1.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "motion",
+      "params": {
+        "v50": {
+          "checked": 10,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.2775
+            ],
+            "k": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.8865,
+              1.0
+            ],
+            "k": 30,
+            "n": 30,
+            "rate": 1.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.8865,
+              1.0
+            ],
+            "k": 30,
+            "n": 30,
+            "rate": 1.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 10
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.8865,
+          1.0
+        ],
+        "k": 30,
+        "n": 30,
+        "rate": 1.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 10,
+      "tags": {}
+    },
+    "motion_pan_qr": {
+      "checked": 10,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2775
+        ],
+        "k": 0,
+        "n": 10,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.8865,
+          1.0
+        ],
+        "k": 30,
+        "n": 30,
+        "rate": 1.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "motion",
+      "params": {
+        "v50": {
+          "checked": 10,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.2775
+            ],
+            "k": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.8865,
+              1.0
+            ],
+            "k": 30,
+            "n": 30,
+            "rate": 1.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.8865,
+              1.0
+            ],
+            "k": 30,
+            "n": 30,
+            "rate": 1.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 10
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.8865,
+          1.0
+        ],
+        "k": 30,
+        "n": 30,
+        "rate": 1.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 10,
+      "tags": {}
+    },
+    "motion_shake_card": {
+      "checked": 10,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2775
+        ],
+        "k": 0,
+        "n": 10,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0346,
+          0.2562
+        ],
+        "k": 3,
+        "n": 30,
+        "rate": 0.1,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "motion",
+      "params": {
+        "amp40": {
+          "checked": 10,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.2775
+            ],
+            "k": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0346,
+              0.2562
+            ],
+            "k": 3,
+            "n": 30,
+            "rate": 0.1,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0346,
+              0.2562
+            ],
+            "k": 3,
+            "n": 30,
+            "rate": 0.1
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0346,
+          0.2562
+        ],
+        "k": 3,
+        "n": 30,
+        "rate": 0.1
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "occlusion_card": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0301,
+          0.5635
+        ],
+        "k": 1,
+        "n": 6,
+        "rate": 0.16666666666666666
+      },
+      "frames": {
+        "ci": [
+          0.2903,
+          0.7097
+        ],
+        "k": 9,
+        "n": 18,
+        "rate": 0.5,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "occlusion",
+      "params": {
+        "occ40_left": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0615,
+              0.7923
+            ],
+            "k": 1,
+            "n": 3,
+            "rate": 0.3333333333333333
+          },
+          "frames": {
+            "ci": [
+              0.7008,
+              1.0
+            ],
+            "k": 9,
+            "n": 9,
+            "rate": 1.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.7008,
+              1.0
+            ],
+            "k": 9,
+            "n": 9,
+            "rate": 1.0
+          },
+          "src_readable": 1,
+          "src_unreadable": 1
+        },
+        "occ60_bottom": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.2903,
+          0.7097
+        ],
+        "k": 9,
+        "n": 18,
+        "rate": 0.5
+      },
+      "src_readable": 1,
+      "src_unreadable": 1,
+      "tags": {}
+    },
+    "occlusion_qr": {
+      "checked": 3,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.5615
+        ],
+        "k": 0,
+        "n": 3,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "occlusion",
+      "params": {
+        "occ30_bottom": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "photo_of_photo": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3903
+        ],
+        "k": 0,
+        "n": 6,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "photo_of_photo",
+      "params": {
+        "card": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "qr": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "scene_cut_card": {
+      "checked": 20,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "k": 0,
+        "n": 20,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0092,
+          0.1136
+        ],
+        "k": 2,
+        "n": 60,
+        "rate": 0.03333333333333333,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "scene_cut",
+      "params": {
+        "every10": {
+          "checked": 20,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.1611
+            ],
+            "k": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0092,
+              0.1136
+            ],
+            "k": 2,
+            "n": 60,
+            "rate": 0.03333333333333333,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0092,
+              0.1136
+            ],
+            "k": 2,
+            "n": 60,
+            "rate": 0.03333333333333333
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0092,
+          0.1136
+        ],
+        "k": 2,
+        "n": 60,
+        "rate": 0.03333333333333333
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {
+        "cut+0": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+1": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+2": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+3": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+4": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+5": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "steady": {
+          "checked": 8,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.3244
+            ],
+            "k": 0,
+            "n": 8,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.138
+            ],
+            "k": 0,
+            "n": 24,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.138
+            ],
+            "k": 0,
+            "n": 24,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      }
+    },
+    "scene_cut_qr": {
+      "checked": 20,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "k": 0,
+        "n": 20,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0029,
+          0.0886
+        ],
+        "k": 1,
+        "n": 60,
+        "rate": 0.016666666666666666,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "scene_cut",
+      "params": {
+        "every10": {
+          "checked": 20,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.1611
+            ],
+            "k": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0029,
+              0.0886
+            ],
+            "k": 1,
+            "n": 60,
+            "rate": 0.016666666666666666,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0029,
+              0.0886
+            ],
+            "k": 1,
+            "n": 60,
+            "rate": 0.016666666666666666
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0029,
+          0.0886
+        ],
+        "k": 1,
+        "n": 60,
+        "rate": 0.016666666666666666
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {
+        "cut+0": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0301,
+              0.5635
+            ],
+            "k": 1,
+            "n": 6,
+            "rate": 0.16666666666666666
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+1": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+2": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+3": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+4": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "cut+5": {
+          "checked": 2,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.6576
+            ],
+            "k": 0,
+            "n": 2,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "steady": {
+          "checked": 8,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.3244
+            ],
+            "k": 0,
+            "n": 8,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.138
+            ],
+            "k": 0,
+            "n": 24,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.138
+            ],
+            "k": 0,
+            "n": 24,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      }
+    },
+    "screen_of_screen": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3903
+        ],
+        "k": 0,
+        "n": 6,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "screens_of_screens",
+      "params": {
+        "card_strong": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "qr_mild": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "separators": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "separators",
+      "params": {
+        "all_spaced": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "words_en": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "zero_width": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "split_lines": {
+      "checked": 12,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2425
+        ],
+        "k": 0,
+        "n": 12,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.0964
+        ],
+        "k": 0,
+        "n": 36,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "split_lines",
+      "params": {
+        "phone_hyphen": {
+          "checked": 6,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.1759
+            ],
+            "k": 0,
+            "n": 18,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.1759
+            ],
+            "k": 0,
+            "n": 18,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "upi_at": {
+          "checked": 6,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.3903
+            ],
+            "k": 0,
+            "n": 6,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.1759
+            ],
+            "k": 0,
+            "n": 18,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.1759
+            ],
+            "k": 0,
+            "n": 18,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.0964
+        ],
+        "k": 0,
+        "n": 36,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "tilt_card": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3903
+        ],
+        "k": 0,
+        "n": 6,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "angle",
+      "params": {
+        "yaw50": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "yaw65": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "tilt_plate": {
+      "checked": 3,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.5615
+        ],
+        "k": 0,
+        "n": 3,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "angle",
+      "params": {
+        "yaw60": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "tilt_qr": {
+      "checked": 3,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.5615
+        ],
+        "k": 0,
+        "n": 3,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "angle",
+      "params": {
+        "yaw60": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    },
+    "unusual_fonts": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "group": "fonts",
+      "params": {
+        "hershey_script": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "spaced": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        },
+        "ubuntu_thin": {
+          "checked": 3,
+          "confirmed": {
+            "ci": [
+              0.0,
+              0.5615
+            ],
+            "k": 0,
+            "n": 3,
+            "rate": 0.0
+          },
+          "frames": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0,
+            "what": "leak = proxy or confirmed"
+          },
+          "proxy": {
+            "ci": [
+              0.0,
+              0.2992
+            ],
+            "k": 0,
+            "n": 9,
+            "rate": 0.0
+          },
+          "src_readable": 0,
+          "src_unreadable": 0
+        }
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0,
+      "tags": {}
+    }
+  },
+  "baseline_current": {
+    "attacks": {
+      "control": 0.0,
+      "distance_card": 0.0,
+      "distance_qr": 0.0,
+      "enter_leave_card": 0.62,
+      "enter_leave_qr": 0.9354838709677419,
+      "face_edge": 0.0,
+      "face_occluded": 0.0,
+      "face_small": 0.0,
+      "face_turned": 0.0,
+      "flash_card": 0.0,
+      "flash_qr": 0.16666666666666666,
+      "frame_drops": 0.0,
+      "glare_card": 0.0,
+      "glare_qr": 0.0,
+      "mixed_script": 0.0,
+      "motion_pan_card": 1.0,
+      "motion_pan_qr": 1.0,
+      "motion_shake_card": 0.1,
+      "occlusion_card": 0.5,
+      "occlusion_qr": 0.0,
+      "photo_of_photo": 0.0,
+      "scene_cut_card": 0.03333333333333333,
+      "scene_cut_qr": 0.016666666666666666,
+      "screen_of_screen": 0.0,
+      "separators": 0.0,
+      "split_lines": 0.0,
+      "tilt_card": 0.0,
+      "tilt_plate": 0.0,
+      "tilt_qr": 0.0,
+      "unusual_fonts": 0.0
+    },
+    "groups": {
+      "angle": 0.0,
+      "control": 0.0,
+      "distance": 0.0,
+      "enter_leave": 0.7407407407407407,
+      "face": 0.0,
+      "flash": 0.037037037037037035,
+      "fonts": 0.0,
+      "frame_drops": 0.0,
+      "glare": 0.0,
+      "mixed_script": 0.0,
+      "motion": 0.7,
+      "occlusion": 0.3333333333333333,
+      "photo_of_photo": 0.0,
+      "scene_cut": 0.025,
+      "screens_of_screens": 0.0,
+      "separators": 0.0,
+      "split_lines": 0.0
+    }
+  },
+  "empty": [],
+  "groups": {
+    "angle": {
+      "checked": 12,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2425
+        ],
+        "k": 0,
+        "n": 12,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.0964
+        ],
+        "k": 0,
+        "n": 36,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.0964
+        ],
+        "k": 0,
+        "n": 36,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "control": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "distance": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3903
+        ],
+        "k": 0,
+        "n": 6,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "enter_leave": {
+      "checked": 28,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.1206
+        ],
+        "k": 0,
+        "n": 28,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.636,
+          0.8237
+        ],
+        "k": 60,
+        "n": 81,
+        "rate": 0.7407407407407407,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.636,
+          0.8237
+        ],
+        "k": 60,
+        "n": 81,
+        "rate": 0.7407407407407407
+      },
+      "src_readable": 4,
+      "src_unreadable": 17
+    },
+    "face": {
+      "checked": 0,
+      "confirmed": {
+        "ci": [
+          0.0,
+          1.0
+        ],
+        "k": 0,
+        "n": 0,
+        "rate": null
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.0787
+        ],
+        "k": 0,
+        "n": 45,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.0787
+        ],
+        "k": 0,
+        "n": 45,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "flash": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0066,
+          0.1828
+        ],
+        "k": 1,
+        "n": 27,
+        "rate": 0.037037037037037035,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0066,
+          0.1828
+        ],
+        "k": 1,
+        "n": 27,
+        "rate": 0.037037037037037035
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "fonts": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "frame_drops": {
+      "checked": 15,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2039
+        ],
+        "k": 0,
+        "n": 15,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.0432
+        ],
+        "k": 0,
+        "n": 85,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.0432
+        ],
+        "k": 0,
+        "n": 85,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "glare": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3903
+        ],
+        "k": 0,
+        "n": 6,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "mixed_script": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "motion": {
+      "checked": 30,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.1135
+        ],
+        "k": 0,
+        "n": 30,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.5987,
+          0.7849
+        ],
+        "k": 63,
+        "n": 90,
+        "rate": 0.7,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.5987,
+          0.7849
+        ],
+        "k": 63,
+        "n": 90,
+        "rate": 0.7
+      },
+      "src_readable": 0,
+      "src_unreadable": 20
+    },
+    "occlusion": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0199,
+          0.435
+        ],
+        "k": 1,
+        "n": 9,
+        "rate": 0.1111111111111111
+      },
+      "frames": {
+        "ci": [
+          0.1864,
+          0.5218
+        ],
+        "k": 9,
+        "n": 27,
+        "rate": 0.3333333333333333,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.1864,
+          0.5218
+        ],
+        "k": 9,
+        "n": 27,
+        "rate": 0.3333333333333333
+      },
+      "src_readable": 1,
+      "src_unreadable": 1
+    },
+    "photo_of_photo": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3903
+        ],
+        "k": 0,
+        "n": 6,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "scene_cut": {
+      "checked": 40,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.0876
+        ],
+        "k": 0,
+        "n": 40,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0085,
+          0.0709
+        ],
+        "k": 3,
+        "n": 120,
+        "rate": 0.025,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0085,
+          0.0709
+        ],
+        "k": 3,
+        "n": 120,
+        "rate": 0.025
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "screens_of_screens": {
+      "checked": 6,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.3903
+        ],
+        "k": 0,
+        "n": 6,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1759
+        ],
+        "k": 0,
+        "n": 18,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "separators": {
+      "checked": 9,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2992
+        ],
+        "k": 0,
+        "n": 9,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.1246
+        ],
+        "k": 0,
+        "n": 27,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    },
+    "split_lines": {
+      "checked": 12,
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2425
+        ],
+        "k": 0,
+        "n": 12,
+        "rate": 0.0
+      },
+      "frames": {
+        "ci": [
+          0.0,
+          0.0964
+        ],
+        "k": 0,
+        "n": 36,
+        "rate": 0.0,
+        "what": "leak = proxy or confirmed"
+      },
+      "proxy": {
+        "ci": [
+          0.0,
+          0.0964
+        ],
+        "k": 0,
+        "n": 36,
+        "rate": 0.0
+      },
+      "src_readable": 0,
+      "src_unreadable": 0
+    }
+  },
+  "header": {
+    "cases_run": 46,
+    "command": "python -m eval.run redteam-video --quick",
+    "date": "2026-11-21",
+    "detectors": "cards=ok, faces=ok, plates=ok, screens=ok, text=ok, upi_qr=ok",
+    "exposed_in_frame": 0.25,
+    "exposed_side": 16.0,
+    "frames_scored": 727,
+    "git_rev": "178ffa40184e",
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 581.86"
+    },
+    "profile": "dev",
+    "readback": "zxing-cpp (QR) + RapidOCR (text)",
+    "readback_stride": 3,
+    "seconds": 517.2,
+    "seed": 1234,
+    "selection": "quick "
+  },
+  "limits": [
+    "Faces are scored by the coverage proxy only (no output-side face check); `face_turned` is a frontal portrait foreshortened by yaw, not a true profile view (no profile images are available).",
+    "The read-back is OCR (RapidOCR PP-OCR, Latin/Chinese model) and zxing; it under-reads Indic digits and stylised fonts, so for those attacks the proxy leak is the stronger signal and `src-unreadable` is expected.",
+    "Frame drops model a dropped frame as a lane run that does not happen on that capture slot; the engine's own sequencing under real drops is covered by the Phase 1/7 stream tests, not here.",
+    "Offline and single-process: lane latency is not applied (detector results are as fresh as the schedule allows), so real-time leaks caused by slow lanes are not visible here."
+  ],
+  "protect_by_attack": {
+    "control": 0,
+    "distance_card": 0,
+    "distance_qr": 0,
+    "enter_leave_card": 0,
+    "enter_leave_qr": 1,
+    "face_edge": 0,
+    "face_occluded": 0,
+    "face_small": 0,
+    "face_turned": 0,
+    "flash_card": 0,
+    "flash_qr": 0,
+    "frame_drops": 40,
+    "glare_card": 0,
+    "glare_qr": 0,
+    "mixed_script": 0,
+    "motion_pan_card": 0,
+    "motion_pan_qr": 0,
+    "motion_shake_card": 0,
+    "occlusion_card": 0,
+    "occlusion_qr": 0,
+    "photo_of_photo": 0,
+    "scene_cut_card": 0,
+    "scene_cut_qr": 0,
+    "screen_of_screen": 0,
+    "separators": 0,
+    "split_lines": 0,
+    "tilt_card": 0,
+    "tilt_plate": 0,
+    "tilt_qr": 0,
+    "unusual_fonts": 0
+  },
+  "ranked": [
+    {
+      "attack": "occlusion_card",
+      "confirmed": {
+        "ci": [
+          0.0615,
+          0.7923
+        ],
+        "k": 1,
+        "n": 3,
+        "rate": 0.3333333333333333
+      },
+      "group": "occlusion",
+      "kind": "confirmed",
+      "leak": {
+        "ci": [
+          0.7008,
+          1.0
+        ],
+        "k": 9,
+        "n": 9,
+        "rate": 1.0
+      },
+      "n": 9,
+      "param": "occ40_left",
+      "repro": "/tmp/ss_redteam_video/repro/occlusion_card.occ40_left.s1234/f000",
+      "worst": {
+        "case": "occlusion_card.occ40_left.s1234",
+        "cat": "aadhaar",
+        "cov": 0.495,
+        "frame": 0,
+        "j": 0,
+        "ro": "confirmed",
+        "tag": ""
+      }
+    },
+    {
+      "attack": "motion_pan_card",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2775
+        ],
+        "k": 0,
+        "n": 10,
+        "rate": 0.0
+      },
+      "group": "motion",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.8865,
+          1.0
+        ],
+        "k": 30,
+        "n": 30,
+        "rate": 1.0
+      },
+      "n": 30,
+      "param": "v50",
+      "repro": "/tmp/ss_redteam_video/repro/motion_pan_card.v50.s1234/f001",
+      "worst": {
+        "case": "motion_pan_card.v50.s1234",
+        "cat": "pan",
+        "cov": 0.0,
+        "frame": 1,
+        "j": 0,
+        "ro": null,
+        "tag": ""
+      }
+    },
+    {
+      "attack": "motion_pan_qr",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2775
+        ],
+        "k": 0,
+        "n": 10,
+        "rate": 0.0
+      },
+      "group": "motion",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.8865,
+          1.0
+        ],
+        "k": 30,
+        "n": 30,
+        "rate": 1.0
+      },
+      "n": 30,
+      "param": "v50",
+      "repro": "/tmp/ss_redteam_video/repro/motion_pan_qr.v50.s1234/f001",
+      "worst": {
+        "case": "motion_pan_qr.v50.s1234",
+        "cat": "upi_qr",
+        "cov": 0.0,
+        "frame": 1,
+        "j": 0,
+        "ro": null,
+        "tag": ""
+      }
+    },
+    {
+      "attack": "enter_leave_card",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.4345
+        ],
+        "k": 0,
+        "n": 5,
+        "rate": 0.0
+      },
+      "group": "enter_leave",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.7961,
+          1.0
+        ],
+        "k": 15,
+        "n": 15,
+        "rate": 1.0
+      },
+      "n": 15,
+      "param": "edge_hold35",
+      "repro": "/tmp/ss_redteam_video/repro/enter_leave_card.edge_hold35.s1234/f001",
+      "worst": {
+        "case": "enter_leave_card.edge_hold35.s1234",
+        "cat": "aadhaar",
+        "cov": 0.8359,
+        "frame": 1,
+        "j": 0,
+        "ro": null,
+        "tag": ""
+      }
+    },
+    {
+      "attack": "enter_leave_qr",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2588
+        ],
+        "k": 0,
+        "n": 11,
+        "rate": 0.0
+      },
+      "group": "enter_leave",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.7928,
+          0.9821
+        ],
+        "k": 29,
+        "n": 31,
+        "rate": 0.9354838709677419
+      },
+      "n": 31,
+      "param": "fast",
+      "repro": "/tmp/ss_redteam_video/repro/enter_leave_qr.fast.s1234/f004",
+      "worst": {
+        "case": "enter_leave_qr.fast.s1234",
+        "cat": "upi_qr",
+        "cov": 0.0,
+        "frame": 4,
+        "j": 0,
+        "ro": null,
+        "tag": ""
+      }
+    },
+    {
+      "attack": "enter_leave_card",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2425
+        ],
+        "k": 0,
+        "n": 12,
+        "rate": 0.0
+      },
+      "group": "enter_leave",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.3047,
+          0.6181
+        ],
+        "k": 16,
+        "n": 35,
+        "rate": 0.45714285714285713
+      },
+      "n": 35,
+      "param": "fast",
+      "repro": "/tmp/ss_redteam_video/repro/enter_leave_card.fast.s1234/f004",
+      "worst": {
+        "case": "enter_leave_card.fast.s1234",
+        "cat": "pan",
+        "cov": 0.2753,
+        "frame": 4,
+        "j": 0,
+        "ro": null,
+        "tag": ""
+      }
+    },
+    {
+      "attack": "flash_qr",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.6576
+        ],
+        "k": 0,
+        "n": 2,
+        "rate": 0.0
+      },
+      "group": "flash",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.0301,
+          0.5635
+        ],
+        "k": 1,
+        "n": 6,
+        "rate": 0.16666666666666666
+      },
+      "n": 6,
+      "param": "f6",
+      "repro": "/tmp/ss_redteam_video/repro/flash_qr.f6.s1234/f022",
+      "worst": {
+        "case": "flash_qr.f6.s1234",
+        "cat": "upi_qr",
+        "cov": 0.0,
+        "frame": 22,
+        "j": 0,
+        "ro": null,
+        "tag": "visible"
+      }
+    },
+    {
+      "attack": "motion_shake_card",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.2775
+        ],
+        "k": 0,
+        "n": 10,
+        "rate": 0.0
+      },
+      "group": "motion",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.0346,
+          0.2562
+        ],
+        "k": 3,
+        "n": 30,
+        "rate": 0.1
+      },
+      "n": 30,
+      "param": "amp40",
+      "repro": "/tmp/ss_redteam_video/repro/motion_shake_card.amp40.s1234/f001",
+      "worst": {
+        "case": "motion_shake_card.amp40.s1234",
+        "cat": "pan",
+        "cov": 0.8735,
+        "frame": 1,
+        "j": 0,
+        "ro": null,
+        "tag": ""
+      }
+    },
+    {
+      "attack": "scene_cut_card",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "k": 0,
+        "n": 20,
+        "rate": 0.0
+      },
+      "group": "scene_cut",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.0092,
+          0.1136
+        ],
+        "k": 2,
+        "n": 60,
+        "rate": 0.03333333333333333
+      },
+      "n": 60,
+      "param": "every10",
+      "repro": "/tmp/ss_redteam_video/repro/scene_cut_card.every10.s1234/f010",
+      "worst": {
+        "case": "scene_cut_card.every10.s1234",
+        "cat": "aadhaar",
+        "cov": 0.3771,
+        "frame": 10,
+        "j": 0,
+        "ro": null,
+        "tag": "cut+0"
+      }
+    },
+    {
+      "attack": "scene_cut_qr",
+      "confirmed": {
+        "ci": [
+          0.0,
+          0.1611
+        ],
+        "k": 0,
+        "n": 20,
+        "rate": 0.0
+      },
+      "group": "scene_cut",
+      "kind": "proxy_readable",
+      "leak": {
+        "ci": [
+          0.0029,
+          0.0886
+        ],
+        "k": 1,
+        "n": 60,
+        "rate": 0.016666666666666666
+      },
+      "n": 60,
+      "param": "every10",
+      "repro": "/tmp/ss_redteam_video/repro/scene_cut_qr.every10.s1234/f010",
+      "worst": {
+        "case": "scene_cut_qr.every10.s1234",
+        "cat": "upi_qr",
+        "cov": 0.0,
+        "frame": 10,
+        "j": 0,
+        "ro": null,
+        "tag": "cut+0"
+      }
+    }
+  ],
+  "regressions": null,
+  "seeded": [],
+  "skipped": {}
+}

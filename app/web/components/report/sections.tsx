@@ -179,7 +179,7 @@ export function NotesSection({ report }: { report: SafetyReport }) {
       <CardContent>
         <ul className="list-disc space-y-1 pl-5 text-sm" data-testid="report-notes">
           {report.notes.map((n, i) => (
-            <li key={i}>{n}</li>
+            <li key={i}>{x.note(n)}</li>
           ))}
         </ul>
       </CardContent>

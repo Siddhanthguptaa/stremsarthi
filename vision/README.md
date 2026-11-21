@@ -30,3 +30,4 @@ bash scripts/ss.sh python -m pytest vision/tests/test_vision_tracking*.py vision
 bash scripts/ss.sh python -m vision.probe                          # CPU ms per model
 bash scripts/ss.sh ruff check vision && bash scripts/ss.sh ruff format --check vision
 ```
+- `shapes.py` + `detectors/{cards,plates,screens}/unsure.py` (T7.5): shape/texture `mask_when_unsure` fallbacks for frames OCR cannot read, run only on degraded frames (`shapes.degraded`, Laplacian variance < 75). Switch with detector params: `shape_fallback` (cards, plates: default off; screens: banner shape default on), `template_fallback` (screens, default off). Tests: `vision/tests/test_vision_unsure_shapes.py`.

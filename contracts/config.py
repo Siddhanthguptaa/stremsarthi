@@ -222,8 +222,11 @@ class EngineConfig(_Model):
         3.0, ge=0.0, le=10.0
     )  # no audio_heartbeat for this long: mute audio (0 = off)
     audio_grace_s: float = Field(
-        10.0, ge=0.0, le=60.0
-    )  # time allowed for the first audio_heartbeat after start
+        2.5, ge=0.0, le=60.0
+    )  # time allowed for the first audio_heartbeat after start (the engine clamps it to delay - 0.5 s)
+    audio_heartbeat_lag_s: float = Field(
+        2.0, ge=0.1, le=10.0
+    )  # a heartbeat whose pts lags the newest ingested audio by more than this is ignored
 
 
 def _default_modules() -> dict[str, str]:

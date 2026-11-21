@@ -77,3 +77,10 @@ token file survives an API restart); the web app sends `app`; others are `api`. 
 - `GET /api/risk` -> `{level: ok|watch|warn|danger, meter_level, score, signals[]}`; WS carries `guard.meter`/`guard.risk`.
 - `GET /api/report[/{id}[/printable|/export?format=json|html]]`, `DELETE /api/session/{id}/data`. `recorder.py` writes
   `events.jsonl` (SafetyEvents only); `report.py` runs the privacy guard on every report.
+
+## Rehearsal start and the end-to-end smoke
+`POST /api/session/start {"destinations": [], "rehearsal": true}` starts a session with no platform destination and
+needs no stream key: the spawned engine publishes only the local `shielded` tap. A normal start still needs one
+enabled destination with a key. The publish URLs (`GET /api/session`, `GET /api/pairing`) use the configured
+`INGEST_PORT_RTMP` / `INGEST_PORT_SRT`. `scripts/e2e_smoke.sh` runs the whole chain (API spawns the real engine,
+synthetic SPECIMEN sender, egress tap, hold, config toggle, stop, report) with no keys; exit 0/1/2.

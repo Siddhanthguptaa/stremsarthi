@@ -155,7 +155,9 @@ class SpokenRules:
         v = self.vocab
         out: list[Cand] = []
         for r in id_runs(toks, SPELL_GAP_S, v):
-            if r.letters < 2 or r.letters + r.digits < 4:
+            cue = self.cue_active(cues, toks[r.tok0].t0, self.watch_window_s)
+            # three spoken letters in a row are a spelling; with a cue (upi, gpay, id ...) two are enough
+            if not (r.letters >= 3 or (r.letters >= 2 and (cue or r.letters + r.digits >= 4))):
                 continue
             first = r.tok0
             words = 0
@@ -184,7 +186,7 @@ class SpokenRules:
                     first,
                     r.tok1,
                     r.digits,
-                    self.cue_active(cues, toks[first].t0, self.watch_window_s),
+                    cue,
                     False,  # muted outright: an LLM would see only a fragment of the id
                     True,
                 )  # fmt: skip

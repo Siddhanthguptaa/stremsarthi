@@ -12,7 +12,8 @@ describe("parseReport", () => {
     expect(r.timeline).toHaveLength(4)
     expect(r.totals.by_category.face).toEqual({ count: 2, mean_confidence: 0.9 })
     expect(r.holds).toEqual([{ start_ts: "2026-11-20T10:01:40.000Z", end_ts: "2026-11-20T10:02:10.000Z", sources: ["app"] }])
-    expect(r.risk.max_level).toBe("orange")
+    expect(r.risk.max_level).toBe("warn")
+    expect(r.totals.events).toBe(4)
     expect(r.chat.platform_actions).toEqual({ done: 3, failed: 1, unsupported: 2 })
   })
 

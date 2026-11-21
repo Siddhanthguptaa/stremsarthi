@@ -28,7 +28,14 @@ from engine.bus import LocalBus
 from engine.deadline import DeadlineEngine
 from engine.motion import IdentityMotion
 from engine.session import AudioRing, Downsampler, Session
-from engine.session_fakes import FakeAudioHost, FakeLaneHost, RecordingSink, SyntheticSource, card_detector
+from engine.session_fakes import (
+    FakeAudioHost,
+    FakeLaneHost,
+    HeartbeatAudioHost,
+    RecordingSink,
+    SyntheticSource,
+    card_detector,
+)
 from engine.testing import lane_result, region_request
 
 T0, FPS, D = 10.0, 30, 3.0
@@ -465,17 +472,21 @@ def test_threaded_session_runs_and_stops_cleanly():
     host = FakeLaneHost(card_detector(36, CARD), latency_s=0.02)
     # the fake host stamps completion in virtual time: frame.arrival is real here, so this just works
     sink = RecordingSink()
-    audio = FakeAudioHost()
     bus = LocalBus()
+    audio = HeartbeatAudioHost(
+        bus, period_s=0.2
+    )  # unvouched audio is muted: the host must send its heartbeats
     session = Session(config, source, sink, lane_host=host, audio_host=audio, bus=bus)
     session.engine.close()
     session.engine = DeadlineEngine.from_config(config, host.active_lanes, motion=IdentityMotion())
     host.start()
+    audio.start()
     session.start()
     try:
         assert session.finished.wait(timeout=12.0), session.stats
     finally:
         session.stop()
+        audio.close()
     assert len(sink.records) == 36 and session.counts["LIVE"] == 36
     assert min(session.emit_lag) >= 0
     assert audio.chunks and all(c.n_samples == 320 for c in audio.chunks)

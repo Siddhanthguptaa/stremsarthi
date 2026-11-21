@@ -6,6 +6,7 @@ import { Radio } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { type I18nKey, LANGS } from "@/lib/i18n"
+import { useLatestReportId } from "@/components/report/use-latest-report"
 import { useLanguage } from "@/components/shell/language-provider"
 
 const NAV: { href: string; key: I18nKey }[] = [
@@ -19,6 +20,9 @@ const NAV: { href: string; key: I18nKey }[] = [
 export function AppHeader() {
   const { lang, setLang, t } = useLanguage()
   const pathname = usePathname()
+  // The "Safety report" link appears once there is a session with a report (and the token may read reports).
+  const reportId = useLatestReportId()
+  const items = reportId ? [...NAV, { href: `/report/${reportId}`, key: "nav.report" as const }] : NAV
 
   return (
     <header className="border-b bg-card">
@@ -49,7 +53,7 @@ export function AppHeader() {
       </div>
       <nav aria-label={t("nav.label")} className="mx-auto w-full max-w-5xl overflow-x-auto px-4 pb-2">
         <ul className="flex gap-2">
-          {NAV.map(({ href, key }) => {
+          {items.map(({ href, key }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`)
             return (
               <li key={href} className="shrink-0">

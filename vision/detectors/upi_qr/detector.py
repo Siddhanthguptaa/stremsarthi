@@ -64,7 +64,7 @@ REASON_UNDECODABLE = "qr_undecodable"
 REASON_ANY = "qr_any"
 SOFT_BUDGET_S = 0.018  # optional scan stages stop here (FAST lane budget is 25 ms)
 BENIGN_TTL_S = 0.35  # an undecodable candidate on a code that decoded as a non-payment this recently passes
-BENIGN_IOU = 0.5  # "same place": the newest sighting overlapping this much decides (payment there: always masked)
+BENIGN_IOU = 0.5  # "same place": the newest sighting overlapping this much decides
 BENIGN_MATCH_IOU = 0.7  # to be trusted as the same website code the box must be nearly the same ...
 BENIGN_AREA_CHANGE = 0.2  # ... and about the same size (relative area change)
 BENIGN_MAX_PASSES = 1  # undecodable runs let through per decoded sighting; the next one is masked
@@ -148,7 +148,10 @@ class UpiQrDetector:
                     continue
                 if payment or passes >= BENIGN_MAX_PASSES:
                     return False
-                if bbox_iou(f.quad, quad) < BENIGN_MATCH_IOU or _area_change(f.quad, quad) > BENIGN_AREA_CHANGE:
+                if (
+                    bbox_iou(f.quad, quad) < BENIGN_MATCH_IOU
+                    or _area_change(f.quad, quad) > BENIGN_AREA_CHANGE
+                ):
                     return False  # moved or resized: not the code we saw
                 entry[3] = passes + 1
                 return True

@@ -68,9 +68,7 @@ class GoLive:
         """Create the session and spawn its processes. Raises ``OSError`` if the engine cannot start."""
         await self.finalize_open()  # a failed or engine_lost session that was never stopped
         user, password = new_ingest_login()
-        ingest = ingest_urls(
-            self.ingest_host, user, password, self.ingest_rtmp_port, self.ingest_srt_port
-        )
+        ingest = ingest_urls(self.ingest_host, user, password, self.ingest_rtmp_port, self.ingest_srt_port)
         record = self.sessions.start(delay_seconds, profile, destinations, ingest)
         record.ingest_login = (user, password)
         self.recorder.begin(record.session_id, record.started_at, profile, delay_seconds)

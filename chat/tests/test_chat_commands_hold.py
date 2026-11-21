@@ -157,3 +157,14 @@ def test_logs_never_contain_ids_or_names(rig, caplog) -> None:  # type: ignore[n
     assert caplog.records
     text = caplog.text
     assert "secret-author-id" not in text and "secret-msg-id" not in text and "specimen" not in text
+
+
+def test_denial_events_are_capped_across_actors(rig) -> None:  # type: ignore[no-untyped-def]
+    cmds, bus, clock = rig
+    for i in range(1000):  # a flood of different viewers typing !hold
+        assert cmds.handle(msg("!hold", f"m{i}", f"troll{i}")).status == "denied"  # type: ignore[union-attr]
+    events = [e for e in bus.of(Topic.SAFETY_EVENT) if e.detail_code == "cmd_denied"]
+    assert len(events) == 1 and cmds.denied_suppressed == 999
+    clock.advance(2.5)
+    cmds.handle(msg("!hold", "later", "troll_x"))
+    assert len([e for e in bus.of(Topic.SAFETY_EVENT) if e.detail_code == "cmd_denied"]) == 2

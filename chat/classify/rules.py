@@ -221,6 +221,20 @@ class RuleMatcher:
                     key = " ".join(_key(t) for t in toks)
                     phrases[key] = _stronger(phrases.get(key), norm_entry)
         self._phrases = phrases
+        # Words joined from single letters ("b.h.e.n.c.h.o.d tu"): the word boundary is lost, so look for the words
+        # inside the run. Only runs that came from letter-by-letter spelling are searched, never ordinary words.
+        blob_map: dict[str, LexEntry] = {}
+        for k, e in {**self._tokens, **self._exact}.items():
+            if len(k) >= 4 and k.isascii() and k.isalpha():
+                blob_map[k[:-1] if k[-1] in "aeio" and len(k) >= 5 else k] = e
+            elif len(k) >= 3 and not k.isascii():
+                blob_map[k] = e
+        self._blob_map = blob_map
+        self._blob_re = (
+            re.compile("|".join(re.escape(k) for k in sorted(blob_map, key=len, reverse=True)))
+            if blob_map
+            else None
+        )
         self._phrase_re = _boundary(phrases)
         self._substrs = substrs
         self._substr_re = (
@@ -291,6 +305,15 @@ class RuleMatcher:
                 found[id(entry)] = entry
         return found
 
+    def _scan_blob(self, blob: str) -> dict[int, LexEntry]:
+        found: dict[int, LexEntry] = {}
+        if self._blob_re is None:
+            return found
+        for m in self._blob_re.finditer(_fold_nofinal(blob)):
+            entry = self._blob_map[m.group(0)]
+            found[id(entry)] = entry
+        return found
+
     def _wildcard(self, tok: str) -> LexEntry | None:
         """``cho*tiya``: try the star as nothing or a vowel, then look the word up phonetically."""
         fixed = sum(c != "*" for c in tok)
@@ -324,6 +347,8 @@ class RuleMatcher:
             found.update(self._scan(norm.glued))
         if norm.roman:
             found.update(self._scan(norm.roman))
+        for blob in norm.blobs:
+            found.update(self._scan_blob(blob))
         if not found:
             return NO_MATCH
         directed = _DIRECTED.search(norm.text) is not None or _MENTION.search(norm.raw) is not None

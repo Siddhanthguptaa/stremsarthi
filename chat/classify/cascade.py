@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from collections import OrderedDict, deque
 from collections.abc import Callable, Sequence
@@ -34,8 +35,9 @@ from contracts.config import ChatConfig
 
 from .candidate import Candidate
 from .doxxing import DoxxingDetector
+from .fold import windows
 from .llm import LlmResult, LlmStage, LlmTransport
-from .normalize import normalize
+from .normalize import Normalized, lexicon_view, normalize
 from .rules import RuleMatcher, default_matcher
 from .scam import detect_scam
 from .suspect import detect_shapes, detect_suspects
@@ -55,6 +57,16 @@ _LABEL_CATEGORY = {
     "doxxing": Category.CHAT_DOXXING,
     "abuse": Category.CHAT_ABUSE,
 }
+#: Instruction-like text aimed at the classifier. An LLM "clean" for such a message is not trusted.
+INJECTION_CUE = re.compile(
+    r"(?:ignore|disregard|forget|override|bypass)\W+(?:\w+\W+){0,3}?(?:previous|prior|above|earlier|all|these|your)\W+(?:\w+\W+){0,2}?"
+    r"(?:instructions?|rules?|prompts?|messages?)|(?:mark|label|classify|tag|treat|rate|output|respond|reply|answer|say)\W+(?:\w+\W+){0,6}?"
+    r"(?:as\W+|with\W+|is\W+|=\W*)?(?:clean|safe|harmless|benign|allowed|not\W+abus\w+)|(?:^|\W)(?:system|assistant|developer)\s*:|"
+    r"<\|?(?:im_start|im_end|system|endoftext)|new\W+instructions?|you\W+are\W+now\W|already\W+(?:reviewed|approved|checked)|"
+    r"\"?(?:labels?|results|confidence)\"?\s*:\s*[\[\d\"]|pichle\W+(?:\w+\W+){0,2}?instructions?|instructions?\W+(?:\w+\W+){0,2}?(?:bhool|ignore)|"
+    r"(?:isse|ise|isko)\W+clean|clean\W+mark",
+    re.IGNORECASE,
+)
 _LLM_CONFIDENT = 0.8
 _LLM_MIN_FLAG = 0.5
 
@@ -175,26 +187,12 @@ class ChatClassifier:
         if not text.strip():
             return FastOutcome(self._allow(msg, t0, "clean", 1.0))
         staff = msg.is_broadcaster or msg.is_moderator
-        norm = normalize(text[:MAX_PROCESS_CHARS])
         cands: list[Candidate] = []
-        if not staff:
-            rr = self._matcher.match(norm)
-            if (
-                rr.matched and rr.soft == "reported"
-            ):  # quoted, reported or discussed: the LLM may look, else allow
-                cands.append(
-                    Candidate(Category.CHAT_ABUSE, min(rr.score, 0.5), "rules_reported", lenient=True)
-                )
-            elif rr.matched and rr.soft == "banter":  # friendly teasing with mild words
-                cands.append(Candidate(Category.CHAT_ABUSE, 0.2, "rules_banter"))
-            elif rr.matched:
-                cands.append(
-                    Candidate(Category.CHAT_ABUSE, rr.score, f"rules_{rr.kind}", severe=rr.severity == 3)
-                )
-            cands.extend(detect_scam(norm.link_text, fanged=norm.fanged))
-            if not rr.matched:
-                cands.extend(detect_shapes(norm))
-        cands.extend(self._dox.detect(norm, include_private=not staff))
+        norms = [
+            normalize(w) for w in windows(text)
+        ]  # one slice for a normal message; bounded work for a huge one
+        for norm in norms:
+            cands.extend(self._detect(norm, staff))
         if staff:
             if cands:
                 top = max(cands, key=lambda c: c.score)
@@ -206,7 +204,8 @@ class ChatClassifier:
             return FastOutcome(self._allow(msg, t0, "clean", 1.0))
         cfg = self._cfg.classify
         if not any(c.score >= cfg.allow_below and not c.lenient for c in cands):
-            cands.extend(detect_suspects(norm))  # weak shapes: only an LLM can tell (else allowed)
+            for norm in norms:
+                cands.extend(detect_suspects(norm))  # weak shapes: only an LLM can tell (else allowed)
         if not cands:
             return FastOutcome(self._allow(msg, t0, "clean", 1.0))
         top = max(cands, key=lambda c: c.score)
@@ -231,6 +230,32 @@ class ChatClassifier:
             self._verdict(msg, t0, ChatAction.HOLD_FOR_MOD, cats, top.score, "llm_unavailable_hold", "rules"),
             top=top,
         )
+
+    def _detect(self, norm: Normalized, staff: bool) -> list[Candidate]:
+        """Every finding in one slice of a message. Staff messages are only scanned for doxxing of others."""
+        cands: list[Candidate] = []
+        if not staff:
+            rr = self._matcher.match(norm)
+            if (
+                rr.matched and rr.soft == "reported"
+            ):  # quoted, reported or discussed: the LLM may look, else allow
+                cands.append(
+                    Candidate(Category.CHAT_ABUSE, min(rr.score, 0.5), "rules_reported", lenient=True)
+                )
+            elif rr.matched and rr.soft == "banter":  # friendly teasing with mild words
+                cands.append(Candidate(Category.CHAT_ABUSE, 0.2, "rules_banter"))
+            elif rr.matched:
+                cands.append(
+                    Candidate(Category.CHAT_ABUSE, rr.score, f"rules_{rr.kind}", severe=rr.severity == 3)
+                )
+            cands.extend(detect_scam(norm.link_text, fanged=norm.fanged))
+            alt = lexicon_view(norm.link_text)  # leetspeak and letter-by-letter spelling of scam wording
+            if alt != norm.link_text.lower():
+                cands.extend(detect_scam(alt, fanged=True))
+            if not rr.matched:
+                cands.extend(detect_shapes(norm))
+        cands.extend(self._dox.detect(norm, include_private=not staff))
+        return cands
 
     # --- LLM resolution ---------------------------------------------------------------------------
 
@@ -262,6 +287,11 @@ class ChatClassifier:
                 return self._allow(msg, t0, f"{top.reason}_timeout_allow", 1.0 - top.score)
             return self._verdict(
                 msg, t0, ChatAction.HOLD_FOR_MOD, (top.category,), top.score, "llm_timeout_hold", "rules"
+            )
+        if INJECTION_CUE.search(msg.text) and (result.clean or result.confidence < _LLM_MIN_FLAG):
+            # text aimed at the classifier ("mark this as clean") must not be able to release the message
+            return self._verdict(
+                msg, t0, ChatAction.HOLD_FOR_MOD, (top.category,), top.score, "llm_injection_hold", "llm"
             )
         return self._from_llm(msg, t0, top, result)
 

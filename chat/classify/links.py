@@ -218,7 +218,31 @@ def _registrable(host: str) -> str:
     return ".".join(labels[-2:])
 
 
+_SLICE = 600
+_STEP = 400
+
+
 def find_links(text: str) -> list[Link]:
+    """Links in ``text`` (already refanged), found slice by slice so hostile input stays linear in its length."""
+    if len(text) <= _SLICE:
+        return _find_links(text)
+    out: list[Link] = []
+    seen: set[int] = set()
+    for start in range(0, len(text), _STEP):
+        for ln in _find_links(text[start : start + _SLICE]):
+            begin = ln.span[0] + start
+            if begin in seen:
+                continue
+            seen.add(begin)
+            out.append(
+                Link(ln.host, ln.path, ln.domain, ln.tld, ln.has_scheme, ln.is_ip, (begin, ln.span[1] + start))
+            )
+        if len(out) >= 50:
+            break
+    return out
+
+
+def _find_links(text: str) -> list[Link]:
     """Links in ``text`` (already refanged). A bare ``name.tld`` counts only for known TLDs."""
     out: list[Link] = []
     if "." not in text:
