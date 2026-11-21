@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # Run a command inside the project (WSL), with the project venv, user-level tools and a clean PATH.
 #
-# The repo lives on the Windows disk (C:\Users\siddh\stremsarthi) and WSL reaches it at
-# /mnt/c/Users/siddh/stremsarthi. This is deliberate: the old location inside WSL was reached
-# through the \\wsl$ network share, which kept dropping and made every tool call fail with
-# "The working directory no longer leads where it did". Local Windows paths always resolve.
+# The repo lives on the Windows disk (C:\Users\suresh\OneDrive\Desktop\stremsarthi) and WSL
+# reaches it at /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi. This is deliberate: the old
+# location inside WSL was reached through the \\wsl$ network share, which kept dropping and made
+# every tool call fail with "The working directory no longer leads where it did". Local Windows
+# paths always resolve.
 #
-# From the Windows side (Git Bash) use:
-#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh <command...>
+# From the Windows side (PowerShell) use:
+#   wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh <command...>
 #
 # The Python venv stays in WSL's own filesystem (fast, supports symlinks): ~/.venvs/stremsarthi.
 # GPU commands: prefix the command with `flock /tmp/streamsarthi-gpu.lock`.
 set -uo pipefail
-USER_NAME="${SS_USER:-siddhanth}"
+USER_NAME="${SS_USER:-suresh}"
 HOME_DIR="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="${SS_VENV:-$HOME_DIR/.venvs/stremsarthi}"

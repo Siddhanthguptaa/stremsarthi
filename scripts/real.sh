@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # REAL-INPUT mode (no scripted reel, no fake chat): starts the API (spawns the real engine), the web app and a keyless
 # rehearsal session, then prints where OBS or your phone should publish. Run through ss.sh:
-#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/real.sh --gpu
+#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh bash scripts/real.sh --gpu
 # Options: --gpu (recommended: vision on the NVIDIA GPU), --no-build, --raw (show the RAW pane on /demo, loopback only),
 #          --chat (run the real chat process: needs YouTube/Twitch credentials in .env)
 #          --live (GO LIVE for real to every platform that has a stream key (.env YOUTUBE_STREAM_KEY / TWITCH_STREAM_KEY);

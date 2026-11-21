@@ -3,7 +3,7 @@
 # commands that run it. SPECIMEN data only. No GPU, no network except the one-time NASA portrait fetch (hash-checked).
 #
 # From Git Bash on Windows:
-#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/demo_assets.sh
+#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh bash scripts/demo_assets.sh
 # Options: --no-audio (skip the 35 s TTS build), --help
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
@@ -75,7 +75,7 @@ Ready in $OUT:
   demo_reel_contact.png                    one frame per scene
   chat_plan.json                           the scripted chat (times, kinds)
 
-Run it (SS = MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh):
+Run it (SS = MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh):
 
   1. Video + audio source (90 s loop; put the SRT url from the /go-live ingest card, or GET /api/pairing):
        SS python -m eval.sender.sender --url "<SRT url>" --script demo_reel --duration 90 \

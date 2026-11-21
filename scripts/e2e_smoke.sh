@@ -3,7 +3,7 @@
 # SPECIMEN sender publishes, an egress tap checks frames, the card mask and the hold slate, then stop + report.
 #
 # Run through the wrapper (it applies the memory cap and the venv):
-#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh \
+#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh \
 #       bash scripts/e2e_smoke.sh [--duration 45] [--delay 4.0] [--run-dir DIR]
 # Exit codes: 0 all checks pass, 1 a check failed, 2 the environment could not run the chain.
 # Heavy: one engine (vision + audio hosts), the API, MediaMTX, ffmpeg and a tap. Run one at a time.

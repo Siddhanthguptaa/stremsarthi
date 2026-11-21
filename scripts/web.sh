@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run npm for app/web in a WSL-native build directory. Run through scripts/ss.sh:
-#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/web.sh <npm args>
+#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh bash scripts/web.sh <npm args>
 #   e.g.  bash scripts/web.sh ci        bash scripts/web.sh run build        bash scripts/web.sh test
 # Why: the source lives on the Windows disk, where npm cannot create node_modules symlinks. The sources are
 # synced (one way, repo -> build dir) into ~/webbuild and npm runs there. node_modules and .next stay in

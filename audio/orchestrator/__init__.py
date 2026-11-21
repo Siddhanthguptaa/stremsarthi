@@ -21,7 +21,7 @@ from audio.segmenter import Segmenter
 from audio.stt.groq import GroqSTT
 from audio.stt.local import LocalWhisperSTT
 from audio.stt.sarvam import SarvamSTT
-from audio.vad import EnergyFrameModel
+from audio.vad import EnergyFrameModel, SileroOnnx
 from contracts.config import Config
 from contracts.enums import Topic
 from contracts.events import StageTiming
@@ -40,7 +40,8 @@ __all__ = ["AudioOrchestrator", "AudioPipeline", "DigitRunPiiDetector", "SttAllF
 
 def make_segmenter(config: Config) -> Segmenter:
     try:
-        return Segmenter.from_config(config)
+        # Model downloads can outlast the engine's audio startup deadline.
+        return Segmenter.from_config(config, SileroOnnx(download=False))
     except Exception as exc:  # missing Silero weights must not stop the audio path: errs toward muting
         log.warning("Silero VAD unavailable (%s): using the energy detector", type(exc).__name__)
         return Segmenter.from_config(config, EnergyFrameModel())

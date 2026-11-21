@@ -78,13 +78,15 @@ def ffmpeg_argv(prefix: Sequence[str], stream: Stream, view: SessionView) -> tup
         "image2pipe",
         "pipe:1",
     ]
+    # A reader can join between video keyframes. Probe beyond the relay's two-second GOP
+    # so FFmpeg has time to discover video even when audio is the first track it receives.
     low_latency = [
         "-flags",
         "low_delay",
         "-probesize",
-        "65536",
+        "1048576",
         "-analyzeduration",
-        "500000",
+        "3000000",
     ]
     head = [*prefix, "-hide_banner", "-loglevel", "error", "-nostats"]
     if stream == "protected":

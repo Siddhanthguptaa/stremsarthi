@@ -5,7 +5,7 @@ Reports presence only for secrets, never values.
 
 ``--real`` prints a short real-live-stream readiness checklist (PASS / FIX / OPTIONAL with the exact fix command).
 Exit 0 only if every REQUIRED item passes (ports free, ffmpeg with libx264 and srt, dev-profile weights). Run it in WSL:
-  MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python scripts/doctor.py --real
+  wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh python scripts/doctor.py --real
 """
 
 from __future__ import annotations
@@ -292,7 +292,7 @@ PORTS: dict[int, str] = {
 }
 WSL_FIX = (
     "MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash "
-    "/mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python scripts/doctor.py --real"
+    "/mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh python scripts/doctor.py --real"
 )
 # name -> (what it unlocks, what runs without it)
 KEYS: dict[str, tuple[str, str]] = {

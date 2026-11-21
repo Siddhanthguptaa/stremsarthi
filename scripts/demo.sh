@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-command local demo (SPECIMEN data only, no keys needed). Run through ss.sh from Git Bash / PowerShell:
-#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/demo.sh
+#   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/suresh/OneDrive/Desktop/stremsarthi/scripts/ss.sh bash scripts/demo.sh
 # Starts: API (spawns the real engine), web app, scripted demo chat, then loops the demo reel into a rehearsal session.
 # It prints the local login URL. Ctrl-C stops everything. Ports used: 8000 (API), 3000 (web), 8890/1935/9997 (engine).
 # Options: --no-build (skip the web build check), --no-chat, --raw (enable the RAW preview pane: loopback only),
