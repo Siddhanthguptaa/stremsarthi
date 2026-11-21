@@ -25,6 +25,10 @@ import { CaptionsControl } from "@/components/streamer/captions-control"
 import { EngineChip } from "@/components/streamer/engine-chip"
 import { HoldButton } from "@/components/streamer/hold-button"
 import { ModeratorInvite } from "@/components/streamer/moderator-invite"
+import { chatProblemsFromHealth, chatStatusCode, withCode } from "@/lib/chat-status"
+import type { SessionView } from "@/lib/api-streamer"
+import { ChatStatusNotice } from "@/components/streamer/chat-status-notice"
+import { LiveBanner } from "@/components/streamer/live-banner"
 import { RiskMeter } from "@/components/streamer/risk-meter"
 import { useRealtime } from "@/components/streamer/use-realtime"
 import { useStreamerApi } from "@/components/streamer/use-streamer-api"
@@ -65,6 +69,9 @@ function Dashboard() {
   const [captions, dispatchCaptions] = React.useReducer(captionReducer, initialCaptions)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [alertsFailed, setAlertsFailed] = React.useState(false)
+  const [session, setSession] = React.useState<SessionView | null>(null)
+  const [chatCodes, setChatCodes] = React.useState<string[]>([])
+  const [healthCodes, setHealthCodes] = React.useState<string[]>([])
   const now = useNow(1000)
   const riskNow = riskView(risk, now)
 
@@ -88,9 +95,12 @@ function Dashboard() {
           dispatchHold({ type: "auto", sources: status.hold_sources.filter((s) => AUTO_SOURCES.includes(s)) })
           break
         }
-        case "safety.event":
+        case "safety.event": {
           dispatchLive({ type: "safety", event: frame.data.d })
+          const code = chatStatusCode(frame.data.d)
+          if (code) setChatCodes((codes) => withCode(codes, code))
           break
+        }
         case "guard.meter":
           dispatchRisk({ type: "meter", meter: frame.data.d, at: Date.now() })
           break
@@ -153,6 +163,22 @@ function Dashboard() {
   React.useEffect(() => {
     if (status === "ready") void refresh() // on mount, and again after every (re)connect
   }, [status, refresh, wsOpen])
+
+  // The session (LIVE banner) and the chat shield state, every 5 s. A failed poll keeps the last answer.
+  React.useEffect(() => {
+    if (status !== "ready") return
+    let alive = true
+    const poll = () => {
+      streamerApi.getSession().then((s) => alive && setSession(s)).catch(() => {})
+      streamerApi.getHealth().then((h) => alive && setHealthCodes(chatProblemsFromHealth(h.chat))).catch(() => {})
+    }
+    poll()
+    const id = setInterval(poll, 5000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [status, streamerApi])
 
   // --- hold ---------------------------------------------------------------------------------------
   const view = holdView(hold)
@@ -245,7 +271,11 @@ function Dashboard() {
         <p className="text-muted-foreground">{t("page.live.desc")}</p>
       </header>
 
+      <LiveBanner session={session} />
+
       <ConnectionBanner state={connection} apiDown={live.apiDown} />
+
+      <ChatStatusNotice codes={[...new Set([...healthCodes, ...chatCodes])]} />
 
       <EngineChip kind={chip} engine={engineFresh ? live.engine : null} />
 

@@ -5,6 +5,9 @@ detect:
   stride: 2            # detect every 2nd frame
   fast_hz: 15
   accurate_hz: 5
+engine:
+  lane_max_age:
+    accurate: 20       # frames a result stays valid: the accurate lane often takes 0.3-0.7 s per run on a laptop GPU (measured 2026-11-21: slate share on the reel fell from about 16% to 11%)
 gpu:
   enabled: true
   mem_limit_mb: 7000

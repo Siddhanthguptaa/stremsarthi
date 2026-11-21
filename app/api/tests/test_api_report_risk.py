@@ -302,3 +302,20 @@ def test_risk_snapshot_maps_levels_and_expires_signals(client, auth, role_header
     assert (
         snap["meter_level"] == "red" and snap["basis"] == "meter" and snap["top_sources"] == ["fingerprint"]
     )
+
+
+def test_system_notices_are_not_protection_events(recorder):
+    from dataclasses import replace
+
+    recorder.observe(Topic.SAFETY_EVENT, ev(0))
+    notice = replace(
+        ev(1), event_id="notice001", modality=Modality.SYSTEM, category=Category.SYSTEM_STATUS,
+        action="warned", source="chat", detail_code="chat_unavailable", bbox=None, duration_ms=None,
+    )  # fmt: skip
+    recorder.observe(Topic.SAFETY_EVENT, notice)
+    report = build_report(recorder.end())
+    assert report["totals"]["events"] == 1 and report["totals"]["system_notices"] == 1
+    assert "system_status" not in report["totals"]["by_category"]
+    assert "system" not in report["totals"]["by_modality"]
+    assert {r["category"] for r in report["timeline"]} == {CATS[0][1].value, "system_status"}  # still listed
+    assert to_printable(report)["summary"][1]["value"] == 1

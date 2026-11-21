@@ -171,11 +171,15 @@ def mediamtx_users(
 
     * ``phone``: publish ``camera`` only (OBS or the phone app).
     * ``internal``: read ``camera`` and publish ``shielded``, loopback only (the relay itself).
-    * anonymous loopback: read ``shielded`` (the eval tap) and use the API.
+    * anonymous local (127.0.0.1, and the LAN bind address when that is a literal LAN IP): read
+      ``shielded`` (the eval tap, the /demo preview). The API permission stays 127.0.0.1 only.
     * only with ``demo_raw_preview`` (env ``DEMO_RAW_PREVIEW=1``, default OFF): anonymous loopback may
       also READ ``camera`` (the unmasked ingest) so the demo preview can show it. Normal sessions
       never expose the raw stream to other local processes.
     """
+    # This machine only: loopback, plus the bind address itself when it is a LAN literal (a local
+    # process dialling that address arrives from it). A remote host can never present either IP.
+    local_ips = sorted({LOOPBACK, address.connect_host})
     users = [
         {
             "user": phone.user,
@@ -192,13 +196,11 @@ def mediamtx_users(
                 {"action": "publish", "path": PATH_SHIELDED},
             ],
         },
-        {"user": "any", "ips": [LOOPBACK], "permissions": [{"action": "read", "path": PATH_SHIELDED}]},
+        {"user": "any", "ips": local_ips, "permissions": [{"action": "read", "path": PATH_SHIELDED}]},
         {"user": "any", "ips": [LOOPBACK], "permissions": [{"action": "api"}]},
     ]
     if demo_raw_preview:
-        users.append(
-            {"user": "any", "ips": [LOOPBACK], "permissions": [{"action": "read", "path": PATH_CAMERA}]}
-        )
+        users.append({"user": "any", "ips": local_ips, "permissions": [{"action": "read", "path": PATH_CAMERA}]})
     return users
 
 

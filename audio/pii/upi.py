@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from collections.abc import Callable, Sequence
 
 from audio.pii.merge import Cand, is_ambiguous
@@ -17,7 +18,17 @@ JOINERS = frozenset({"dot", "underscore", "dash", "hyphen", "point", "डॉट"
 # Words that are also bank or app names: "meet me at sbi" is not a UPI id, so these need a name before "at".
 SHARED_HANDLES = frozenset(
     {"sbi", "upi", "paytm", "icici", "hdfc", "hdfcbank", "axisbank", "airtel", "jio", "kotak"}
+    | {"एसबीआई", "पेटीएम", "आईसीआईसीआई", "एचडीएफसी", "एक्सिसबैंक", "एयरटेल", "जियो"}
 )
+
+
+def _marks_ok(text: str) -> bool:
+    """Indic vowel signs are combining marks (``str.isalpha`` is False for them): count them as letters."""
+    return bool(text) and all(ch.isalnum() or unicodedata.category(ch).startswith("M") for ch in text)
+
+
+def _alpha(text: str) -> bool:
+    return _marks_ok(text) and not text.isdigit()
 
 
 def _match(toks: Sequence[Tok], i: int, phrases: tuple[tuple[str, ...], ...]) -> int:
@@ -39,7 +50,7 @@ def _handle(toks: Sequence[Tok], j: int, vocab: Vocab) -> tuple[int, bool] | Non
         if k and toks[j + k].t0 - toks[j + k - 1].t1 >= HANDLE_GAP_S:
             break
         t = toks[j + k].text
-        if not t.isalnum():
+        if not _marks_ok(t):
             break
         cat += t
         if cat in vocab.handles:
@@ -71,7 +82,7 @@ def find_upi(toks: Sequence[Tok], vocab: Vocab, cue_active_at: Callable[[float],
                 break
             if _id_like(prev, vocab):
                 spelt += 1
-            elif words < NAME_MAX_WORDS and prev.text.isalpha():
+            elif words < NAME_MAX_WORDS and _alpha(prev.text):
                 words += 1
             else:
                 break
@@ -99,7 +110,7 @@ def find_upi(toks: Sequence[Tok], vocab: Vocab, cue_active_at: Callable[[float],
                 i += 1
                 continue
             nxt = toks[j]
-            if len(nxt.text) < 2 or not nxt.text.isalpha() or nxt.text in vocab.name_stop:
+            if len(nxt.text) < 2 or not _alpha(nxt.text) or nxt.text in vocab.name_stop:
                 i += 1
                 continue
             if nxt.t0 - toks[j - 1].t1 >= HANDLE_GAP_S:

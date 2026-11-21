@@ -239,7 +239,10 @@ def test_pairing_uses_the_injected_builder_and_hides_nothing_extra(settings_fact
         assert FAKE_YT_KEY not in c.get("/api/pairing").text
 
 
-def test_wildcard_ingest_host_is_refused_for_pairing(settings_factory, bus):
+def test_wildcard_ingest_host_is_refused_for_pairing(settings_factory, bus, monkeypatch):
+    monkeypatch.setenv(
+        "PAIRING_HOST", "not-an-ip"
+    )  # the relay resolves 0.0.0.0 itself; a bad override is refused
     app = create_app(
         settings_factory(ingest_host="0.0.0.0"), bus, Config(_env_file=None, youtube_stream_key=FAKE_YT_KEY)
     )  # type: ignore[arg-type]  # noqa: S104
@@ -265,3 +268,20 @@ def test_destination_routes_are_streamer_only_and_keys_are_clearable(spawning, r
         assert c.delete("/api/destinations/twitch/key", headers=h).json()["cleared"] is False
         assert c.put("/api/destinations/vimeo/key", json={"key": KEY_TYPED}, headers=h).status_code == 422
         assert "DestinationKeys(configured=[])" == repr(app.state.keys)
+
+
+def test_wildcard_bind_shows_a_dialable_address_and_the_passphrase(settings_factory, bus, monkeypatch):
+    monkeypatch.setenv("PAIRING_HOST", "192.168.1.20")
+    monkeypatch.setenv("INGEST_SRT_PASSPHRASE", "phone-pass-0123456789")
+    app = create_app(
+        settings_factory(ingest_host="0.0.0.0"), bus, Config(_env_file=None, youtube_stream_key=FAKE_YT_KEY)
+    )  # type: ignore[arg-type]  # noqa: S104
+    with TestClient(app, base_url="http://127.0.0.1:8000") as c:
+        c.headers.update({"Authorization": f"Bearer {app.state.tokens.issue('streamer')}"})
+        assert c.post("/api/session/start", json={"destinations": [YT]}).status_code == 200
+        card = c.get("/api/session").json()["ingest"]
+        pair = c.get("/api/pairing").json()
+        for url in (card["rtmp_url"], card["srt_url"], pair["rtmp"]["url"], pair["srt"]["url"]):
+            assert "0.0.0.0" not in url and "192.168.1.20" in url
+        assert "passphrase=phone-pass-0123456789" in card["srt_url"]
+        assert "passphrase=phone-pass-0123456789" in pair["srt"]["url"]

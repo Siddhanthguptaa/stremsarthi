@@ -29,10 +29,12 @@ import { useRealtime } from "@/components/streamer/use-realtime"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card"
 import { toast } from "@/components/ui/use-toast"
+import { chatStatusCode, withCode } from "@/lib/chat-status"
+import { ChatStatusNotice } from "@/components/streamer/chat-status-notice"
 import { Filters } from "@/components/mod/filters"
 import { QueueList } from "@/components/mod/queue-list"
 
-const MOD_TOPICS: readonly WireTopic[] = ["chat.modqueue", "chat.verdict"]
+const MOD_TOPICS: readonly WireTopic[] = ["chat.modqueue", "chat.verdict", "safety.event"]
 /** The API refuses a second action on a message for 10 s; the console frees the buttons after the same time. */
 const BUSY_MS = 10_000
 
@@ -97,6 +99,7 @@ function Console() {
   const { t, lang } = useLanguage()
   const { client, state: connection } = useRealtime(MOD_TOPICS, status === "ready")
   const [state, dispatch] = React.useReducer(modReducer, initialModState)
+  const [chatCodes, setChatCodes] = React.useState<string[]>([])
   const [filters, setFilters] = React.useState<ModFilters>(NO_FILTERS)
   const [preset, setPreset] = React.useState<TimeoutPreset>(600)
   // True after an action could not reach the API; cleared by the next one that does.
@@ -108,7 +111,10 @@ function Console() {
     if (!client) return
     const offFrame = client.onFrame((frame) => {
       if (frame.topic === "chat.modqueue") dispatch({ type: "item", item: frame.data.d, at: Date.now() })
-      else if (frame.topic === "chat.verdict") {
+      else if (frame.topic === "safety.event") {
+        const code = chatStatusCode(frame.data.d)
+        if (code) setChatCodes((codes) => withCode(codes, code))
+      } else if (frame.topic === "chat.verdict") {
         dispatch({ type: "verdict", verdict: frame.data.d })
         if (frame.meta) dispatch({ type: "hidden-count", count: frame.meta.hidden_count })
       }
@@ -209,6 +215,7 @@ function Console() {
         </p>
       ) : null}
       <ConnectionBanner state={connection} apiDown={false} />
+      <ChatStatusNotice codes={chatCodes} />
       {connection === "reconnecting" ? (
         <p className="text-sm text-muted-foreground" data-testid="mod-stale">
           {modText(lang, "modx.stale")}

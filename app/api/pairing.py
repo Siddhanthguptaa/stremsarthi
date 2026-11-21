@@ -16,6 +16,7 @@ import importlib
 import ipaddress
 import json
 import os
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from io import BytesIO
@@ -31,6 +32,32 @@ class PairingView(Protocol):
     @property
     def srt_url(self) -> str: ...
     def moblin_url(self, protocol: str = "srt") -> str: ...
+
+
+_PASSPHRASE_RE = re.compile(r"^[A-Za-z0-9_\-]{10,79}$")  # relay.srt.validate_passphrase
+
+
+def srt_passphrase() -> str | None:
+    """INGEST_SRT_PASSPHRASE from the environment or ``.env`` (via ``relay.netenv``), if it is valid.
+
+    The engine child reads the same value, so both sides agree. Never logged."""
+    try:
+        value = importlib.import_module("relay.netenv").effective_env().get("INGEST_SRT_PASSPHRASE")
+    except ImportError:
+        value = os.environ.get("INGEST_SRT_PASSPHRASE")
+    value = (value or "").strip()
+    return value if _PASSPHRASE_RE.match(value) else None
+
+
+def public_host(bind_host: str) -> str:
+    """The address OBS or a phone dials. A specific bind address is used as is; for the wildcard bind
+    ``relay.pairing.resolve_pairing_host`` picks ``PAIRING_HOST`` or the detected LAN address.
+    Raises ``ValueError`` (naming ``PAIRING_HOST``) when none can be found."""
+    try:
+        resolve = importlib.import_module("relay.pairing").resolve_pairing_host
+    except (ImportError, AttributeError):
+        return bind_host
+    return str(resolve(bind_host)[0])
 
 
 PairingBuilder = Callable[[str, str, str], PairingView]  # (host, user, password)
@@ -76,7 +103,7 @@ def local_pairing(
     if address.is_unspecified or address.is_multicast:
         raise ValueError("pairing host must be an address the phone can dial")
 
-    urls = ingest_urls(host, user, password, rtmp_port, srt_port)
+    urls = ingest_urls(host, user, password, rtmp_port, srt_port, srt_passphrase())
     return LocalPairing(urls["rtmp_url"], urls["srt_url"])
 
 
@@ -86,8 +113,8 @@ def relay_pairing(
     """``relay.pairing.build_pairing`` for this login; raises ``ImportError``/``ValueError`` if unusable."""
     pairing = importlib.import_module("relay.pairing")
     security = importlib.import_module("relay.security")
-    # INGEST_SRT_PASSPHRASE is inherited by the engine child, so both sides use the same one.
-    passphrase = os.environ.get("INGEST_SRT_PASSPHRASE") or None
+    # The engine child reads the same INGEST_SRT_PASSPHRASE (environment or .env), so both sides agree.
+    passphrase = srt_passphrase()
     return pairing.build_pairing(  # type: ignore[no-any-return]
         host,
         security.Credentials(user, password),

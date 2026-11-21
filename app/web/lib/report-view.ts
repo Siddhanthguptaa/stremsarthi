@@ -96,7 +96,7 @@ export function holdSeconds(start: string, end: string | null, span: Span): numb
 }
 
 export function totalEvents(report: SafetyReport): number {
-  return report.timeline.length
+  return report.timeline.filter((e) => e.category !== "system_status").length // notices are not protections
 }
 
 export function totalHoldSeconds(report: SafetyReport, span: Span): number {

@@ -28,7 +28,7 @@ at_markers:            # token sequences that say "@"
   weak: [["at"], ["एट"], ["ऐट"]]
   partial: [["the", "rate", "of"], ["rate", "of"], ["द", "रेट"]]   # the leading "at" was lost: only with a known handle
   fuzzy: [["at", "the", "*", "of"], ["at", "*", "rate", "of"], ["at", "the", "rate", "*"]]   # one word mis-heard: known handle or a spelt name
-handles: [oksbi, okhdfcbank, okicici, okaxis, ybl, ibl, axl, paytm, apl, upi, sbi, okhdfc, hdfcbank, icici, axisbank, fbl, ezetap, ikwik, airtel, jio, freecharge, kotak, yesbank, pnb, idfcbank, aubank, barodampay, ibkl, okbizaxis, hsbc, rbl, indus, cnrb, boi, uboi, postbank, ippb, hdfc]
+handles: [oksbi, okhdfcbank, okicici, okaxis, ybl, ibl, axl, paytm, apl, upi, sbi, okhdfc, hdfcbank, icici, axisbank, fbl, ezetap, ikwik, airtel, jio, freecharge, kotak, yesbank, pnb, idfcbank, aubank, barodampay, ibkl, okbizaxis, hsbc, rbl, indus, cnrb, boi, uboi, postbank, ippb, hdfc, ओकेएसबीआई, ओकेएचडीएफसी, ओकेएचडीएफसीबैंक, ओकेआईसीआईसीआई, ओकेएक्सिस, वायबीएल, आईबीएल, एक्सएल, पेटीएम, एसबीआई, आईसीआईसीआई, एचडीएफसी, एक्सिसबैंक, एयरटेल, जियो]
 # Cue phrases open a watch window (docs/specs/audio.md 5.6). Own wording, several scripts: spoken PII is introduced
 # by a name for the item (number, code, id, account) or by an instruction to write it down / send it.
 cues:

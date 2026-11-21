@@ -10,20 +10,29 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
+import os
 import time
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import Any
 
 from .keystore import DestinationKeys
 from .orchestrator import Orchestrator, ingest_urls, new_ingest_login
-from .recorder import SessionLog, SessionRecorder
-from .report import ReportPrivacyError, build_report
+from .pairing import public_host, srt_passphrase
+from .recorder import SESSION_ID_RE, SessionLog, SessionRecorder
+from .report import SCHEMA_VERSION, ReportPrivacyError, build_report, validate_report
 from .sessions import SessionManager, SessionRecord
 
 log = logging.getLogger("streamsarthi.api.golive")
 MAX_REPORTS = 8
 DRAIN_S = 0.25  # time for the last bus events of a stopping engine to reach the recorder
+REPORT_FILE = (
+    "report.json"  # next to events.jsonl in <sessions_dir>/<session id>/; privacy-validated, mode 0600
+)
+MAX_REPORT_BYTES = 8_000_000
+MAX_DISK_REPORTS = 50
 
 
 class GoLive:
@@ -64,11 +73,22 @@ class GoLive:
         chat_enabled: bool,
         engine_already_running: bool,
         extra_env: Mapping[str, str] | None = None,
+        fixed_login: tuple[str, str] | None = None,
     ) -> SessionRecord:
         """Create the session and spawn its processes. Raises ``OSError`` if the engine cannot start."""
         await self.finalize_open()  # a failed or engine_lost session that was never stopped
-        user, password = new_ingest_login()
-        ingest = ingest_urls(self.ingest_host, user, password, self.ingest_rtmp_port, self.ingest_srt_port)
+        # A fixed login (INGEST_PUBLISH_USER/PASSWORD, checked by the caller) makes OBS setup one-time;
+        # otherwise a new random login per session. Either way pairing reads it from this record.
+        user, password = fixed_login or new_ingest_login()
+        try:
+            dial = public_host(self.ingest_host)  # 0.0.0.0 is a bind address: show an address OBS can dial
+        except ValueError:
+            dial = (
+                "127.0.0.1"  # no LAN address found: OBS on this PC still works (set PAIRING_HOST for a phone)
+            )
+        ingest = ingest_urls(
+            dial, user, password, self.ingest_rtmp_port, self.ingest_srt_port, srt_passphrase()
+        )
         record = self.sessions.start(delay_seconds, profile, destinations, ingest)
         record.ingest_login = (user, password)
         self.recorder.begin(record.session_id, record.started_at, profile, delay_seconds)
@@ -130,6 +150,18 @@ class GoLive:
     async def shutdown(self) -> None:
         if self._finish_task is not None and not self._finish_task.done():
             await self.wait_finished(self.stop_timeout_s + 5)
+        # API stop (Ctrl-C) while a session is still open: stop the children, close the record and persist
+        # its report, so the safety report survives the restart.
+        try:
+            cur = self.recorder.current
+            if (
+                cur is not None
+            ):  # first a partial copy now: stopping the engine can outlast a launcher's grace
+                with contextlib.suppress(ReportPrivacyError):
+                    self._write_report(build_report(cur))
+            await self.finalize_open()
+        except Exception:  # never block the shutdown
+            log.exception("could not close the open session at shutdown")
         await self.orch.shutdown()
 
     # --- reports -----------------------------------------------------------------------------
@@ -143,6 +175,63 @@ class GoLive:
         self._reports[rec.session_id] = (time.monotonic() + self.ttl_s, report)
         while len(self._reports) > MAX_REPORTS:
             self._reports.pop(next(iter(self._reports)))
+        self._write_report(report)
+
+    # --- reports on disk (category, time, confidence, box only: the report was privacy-validated) ----
+    def _report_path(self, session_id: str) -> Path | None:
+        base = self.recorder.sessions_dir
+        if base is None or not SESSION_ID_RE.match(session_id):
+            return None
+        return base / session_id / REPORT_FILE
+
+    def _write_report(self, report: dict[str, Any]) -> None:
+        path = self._report_path(report["session_id"])
+        if path is None:
+            return
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(".tmp")
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(report, fh, separators=(",", ":"), ensure_ascii=False)
+            os.replace(tmp, path)
+        except OSError:
+            log.warning("the report could not be saved to disk; it stays in RAM only")
+
+    def _read_report(self, session_id: str) -> dict[str, Any] | None:
+        path = self._report_path(session_id)
+        if path is None:
+            return None
+        try:
+            if not path.is_file() or path.stat().st_size > MAX_REPORT_BYTES:
+                return None
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if (
+                not isinstance(data, dict)
+                or data.get("schema_version") != SCHEMA_VERSION
+                or data.get("session_id") != session_id
+            ):
+                return None
+            validate_report(data)  # a file edited by hand must still be free of images and raw PII
+            return data
+        except (OSError, ValueError, ReportPrivacyError):
+            log.warning("a saved report could not be read")
+            return None
+
+    def _disk_sessions(self) -> list[str]:
+        base = self.recorder.sessions_dir
+        if base is None:
+            return []
+        try:
+            found = [
+                (p.stat().st_mtime, p.parent.name)
+                for p in base.glob(f"*/{REPORT_FILE}")
+                if SESSION_ID_RE.match(p.parent.name)
+            ]
+        except OSError:
+            return []
+        found.sort()
+        return [sid for _, sid in found[-MAX_DISK_REPORTS:]]
 
     def _sweep(self) -> None:
         now = time.monotonic()
@@ -159,11 +248,12 @@ class GoLive:
                 return None
         self._sweep()
         hit = self._reports.get(session_id)
-        return None if hit is None else hit[1]
+        return self._read_report(session_id) if hit is None else hit[1]
 
     def known_sessions(self) -> list[str]:
         self._sweep()
         ids = list(self._reports)
+        ids = [*(s for s in self._disk_sessions() if s not in self._reports), *ids]  # past runs, oldest first
         cur = self.recorder.current
         if cur is not None:
             ids.append(cur.session_id)

@@ -64,10 +64,30 @@ class ConfigFeed(BusFeed):
     ) -> None:
         super().__init__(bus, log)
         self._cats = categories
+        # the settings at start-up: what a dropped CONFIG event falls back to
+        self._startup = dict(categories)
         self._before_enable = before_enable
         self._after_disable = after_disable
         self.applied = 0
         self.ignored = 0
+        self.resets = 0
+
+    def on_drop(self) -> None:
+        """CONFIG events were dropped (it is not a never-drop topic): the live settings can no longer be trusted, so
+        fail toward MORE masking. Every category that was enabled at start-up is enabled again, with its start-up
+        sensitivity, padding and mask-when-unsure; a category that was off at start-up is left as it is."""
+        self.resets += 1
+        log.error("vision-config: CONFIG events were dropped: categories reset to the start-up defaults")
+        for cat, base in self._startup.items():
+            if not base.enabled:
+                continue
+            cur = self._cats.get(cat)
+            if cur is not None and cur.enabled is False and self._before_enable is not None:
+                try:
+                    self._before_enable(cat)
+                except Exception:  # noqa: BLE001 - still switch it on: the lane warms it on demand
+                    log.error("config reset: warm-up failed for a category")
+            self._cats[cat] = base
 
     def handle(self, event: Any) -> None:
         self.apply(event)

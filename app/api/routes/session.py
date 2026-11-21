@@ -41,6 +41,34 @@ class StartBody(BaseModel):
     # Rehearsal: no platform destination at all. The engine still runs the whole chain and publishes only
     # the local ``shielded`` tap (nothing leaves the machine). Needs no stream key.
     rehearsal: bool = False
+    # Go live from /go-live while a local rehearsal is running: stop the rehearsal first (never a live stream).
+    replace_rehearsal: bool = False
+
+
+_LOGIN_RE = re.compile(r"^[A-Za-z0-9_\-]{1,128}$")  # what relay.security.Credentials accepts
+
+
+def fixed_login(cfg: Any) -> tuple[str, str] | None:
+    """INGEST_PUBLISH_USER / INGEST_PUBLISH_PASSWORD from .env or the environment, if usable.
+
+    The engine child receives the login the API chose through its environment, so the API must pick the
+    configured one itself, otherwise a random login would override it at every start. A stable login makes
+    the OBS or phone setup one-time. Unusable values (bad characters, password under 8 characters) fall
+    back to the random login; the values are never logged."""
+    user = getattr(cfg, "ingest_publish_user", None)
+    password = getattr(cfg, "ingest_publish_password", None)
+    u = user.get_secret_value().strip() if user is not None else ""
+    p = password.get_secret_value().strip() if password is not None else ""
+    if not u and not p:
+        return None
+    if _LOGIN_RE.match(u) and _LOGIN_RE.match(p) and len(p) >= 8:
+        return u, p
+    log.warning("INGEST_PUBLISH_USER/PASSWORD ignored: use [A-Za-z0-9_-] and a password of 8+ characters")
+    return None
+
+
+def _is_rehearsal(rec: Any) -> bool:
+    return rec is not None and not any(rec.destinations.values())
 
 
 def _hold(request: Request) -> dict[str, Any]:
@@ -60,6 +88,9 @@ async def get_session(request: Request, _: Principal = Depends(require_role("str
         "delay_seconds": rec.delay_seconds if rec else cfg.delay_seconds,
         "profile": rec.profile if rec else cfg.profile,
         "hold": _hold(request),
+        # What the output goes to: "rtmps" = a real platform (LIVE), "preview" = local rehearsal only.
+        "output": None if rec is None else ("rehearsal" if _is_rehearsal(rec) else "live"),
+        "destinations": [] if rec is None else sorted(k for k, on in rec.destinations.items() if on),
         # Per-session ingest URLs and credentials are created by the go-live orchestration (T6.1).
         "ingest": {
             "srt_url": rec.ingest.get("srt_url") if rec else None,
@@ -110,7 +141,18 @@ async def start_session(
     cfg = store.config
     engine = state.hub.engine_status()
     if state.sessions.is_active(engine):
-        raise ApiError(409, "session_active", "a session is already running")
+        rec = state.sessions.record
+        if not (body.replace_rehearsal and not body.rehearsal and _is_rehearsal(rec)):
+            raise ApiError(409, "session_active", "a session is already running")
+        # Switch from the local rehearsal to a live session: stop it and wait for its report (never done
+        # for a session that is going to a platform).
+        await _stop(request, principal.actor)
+        await state.golive.wait_finished(state.settings.session_stop_timeout_s + 8)
+        engine = state.hub.engine_status()
+        if state.sessions.is_active(engine):
+            raise ApiError(
+                409, "session_stopping", "the rehearsal is still stopping; try again in a few seconds"
+            )
 
     enabled = {d.kind: d.enabled for d in body.destinations}
     if body.rehearsal:
@@ -126,7 +168,10 @@ async def start_session(
     if missing:  # names only, never values
         raise ApiError(422, "missing_keys", "missing in .env: " + ", ".join(sorted(missing)))
 
-    attached = engine is not None  # an engine already running (scripts/run_engine): its delay is fixed
+    # An engine already running that the API did not start (scripts/run_engine): its delay is fixed. The last
+    # heartbeat of an engine we just stopped lingers for a few seconds and is not "attached".
+    orch_engine = state.orchestrator.engine
+    attached = engine is not None and not (orch_engine is not None and orch_engine.state != "running")
     if attached and body.delay_seconds is not None and body.delay_seconds != cfg.delay_seconds:
         raise ApiError(
             409,
@@ -158,6 +203,7 @@ async def start_session(
             chat_enabled=new_config.chat.enabled,
             engine_already_running=attached,
             extra_env=child_overrides,
+            fixed_login=fixed_login(cfg),
         )
     except OSError:
         log.warning("session start: the engine process could not be started")
@@ -178,6 +224,8 @@ async def start_session(
     return {
         "session_id": record.session_id,
         "state": "starting",
+        "output": "rehearsal" if body.rehearsal else "live",
+        "login_stable": fixed_login(cfg) is not None,
         "checks": {
             "youtube_key": configured["youtube_stream_key"],
             "twitch_key": configured["twitch_stream_key"],
@@ -188,19 +236,23 @@ async def start_session(
     }
 
 
-@router.post("/stop")
-async def stop_session(
-    request: Request,
-    principal: Principal = Depends(require_role("streamer")),  # noqa: B008
-) -> dict[str, Any]:
+async def _stop(request: Request, actor: str) -> None:
     state = request.app.state
     try:
-        state.bus.publish(Topic.SESSION, SessionCommand(action="stop", actor=principal.actor))
+        state.bus.publish(Topic.SESSION, SessionCommand(action="stop", actor=actor))
     except (RuntimeError, ValueError, TypeError):
         log.warning("session stop publish failed")
         raise ApiError(503, "bus_unavailable", "could not reach the engine bus") from None
     state.sessions.stop()
     state.golive.request_stop()  # children stop, the report is built, the state becomes "ended"
+
+
+@router.post("/stop")
+async def stop_session(
+    request: Request,
+    principal: Principal = Depends(require_role("streamer")),  # noqa: B008
+) -> dict[str, Any]:
+    await _stop(request, principal.actor)
     return {"state": "stopping"}
 
 

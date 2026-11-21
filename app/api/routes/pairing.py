@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from ..auth import Principal
 from ..deps import require_role
 from ..errors import ApiError
-from ..pairing import PairingView, build_pairing_info, pairing_payload, qr_png
+from ..pairing import PairingView, build_pairing_info, pairing_payload, public_host, qr_png
 
 log = logging.getLogger("streamsarthi.api.pairing")
 router = APIRouter(prefix="/api/pairing")
@@ -31,7 +31,7 @@ def _info(request: Request) -> PairingView:
     user, password = rec.ingest_login
     try:
         return build_pairing_info(
-            state.settings.ingest_host,
+            public_host(state.settings.ingest_host),
             user,
             password,
             getattr(state, "pairing_builder", None),

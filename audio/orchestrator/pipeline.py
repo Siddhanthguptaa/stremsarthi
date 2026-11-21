@@ -40,8 +40,13 @@ log = logging.getLogger("audio.orchestrator")
 
 WINDOW_S = 8.0  # transcript window kept for the rules (5.4)
 RING_S = 8.0  # recent audio kept for the Groq context (>= 3 s requests)
+MIN_PAD_S = 0.3  # lead and trail padding around a spoken PII span: ASR word times are only good to ~0.2 s
 FAILSAFE_PAD_S = 0.25  # VAD end-of-speech trims soft word tails: pad generously (the fail-safe is final)
 MAX_BOUNDS = 64
+
+
+class ConfigFeedEnded(RuntimeError):
+    """The ``Topic.CONFIG`` subscription stopped delivering (closed or exhausted)."""
 
 
 class ThinTranscript(RuntimeError):
@@ -118,7 +123,7 @@ class AudioPipeline:
         self.detector = detector
         self.clock = clock
         self.delay = float(config.delay_seconds)
-        self.planner = planner or SpanPlanner(pad_s=a.pad_s)
+        self.planner = planner or SpanPlanner(pad_s=max(a.pad_s, MIN_PAD_S))
         self.window = TranscriptWindowBuilder(span_s=max(WINDOW_S, a.watch_window_s + 2.0))
         self.ring = PcmRing()
         self.arrivals = ArrivalMap()
@@ -143,6 +148,8 @@ class AudioPipeline:
                 "dropped_chunks",
                 "chunk_failsafe",
                 "thin_transcript",
+                "config_drops",
+                "config_restarts",
             ),
             0,
         )
@@ -169,13 +176,74 @@ class AudioPipeline:
                 if seg.voiced:
                     self._failsafe(seg, "error")
 
-    async def watch_config(self, sub: Any) -> None:
-        """Feed ``Topic.CONFIG`` changes from a bus subscription into the live settings (until cancelled)."""
-        async for _topic, ev in sub:
+    async def watch_config(self, sub: Any, poll_s: float = 1.0) -> None:
+        """Feed ``Topic.CONFIG`` changes from one bus subscription into the live settings (until cancelled).
+
+        A subscription that dropped an event (``sub.dropped`` grew) may have missed a toggle: the settings fall back
+        to fail-closed defaults at once (checked every ``poll_s`` and before each event). Raises ``ConfigFeedEnded``
+        if the subscription ends (the caller restarts it, see ``supervise_config``)."""
+        it = sub.__aiter__()
+        seen = int(getattr(sub, "dropped", 0) or 0)
+        nxt: asyncio.Future[Any] | None = None
+        try:
+            while True:
+                if nxt is None:
+                    nxt = asyncio.ensure_future(it.__anext__())
+                done, _ = await asyncio.wait({nxt}, timeout=poll_s)
+                now = int(getattr(sub, "dropped", 0) or 0)
+                if now != seen:
+                    seen = now
+                    self.stats["config_drops"] += 1
+                    log.error("audio config feed dropped an event: spoken categories reset to fail-closed")
+                    self.live.fail_closed()
+                if not done:
+                    continue
+                fut, nxt = nxt, None
+                try:
+                    _topic, ev = fut.result()
+                except StopAsyncIteration:
+                    raise ConfigFeedEnded from None
+                try:
+                    self.live.apply(ev.diff)
+                except Exception as exc:  # never let a bad event stop the feed
+                    log.warning("audio config event ignored (%s)", type(exc).__name__)
+        finally:
+            if nxt is not None and not nxt.done():
+                nxt.cancel()
+                await asyncio.gather(nxt, return_exceptions=True)
+
+    async def supervise_config(
+        self,
+        first_sub: Any,
+        resubscribe: Callable[[], Any],
+        *,
+        backoff_s: tuple[float, ...] = (0.5, 1.0, 2.0, 5.0),
+        poll_s: float = 1.0,
+    ) -> None:
+        """Keep ``watch_config`` alive: when it dies, log at error level, fall back to fail-closed settings, wait
+        (backoff) and subscribe again. Runs until cancelled."""
+        sub: Any = first_sub
+        attempt = 0
+        while True:
             try:
-                self.live.apply(ev.diff)
-            except Exception as exc:  # never let a bad event stop the feed
-                log.warning("audio config event ignored (%s)", type(exc).__name__)
+                if sub is None:
+                    sub = resubscribe()
+                await self.watch_config(sub, poll_s)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                log.error("audio config feed died (%s): fail-closed, restarting", type(exc).__name__)
+            self.stats["config_restarts"] += 1
+            self.live.fail_closed()  # events may have been missed while the feed was down
+            closer = getattr(sub, "close", None)
+            sub = None
+            if closer is not None:
+                try:
+                    closer()
+                except Exception:  # noqa: BLE001 - already failing
+                    pass
+            await asyncio.sleep(backoff_s[min(attempt, len(backoff_s) - 1)])
+            attempt += 1
 
     def failsafe_chunk(self, chunk: AudioChunk, why: str) -> None:
         """Mute the whole chunk (loop thread). Never raises, never logs text or audio."""

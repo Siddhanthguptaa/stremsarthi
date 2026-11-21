@@ -63,10 +63,21 @@ try:
     cl.patch("/api/config", json={"captions": {"enabled": True}})
 except Exception:  # noqa: BLE001 - cosmetic
     pass
-p = cl.get("/api/pairing").json()
+pr = cl.get("/api/pairing")
+p = pr.json() if pr.status_code == 200 else {}
+if pr.status_code != 200:
+    print(
+        f"\nNo publish address yet (pairing answered {pr.status_code}). On a phone-reachable bind set PAIRING_HOST=<this PC's LAN IPv4> "
+        "in .env when WSL uses NAT networking, then run again.",
+        file=sys.stderr,
+    )
 print("\n=== Point your streaming app here (SRT is best on a phone, RTMP works in OBS) ===")
 print("  RTMP:", p.get("rtmp", {}).get("url"))
 print("  SRT :", p.get("srt", {}).get("url"))
+if os.environ.get("INGEST_BIND_HOST", "127.0.0.1") not in ("127.0.0.1", ""):
+    print(
+        "  (phone-reachable ingest: RTMP sends the login in cleartext on your network, SRT is encrypted: use SRT)"
+    )
 if p.get("moblin_url"):
     print("  Moblin import link:", p["moblin_url"])
 print("\nThen open  http://127.0.0.1:3000/demo  (left: what your camera sees, right: what viewers get).")

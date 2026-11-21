@@ -206,3 +206,19 @@ def test_degenerate_boxes_do_not_break_the_filter() -> None:
     for k in range(5):
         out = step(tr, k, [(100.0, 100.0, 100.0, 100.0)])  # zero area
         assert len(out) == 1 and np.isfinite(out[0].kf).all()
+
+
+def test_reset_clears_the_clock_and_forget_label_keeps_it() -> None:
+    tr = tracker()
+    for k in range(5):
+        step(tr, k, [box(100, 100), box(300, 300)], labels=["a", "b"])
+    assert len(tr.tracks) == 2
+    last = tr._last_pts
+    tr.forget_label("a")
+    assert [t.label for t in tr.tracks] == ["b"], "only that label's tracks go"
+    assert tr._last_pts == last, "forget_label leaves the clock alone"
+    tr.reset()
+    assert tr.tracks == [] and tr._last_pts == -float("inf"), "reset clears the clock too"
+    # a restarted (earlier) source clock after reset must start fresh tracks, not be read as a back-jump
+    step(tr, 0, [box(100, 100)], labels=["a"])
+    assert len(tr.tracks) == 1

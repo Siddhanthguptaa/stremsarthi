@@ -9,8 +9,10 @@ adapter and the dispatcher policy cannot disagree.
 ``python -m chat.main`` is the live process (T6.1): it loads ``contracts.load_config``, opens the ZeroMQ bus
 (``chat.zmq_bus``; endpoints from ``BUS_SUB_ENDPOINT`` / ``BUS_PUB_ENDPOINT``), runs ``chat.live.ChatService`` and
 shuts down cleanly on SIGTERM / SIGINT. Exit codes: 0 ok or chat disabled, 1 config error, 2 no connector could
-be built (missing credentials, no login), 3 bus error, 4 every connector failed for good. Flags: ``--login``
-(interactive OAuth when no stored token), ``--remember`` (keep refresh tokens in the OS keyring), ``--profile``,
+be built (missing credentials, no login), 3 bus error, 4 every connector failed for good, 5 a standalone --login failed. Flags: ``--login``
+(standalone: OAuth for each configured platform, store the tokens, exit; no bus needed; always stores), ``--remember`` (the
+service logs in itself and keeps tokens; tokens go to the OS keyring when a real one exists, else a 0600 file, see
+``chat.tokenfile``), ``--profile``,
 ``--config-dir``, ``--env-file``, ``--log-level``. Logs are machine codes only; no secret or message text.
 """
 
@@ -83,10 +85,14 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--config-dir", default="config/profiles")
     p.add_argument("--env-file", default=".env")
     p.add_argument(
-        "--login", action="store_true", help="run the interactive OAuth flows when no token is stored"
+        "--login",
+        action="store_true",
+        help="standalone: run the OAuth flows (YouTube loopback, Twitch device code), store the tokens, exit",
     )
     p.add_argument(
-        "--remember", action="store_true", help="keep refresh tokens in the OS keyring after login"
+        "--remember",
+        action="store_true",
+        help="keep refresh tokens (OS keyring, else a 0600 file) when the service logs in itself; --login always stores",
     )
     p.add_argument("--log-level", default="INFO", choices=("DEBUG", "INFO", "WARNING", "ERROR"))
     return p
@@ -124,7 +130,11 @@ async def amain(
         except Exception as exc:  # pydantic errors can echo values: report the class only
             log_event(log, "config_error", level=logging.ERROR, error=type(exc).__name__)
             return int(ExitCode.CONFIG_ERROR)
-    live = options or LiveOptions(login=args.login, remember=args.remember)
+    if args.login:  # standalone: no bus, no engine, no session
+        from chat.live import run_login
+
+        return await run_login(config)
+    live = options or LiveOptions(remember=args.remember)
     owned: ZmqBus | None = None
     if bus is None:
         sub_ep, pub_ep = endpoints_from_env()

@@ -27,10 +27,11 @@ from relay.egress import Egress
 from relay.encoder import Encoder, EncoderSettings, describe_command, select_encoder
 from relay.ingest import NetworkInput
 from relay.mediamtx import MediaMTXSupervisor
-from relay.pairing import PairingInfo, build_pairing
+from relay.netenv import effective_env
+from relay.pairing import PairingInfo, build_pairing, resolve_pairing_host
 from relay.security import PATH_SHIELDED, WILDCARD, Credentials, RelayAddress
 from relay.sink import EgressFrameSink
-from relay.srt import generate_passphrase, tuning_warnings
+from relay.srt import tuning_warnings, validate_passphrase
 from relay.tls_forwarder import TLSForwarder
 
 log = logging.getLogger("relay.runtime")
@@ -147,7 +148,7 @@ def _bind_address(config: Config, env: dict[str, str]) -> RelayAddress:
     ``0.0.0.0`` is accepted only because it was written down on purpose; the supervisor then also
     requires the publish login and an SRT passphrase (``relay.srt.validate_exposure``).
     """
-    host = env.get(ENV_BIND_HOST) or config.relay.ingest_bind_host
+    host = (env.get(ENV_BIND_HOST) or "").strip() or config.relay.ingest_bind_host
     return RelayAddress(
         host=host,
         rtmp_port=config.ingest_port_rtmp,
@@ -159,15 +160,39 @@ def _bind_address(config: Config, env: dict[str, str]) -> RelayAddress:
 
 
 def _srt_passphrase(address: RelayAddress, env: dict[str, str]) -> str | None:
-    fixed = env.get(ENV_SRT_PASSPHRASE)
+    """``INGEST_SRT_PASSPHRASE`` (validated, never echoed). A non-loopback bind without one fails closed.
+
+    A generated passphrase would be unknown to the API process that builds the phone URLs, so a
+    phone-reachable ingest must be given one on purpose.
+    """
+    fixed = (env.get(ENV_SRT_PASSPHRASE) or "").strip()
     if fixed:
-        return fixed
-    return None if address.host.startswith("127.") else generate_passphrase()
+        try:
+            return validate_passphrase(fixed)
+        except ValueError:
+            raise ValueError(f"{ENV_SRT_PASSPHRASE} must be 10..79 characters from [A-Za-z0-9_-]") from None
+    if address.host.startswith("127."):
+        return None
+    raise ValueError(
+        f"INGEST_BIND_HOST={address.host} is reachable from other devices: set {ENV_SRT_PASSPHRASE} "
+        "(10..79 characters from [A-Za-z0-9_-]); refusing to start an unprotected ingest"
+    )
 
 
 def build(config: Config, bus: EventBus, *, environ: dict[str, str] | None = None) -> RelayEndpoints:
-    env = dict(os.environ if environ is None else environ)
+    env = effective_env(environ)  # process environment first, then the .env subset (see relay.netenv)
     address = _bind_address(config, env)
+    log.info(
+        "ingest bind %s (%s)",
+        address.host,
+        "loopback only" if address.host.startswith("127.") else "phone-reachable: publish login and SRT passphrase required",
+    )
+    if not address.host.startswith("127."):
+        try:
+            host, source = resolve_pairing_host(address.host, env)
+            log.info("phones should dial %s (from %s)", host, source)
+        except ValueError as error:
+            log.warning("pairing host: %s", error)
     for warning in tuning_warnings(config.relay.srt_latency_ms, config.relay.ingest_hold_after_s):
         log.warning("relay tuning: %s", warning)
     demo_raw_preview = env.get(ENV_DEMO_RAW_PREVIEW) == "1"

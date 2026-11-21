@@ -60,6 +60,9 @@ CHAT_STATUS_CODES = (
     "twitch_no_credentials",
     "twitch_login_required",
     "twitch_no_channel",
+    "twitch_auth_failed",
+    "chat_unavailable",
+    "chat_connectors_failed",
 )
 _CODE_RE = re.compile(r"\b(" + "|".join(CHAT_STATUS_CODES) + r")\b")
 # Exit codes of ``python -m chat.main`` (0 also means "chat disabled in its own config").
@@ -141,16 +144,20 @@ def new_ingest_login() -> tuple[str, str]:
 
 
 def ingest_urls(
-    host: str, user: str, password: str, rtmp_port: int = 1935, srt_port: int = 8890
+    host: str,
+    user: str,
+    password: str,
+    rtmp_port: int = 1935,
+    srt_port: int = 8890,
+    passphrase: str | None = None,
 ) -> dict[str, str]:
-    """What OBS or a phone app publishes to (not the YouTube or Twitch key). Mirrors ``relay.security``."""
-    return {
-        "rtmp_url": f"rtmp://{host}:{rtmp_port}/camera?user={user}&pass={password}",
-        "srt_url": (
-            f"srt://{host}:{srt_port}?streamid=publish:camera:{user}:{password}"
-            "&pkt_size=1316&mode=caller&latency=120000"
-        ),
-    }
+    """What OBS or a phone app publishes to (not the YouTube or Twitch key). Mirrors ``relay.security``.
+
+    ``passphrase`` (INGEST_SRT_PASSPHRASE, already validated) is added to the SRT URL; never log the result."""
+    srt = f"srt://{host}:{srt_port}?streamid=publish:camera:{user}:{password}&pkt_size=1316&mode=caller&latency=120000"
+    if passphrase:
+        srt += f"&passphrase={passphrase}&pbkeylen=16"
+    return {"rtmp_url": f"rtmp://{host}:{rtmp_port}/camera?user={user}&pass={password}", "srt_url": srt}
 
 
 class Orchestrator:

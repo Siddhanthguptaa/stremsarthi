@@ -74,7 +74,9 @@ def test_user_list_permissions_and_ips():
     ]
     assert set(internal_perms["ips"]) == {"127.0.0.1", "192.168.1.20"}
     anonymous = [u for u in users if u["user"] == "any"]
-    assert all(u["ips"] == ["127.0.0.1"] for u in anonymous), "anonymous access is loopback only"
+    local = {"127.0.0.1", "192.168.1.20"}  # this machine: loopback and the bind address itself
+    assert all(set(u["ips"]) <= local for u in anonymous), "anonymous access is this machine only"
+    assert all(u["ips"] == ["127.0.0.1"] for u in anonymous if {"action": "api"} in u["permissions"])
     assert {p["action"] for u in anonymous for p in u["permissions"]} == {"read", "api"}
     assert not any(p["path"] == "camera" for u in anonymous for p in u["permissions"] if "path" in p)
     json.dumps(users)  # serialisable
@@ -141,12 +143,12 @@ def test_raw_preview_entry_is_loopback_read_of_camera_only():
     extra = users[-1]
     assert extra == {
         "user": "any",
-        "ips": ["127.0.0.1"],
+        "ips": ["127.0.0.1", "192.168.1.20"],
         "permissions": [{"action": "read", "path": "camera"}],
     }
     assert users[:4] == mediamtx_users(address, phone, internal), "nothing else changes"
     anonymous = [u for u in users if u["user"] == "any"]
-    assert all(u["ips"] == ["127.0.0.1"] for u in anonymous), "never non-loopback"
+    assert all(set(u["ips"]) <= {"127.0.0.1", "192.168.1.20"} for u in anonymous), "never a remote address"
     perms = {(p["action"], p.get("path")) for u in anonymous for p in u["permissions"]}
     assert perms == {("read", "shielded"), ("api", None), ("read", "camera")}
     assert not any(a == "publish" for a, _ in perms), "no anonymous publish on any path"
@@ -158,3 +160,40 @@ def test_runtime_turns_the_preview_on_only_for_env_value_1(caplog):
     assert runtime.ENV_DEMO_RAW_PREVIEW == "DEMO_RAW_PREVIEW"
     source = open(runtime.__file__, encoding="utf-8").read()
     assert 'env.get(ENV_DEMO_RAW_PREVIEW) == "1"' in source and source.count("demo_raw_preview: enabled") == 1
+
+
+def _users(host, **kw):
+    address = RelayAddress(host, allow_wildcard=host == "0.0.0.0")
+    return mediamtx_users(address, Credentials("phoneuser", "p" * 20), Credentials("internal", "i" * 20), **kw)
+
+
+def _reader_ips(users, path):
+    return [
+        u["ips"]
+        for u in users
+        if u["user"] == "any" and {"action": "read", "path": path} in u["permissions"]
+    ]
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "0.0.0.0", "192.168.1.20"])
+def test_publisher_always_has_a_login_and_anonymous_never_publishes(host):
+    users = _users(host, demo_raw_preview=True)
+    assert all(u["user"] != "any" or all(p["action"] != "publish" for p in u["permissions"]) for u in users)
+    phone = next(u for u in users if u["user"] == "phoneuser")
+    assert phone["pass"] and phone["permissions"] == [{"action": "publish", "path": "camera"}]
+
+
+def test_wildcard_bind_keeps_anonymous_readers_and_api_on_loopback():
+    users = _users("0.0.0.0", demo_raw_preview=True)
+    assert _reader_ips(users, "shielded") == [["127.0.0.1"]] == _reader_ips(users, "camera")
+    api = [u for u in users if {"action": "api"} in u["permissions"]]
+    assert api and all(u["ips"] == ["127.0.0.1"] for u in api)
+
+
+def test_lan_bind_lets_the_local_preview_reader_in_from_the_bind_address_only():
+    users = _users("192.168.1.20", demo_raw_preview=True)
+    assert _reader_ips(users, "shielded") == [["127.0.0.1", "192.168.1.20"]]
+    assert _reader_ips(users, "camera") == [["127.0.0.1", "192.168.1.20"]]
+    api = [u for u in users if {"action": "api"} in u["permissions"]]
+    assert all(u["ips"] == ["127.0.0.1"] for u in api)
+    assert _reader_ips(_users("192.168.1.20"), "camera") == [], "raw camera read stays off by default"

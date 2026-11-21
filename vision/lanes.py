@@ -14,6 +14,7 @@ only the exception type.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import threading
@@ -47,6 +48,10 @@ RESULT_QUEUE_MAX = 256
 ENV_FAULT = "SS_FAULT"
 ENV_FAULT_LOG = "SS_FAULT_LOG"
 _FAULT_TIME_RE = re.compile(r"^(\d+(?:\.\d+)?)(ms|s)?$")
+
+log = logging.getLogger("vision.lanes")
+#: seconds between the per-lane service-time lines in the log (windowed p50/p95; numbers only, no content)
+DIAG_PERIOD_S = 20.0
 
 
 def _fault_seconds(text: str) -> float:
@@ -288,6 +293,8 @@ class LaneWorker:
         )
         self.last_error: dict[str, str] = {}  # detector id -> exception type name (never the message)
         self.service_seconds: deque[float] = deque(maxlen=4096)
+        self._diag: dict[str, list[float]] = {}
+        self._diag_at = time.monotonic()
         self.detector_seconds: dict[str, deque[float]] = {d.id: deque(maxlen=4096) for d in self.detectors}
 
     # ------------------------------------------------------------------ public API
@@ -403,8 +410,37 @@ class LaneWorker:
                 else self._run_once(frame, began)
             )
             self.service_seconds.append(self._clock() - began)
+            self._log_diag(self._clock() - began)
             with self._cond:
                 self._results.append(result)
+
+    def _log_diag(self, service: float) -> None:
+        """Every ``DIAG_PERIOD_S``: windowed p50/p95 of this lane's service time and of each detector."""
+        win = self._diag
+        win.setdefault("_lane", []).append(service)
+        for det_id, d in self.detector_seconds.items():
+            if d:
+                win.setdefault(det_id, []).append(d[-1])
+        now = time.monotonic()
+        if now - self._diag_at < DIAG_PERIOD_S:
+            return
+        self._diag_at = now
+
+        def pct(v: list[float], q: float) -> int:
+            return round(1000 * sorted(v)[min(len(v) - 1, int(q * len(v)))])
+
+        parts = [f"{k.strip('_')}={pct(v, 0.5)}/{pct(v, 0.95)}ms" for k, v in win.items() if v]
+        log.info(
+            "lane %s service p50/p95 n=%d: %s (offered=%d completed=%d dropped=%d failed=%d)",
+            self.lane.value,
+            len(win.get("_lane", ())),
+            " ".join(parts),
+            self.offered,
+            self.completed,
+            self.dropped,
+            self.failed,
+        )
+        self._diag = {}
 
     def _run_once(self, frame: Frame, began: float) -> LaneResult:
         deadline = None if self._deadline_s is None else began + self._deadline_s

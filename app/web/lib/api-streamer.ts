@@ -26,18 +26,41 @@ export interface SessionView {
   profile: Profile
   hold: { active: boolean; sources: HoldSource[] }
   ingest: { srt_url: string | null; rtmp_url: string | null }
+  /** "live" = going to a platform over RTMPS, "rehearsal" = local preview only, null = no session. */
+  output?: "live" | "rehearsal" | null
+  /** Platforms the running session sends to (empty for a rehearsal). */
+  destinations?: DestinationKind[]
+}
+
+/** `GET /api/destinations`: whether a stream key exists and where it came from. The key itself is never returned. */
+export interface DestinationView {
+  kind: DestinationKind
+  enabled: boolean
+  configured: boolean
+  key_source: "env" | "session" | null
+}
+
+/** `GET /api/session/health` (the part the live page reads). Fixed code names only. */
+export interface SessionHealth {
+  ready: boolean
+  chat: { enabled: boolean; process: string; reason: string | null; status_codes: string[] }
 }
 
 export interface StartRequest {
   destinations: { kind: DestinationKind; enabled: boolean }[]
   delay_seconds?: number
   profile?: Profile
+  /** Stop a running local rehearsal and go live in one step (the API never replaces a live session). */
+  replace_rehearsal?: boolean
 }
 
 /** `POST /api/session/start`: which prerequisites are present (booleans, never values). */
 export interface StartResponse {
   session_id: string
   state: string
+  output?: "live" | "rehearsal"
+  /** True when INGEST_PUBLISH_USER/PASSWORD from .env fixed the publish login (one-time OBS setup). */
+  login_stable?: boolean
   checks: { youtube_key: boolean; twitch_key: boolean; groq_key: boolean; sarvam_key: boolean; gpu: boolean }
 }
 
@@ -114,6 +137,14 @@ export function createStreamerApi(options: ApiClientOptions) {
     getSession: (signal?: AbortSignal) => json<SessionView>("GET", "/api/session", undefined, signal),
     startSession: (body: StartRequest, signal?: AbortSignal) => json<StartResponse>("POST", "/api/session/start", body, signal),
     stopSession: (signal?: AbortSignal) => json<{ state: string }>("POST", "/api/session/stop", {}, signal),
+    getHealth: (signal?: AbortSignal) => json<SessionHealth>("GET", "/api/session/health", undefined, signal),
+    listDestinations: (signal?: AbortSignal) =>
+      json<{ destinations: DestinationView[] }>("GET", "/api/destinations", undefined, signal),
+    /** The key goes in the request body only (never a URL), is held in the API's RAM and is never returned. */
+    setDestinationKey: (kind: DestinationKind, key: string, signal?: AbortSignal) =>
+      json<{ kind: DestinationKind; configured: boolean }>("PUT", `/api/destinations/${kind}/key`, { key }, signal),
+    clearDestinationKey: (kind: DestinationKind, signal?: AbortSignal) =>
+      json<{ kind: DestinationKind; cleared: boolean }>("DELETE", `/api/destinations/${kind}/key`, undefined, signal),
     getPairing: (signal?: AbortSignal) => json<Pairing>("GET", "/api/pairing", undefined, signal),
     getRisk: (signal?: AbortSignal) => json<RiskSnapshot>("GET", "/api/risk", undefined, signal),
     /**

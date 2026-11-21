@@ -16,6 +16,7 @@ load (``SttBusy``) rather than building a backlog of segments that would be stal
 from __future__ import annotations
 
 import asyncio
+import logging
 import threading
 import time
 from collections.abc import Callable
@@ -38,6 +39,13 @@ from audio.stt.base import (
 from contracts.config import Config
 from contracts.speech import Transcript, Word
 
+log = logging.getLogger("audio.stt.local")
+
+# Model sizes by cost. When the requested weights are missing the engine takes the nearest SMALLER one first
+# (a slower model would miss the delay window; the race then mutes), then a larger one as the last resort.
+SIZE_ORDER = ("tiny", "base", "small")
+REQUIRED_FILES = ("model.bin", "config.json", "tokenizer.json")
+
 SILENCE_DBFS = -55.0  # below this RMS the segment is not sent to Whisper
 NO_SPEECH_DROP = 0.8  # drop a Whisper segment that is probably non-speech ...
 LOGPROB_DROP = -1.0  # ... and low confidence
@@ -45,6 +53,27 @@ LOGPROB_DROP = -1.0  # ... and low confidence
 
 def model_dir_for(size: str) -> Path:
     return weights_dir() / f"faster-whisper-{size}"
+
+
+def model_present(size: str, base: Path | None = None) -> bool:
+    d = (base / f"faster-whisper-{size}") if base is not None else model_dir_for(size)
+    return all((d / f).is_file() for f in REQUIRED_FILES)
+
+
+def candidate_sizes(requested: str) -> list[str]:
+    """Order to try: the requested size, smaller ones (largest first), then larger ones (smallest first)."""
+    if requested not in SIZE_ORDER:
+        return list(SIZE_ORDER[1::-1]) + [SIZE_ORDER[2]]  # unknown name: base, tiny, small
+    i = SIZE_ORDER.index(requested)
+    return [requested, *reversed(SIZE_ORDER[:i]), *SIZE_ORDER[i + 1 :]]
+
+
+def resolve_model_size(requested: str, base: Path | None = None) -> str | None:
+    """The best AVAILABLE weight for ``requested`` (``None`` when no weights are on disk at all)."""
+    for size in candidate_sizes(requested):
+        if model_present(size, base):
+            return size
+    return None
 
 
 def preprocess(pcm: Any) -> np.ndarray:
@@ -84,7 +113,9 @@ class LocalWhisperSTT:
         model_factory: Callable[[], Any] | None = None,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        self.model_size = model_size
+        self.model_size = model_size  # what was asked for
+        self.active_model_size: str | None = None  # what actually loaded (set by _load)
+        self._pinned_dir = model_dir is not None
         self.device = device
         self.compute_type = compute_type or ("int8" if device == "cpu" else "int8_float16")
         self.cpu_threads = cpu_threads
@@ -116,19 +147,43 @@ class LocalWhisperSTT:
             from faster_whisper import WhisperModel
         except ImportError as exc:
             raise SttUnavailable("faster-whisper is not installed") from exc
-        if not (self.model_dir / "model.bin").exists():
+        if self._pinned_dir:
+            plan = [(self.model_size, self.model_dir)]
+        else:
+            plan = [(s, model_dir_for(s)) for s in candidate_sizes(self.model_size) if model_present(s)]
+        if not plan:
             repo = WHISPER_REPOS.get(self.model_size, "?")
             raise SttUnavailable(
-                f"model files missing in {self.model_dir}; fetch {repo} with audio.models.fetch_hf_model()"
+                f"no whisper weights in {weights_dir()}; fetch {repo} with audio.models.fetch_hf_model()"
             )
-        self._model = WhisperModel(
-            str(self.model_dir),
-            device=self.device,
-            compute_type=self.compute_type,
-            cpu_threads=self.cpu_threads if self.device == "cpu" else 0,
-            num_workers=1,
-        )
-        return self._model
+        for size, path in plan:
+            if not (path / "model.bin").exists():
+                continue
+            try:
+                self._model = WhisperModel(
+                    str(path),
+                    device=self.device,
+                    compute_type=self.compute_type,
+                    cpu_threads=self.cpu_threads if self.device == "cpu" else 0,
+                    num_workers=1,
+                )
+            except Exception as exc:  # noqa: BLE001 - a corrupt or incompatible model: try the next one
+                log.warning("local stt: whisper %s failed to load (%s)", size, type(exc).__name__)
+                continue
+            self.active_model_size = size
+            self.model_dir = path
+            if size != self.model_size:
+                log.warning(
+                    "local stt: whisper %s is not available, using %s (%s, %s)",
+                    self.model_size,
+                    size,
+                    self.device,
+                    self.compute_type,
+                )
+            else:
+                log.info("local stt: using whisper %s (%s, %s)", size, self.device, self.compute_type)
+            return self._model
+        raise SttUnavailable(f"no usable whisper weights for {self.model_size!r}")
 
     async def warmup(self) -> None:
         """Load the model (and run one dummy decode) off the event loop so the first segment is not slow."""

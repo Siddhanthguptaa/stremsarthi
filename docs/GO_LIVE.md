@@ -1,12 +1,46 @@
 # Stream Sarthi: go-live runbook (from this repo to a REAL stream)
 
-Written 2026-11-21 from the repo as it stands (uncommitted tree), `docs/STATUS.md`, `docs/DEMO.md`, `docs/COST.md`, `docs/PLAN.md` sections 2 and 9, the scripts and the code. Every command, flag, path, route and variable below was checked by reading the repo; anything that could not be checked is marked **UNVERIFIED**. Nothing in this file was run.
+Written 2026-11-21 (updated the same day for the relay, chat and report changes) from the repo as it stands (uncommitted tree), `docs/STATUS.md`, `docs/DEMO.md`, `docs/COST.md`, `docs/PLAN.md` sections 2 and 9, the scripts and the code. Every command, flag, path, route and variable below was checked by reading the repo; anything that could not be checked is marked **UNVERIFIED**. Nothing in this file was run.
 
 Conventions: `SS` means the WSL wrapper, always typed in full from **Git Bash** (in PowerShell drop the leading `MSYS_NO_PATHCONV=1 `, UNVERIFIED). Never put `$VARS` or Windows paths inside the WSL command. Never paste a key, token or login URL into a chat, ticket or screenshot: edit `.env` yourself.
 
 ```
 MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh <command>
 ```
+
+---
+
+## Fastest path to a first real test (no keys, 10 minutes)
+
+Nothing leaves this PC and no account or key is needed. Everything is typed from Git Bash (`SS` below is the long wrapper from the top of this file).
+
+1. **Check the machine (about 10 s):** `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python scripts/doctor.py --real`. Fix anything marked `FIX` for a REQUIRED item (busy ports, missing weights).
+2. **Start the local rehearsal (2 to 3 min):**
+   ```
+   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash -c "SS_MEM_MAX=7000M bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/real.sh --gpu"
+   ```
+   Open the `http://127.0.0.1:3000/#token=...` link it prints in the Windows browser. It also prints the RTMP and SRT address to publish to (these contain the session login: keep them private).
+3. **OBS on this PC:** Settings, Stream, Service Custom, Server = the printed RTMP URL, Stream Key empty (details and the SRT fallback in section 3.2). Video 1280x720, 30 fps. Start Streaming.
+4. **Open `/demo`** (top menu "Demo", ONE tab only). The right pane, "what viewers get", should leave "waiting" within a few seconds. Expect up to 1 to 3 minutes of slate flapping while the GPU warms up: that is the fail-safe, not a bug.
+5. **Enrol your face** (top menu "Faces", `/enrol`, about 3 s) so you stay visible; anyone not enrolled is masked.
+6. **Test with SPECIMEN or made-up data only** (section 3.6). Press H to hold. Ctrl-C the launcher when done.
+
+What is still UNVERIFIED on this path: OBS has never been run against this stack, and the enrolment-to-engine allowlist wiring has unit tests only (section 0).
+
+## Going live: checklist
+
+Do these in order; each one is described in the section named. Stop at the first thing that does not pass.
+
+- [ ] Level 1 rehearsal passed with your own camera and microphone, the test script in section 3.6 done, one `/demo` tab, no other heavy apps (sections 3 and 5).
+- [ ] Doctor clean for REQUIRED items: `scripts/doctor.py --real` (section 2.1). Plugged in, performance mode.
+- [ ] YouTube live enabled on the channel at least 24 h ago; a broadcast created as **Unlisted or Private**; `YOUTUBE_STREAM_KEY` and/or `TWITCH_STREAM_KEY` in `.env` (sections 1.1, 4.1).
+- [ ] `GROQ_API_KEY` and `SARVAM_API_KEY` in `.env` if you want abuse/doxxing detection and captions (names are checked by the doctor, values never printed).
+- [ ] Chat shield (optional): one-time standalone login done for YouTube and/or Twitch (section 4.2); a second account ready to post test chat.
+- [ ] Phone only: `--phone` with `INGEST_SRT_PASSPHRASE` set, mirrored networking and firewall rules in place, SRT chosen in the app (section 3.3).
+- [ ] Start with `--gpu --chat` (or add `--live`), switch to the live session from `/go-live`, delay **4 s**, profile `dev` (section 4.3). Copy the NEW publish login into OBS or the phone.
+- [ ] Watch your own stream in a private window, signed out, and repeat the section 3.6 test there before telling anyone (section 4.4).
+- [ ] Hold is reachable: button or key H on `/live`, `!hold` in chat, tab not hidden behind other windows (section 4.5).
+- [ ] After the stream: Stop on `/go-live` FIRST, then Ctrl-C the launcher. The report is saved to the sessions dir when a session stops (**UNVERIFIED** until the product agent reports; see section 7 for where and how to export).
 
 ---
 
@@ -39,11 +73,11 @@ All values go into `C:\Users\siddh\stremsarthi\.env` (copy `.env.example` to `.e
 | **Sarvam** account, API key (INR 100 signup credit, per `docs/PLAN.md`) | 5 min | `SARVAM_API_KEY` | Groq or local speech-to-text (Hinglish only); **no caption translation** |
 | **YouTube live enabled** on the channel | **up to 24 h**, start first | (none) | No YouTube output (rehearsal only) |
 | YouTube **stream key** (YouTube Studio, Go live, Stream) | 2 min after enablement | `YOUTUBE_STREAM_KEY` (or type it on `/go-live`: kept in RAM only) | No YouTube output |
-| YouTube chat: Google Cloud project, YouTube Data API v3 on, OAuth consent screen with YOU as a **test user**, OAuth client of type **Desktop app** | 20-30 min | `YOUTUBE_OAUTH_CLIENT_ID`, `YOUTUBE_OAUTH_CLIENT_SECRET` | Chat shield off for YouTube. A consent screen in "Testing" gives refresh tokens that expire after 7 days (per `docs/DEMO.md`) |
-| **Twitch** developer app (device-code flow, public client) | 10 min | `TWITCH_CLIENT_ID` (`TWITCH_CLIENT_SECRET` is in `.env.example` and the doctor, but the chat code reads only the client id) | Chat shield off for Twitch |
+| YouTube chat: Google Cloud project, YouTube Data API v3 on, OAuth consent screen with YOU as a **test user**, OAuth client of type **Desktop app** | 20-30 min | `YOUTUBE_OAUTH_CLIENT_ID`, `YOUTUBE_OAUTH_CLIENT_SECRET` | Chat shield off for YouTube. A consent screen in "Testing" gives refresh tokens that expire after 7 days (per `docs/DEMO.md`): log in again then (section 4.2) |
+| **Twitch** developer app (device-code flow, public client) | 10 min | `TWITCH_CLIENT_ID` (a **Public** client; `TWITCH_CLIENT_SECRET` is in `.env.example` and the doctor, but the chat code reads only the client id) | Chat shield off for Twitch |
 | Twitch **stream key** | 2 min | `TWITCH_STREAM_KEY` (or type it on `/go-live`) | No Twitch output |
 | **Hugging Face** token (optional) | 5 min | `HF_TOKEN` | Only needed for local IndicTrans2 captions in the `demo` profile. Not needed in `dev` |
-| Stable pairing login (optional) | 1 min | `INGEST_PUBLISH_USER`, `INGEST_PUBLISH_PASSWORD` | Random login per session. **UNVERIFIED that these help:** the API generates a new login at every session start (`app/api/orchestrator.py:new_ingest_login`, `app/api/golive.py`) and passes it to the engine, so expect to re-copy the URL after every start |
+| Stable pairing login (optional) | 1 min | `INGEST_PUBLISH_USER`, `INGEST_PUBLISH_PASSWORD` (`[A-Za-z0-9_-]`, password 8+ characters) | Random login per session. New in the uncommitted tree: `fixed_login()` in `app/api/routes/session.py` makes the API use these values instead of a random login, so the OBS or phone setup can be one-time. **UNVERIFIED** (read in code only; a bad value silently falls back to the random login, and a phone-reachable bind needs a password of 12+ characters). Without it, expect to re-copy the URL after every start |
 
 What runs with an EMPTY `.env`: everything in Level 1 (local video protection, local audio fail-safe and local speech-to-text, no captions, chat disabled, output only to the local `shielded` tap). A second YouTube or Twitch account (or device) is needed to post test chat.
 
@@ -124,20 +158,30 @@ The login is per session: after any Stop/Start of the session (or restarting `re
 
 ### 3.3 Phone (Moblin on iPhone, Larix Broadcaster on Android)
 
-Needs mirrored networking and the firewall rules (section 1.2) **and** the ingest bound to the PC's LAN address. `scripts/real.sh` does NOT do this for you: by default the ingest binds `127.0.0.1`, which a phone cannot reach. A non-loopback bind also forces an SRT passphrase (`relay/srt.py:validate_exposure`), and the API builds the phone URLs with the passphrase only when `INGEST_SRT_PASSPHRASE` is set in the **process environment** (not `.env`: `app/api/pairing.py` reads `os.environ`).
+Needs mirrored networking and the firewall rules (section 1.2) **and** an ingest that listens on the LAN. By default the ingest binds `127.0.0.1`, which a phone cannot reach. Use `--phone` (it sets that up and checks the passphrase), or set the variables yourself:
 
-Generate a passphrase (10 to 79 characters of `A-Za-z0-9_-`) inside WSL and keep it private, then start with both variables set (replace `192.168.x.x` with your LAN address):
+| Variable | Needed | Meaning (verified in `relay/runtime.py`, `relay/security.py`, `relay/pairing.py`, `relay/netenv.py`) |
+|---|---|---|
+| `INGEST_BIND_HOST` | yes for a phone | `0.0.0.0` (every interface; accepted only because it is written down on purpose). A specific loopback, LAN private (10.x, 172.16-31.x, 192.168.x) or Tailscale (100.64/10) address also works |
+| `INGEST_SRT_PASSPHRASE` | **mandatory on any non-loopback bind** | 10 to 79 characters of `A-Za-z0-9_-`. Your own long random string. The ingest **refuses to start** without it (and a bad format is refused too). A generated one is no longer used: the API must know the same value to build the phone URLs |
+| `PAIRING_HOST` | optional | The PC's LAN IPv4 (a literal LAN private or Tailscale address). Needed under WSL **NAT** networking: with a `0.0.0.0` bind the address shown to the phone is auto-detected, and under NAT the auto-detect returns a WSL-internal 172.x address the phone cannot reach. Under mirrored networking auto-detect should give the Windows LAN address (UNVERIFIED on this machine) |
+
+Put them in `.env` (edit it yourself) or in the process environment. `relay/netenv.py` reads `INGEST_BIND_HOST`, `INGEST_SRT_PASSPHRASE`, `INGEST_PUBLISH_USER`, `INGEST_PUBLISH_PASSWORD` and `PAIRING_HOST` from `.env` as well; **the process environment wins** over `.env`. The API reads the same passphrase (`app/api/pairing.py`), so both sides agree.
+
+Start with `--phone` (exports `INGEST_BIND_HOST=0.0.0.0` unless you already set one; exits 2 with a message, without printing the value, when `INGEST_SRT_PASSPHRASE` is missing or not 10 to 79 characters of `A-Za-z0-9_-`; prints a `PAIRING_HOST` hint):
 
 ```
-MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash -c "SS_MEM_MAX=7000M INGEST_BIND_HOST=192.168.x.x INGEST_SRT_PASSPHRASE=<your-own-long-passphrase> bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/real.sh --gpu"
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash -c "SS_MEM_MAX=7000M bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/real.sh --gpu --phone"
 ```
+
+(`--phone` is for `scripts/real.sh`; passing the variables on the command line before `bash ...ss.sh` inside the quotes still works.) The relay logs which address phones should dial and where it came from (`bind`, `PAIRING_HOST` or `autodetect`) and says if it cannot find one (it then names `PAIRING_HOST`).
 
 Then in the phone app (open the RTMP/SRT QR from `GET /api/pairing/srt.png` or the printed Moblin link; the `/go-live` page also has an ingest card):
 
-- **Protocol: SRT** (best on a phone). **Latency 400 ms on 4G** (the pairing URL defaults to `latency=400`; weak 4G: 500; Wi-Fi 200). Moblin: import the `moblin://` link. Larix: paste the SRT URL. 720p, 30 fps, about 4 Mbps, keyframe 2 s.
+- **Protocol: SRT.** SRT is encrypted with your passphrase. **RTMP from a phone sends the publish login in cleartext** over your Wi-Fi: prefer SRT, and use RTMP only on a network you trust. **Latency 400 ms on 4G** (the pairing URL defaults to `latency=400`; weak 4G: 500; Wi-Fi 200). Moblin: import the `moblin://` link. Larix: paste the SRT URL. 720p, 30 fps, about 4 Mbps, keyframe 2 s.
 - **UNVERIFIED on a real phone:** whether Moblin and Larix honour the `latency` and `passphrase` URL query (`relay/pairing.py` says so). If the phone connects but is rejected, set latency and passphrase by hand in the app.
-- **Known limit (STATUS):** with a LAN-address bind, the `/demo` PROTECTED pane may show "Stream not available", because MediaMTX lets the anonymous preview reader in only from `127.0.0.1`. Watch the result on the YouTube page (Level 2) instead, or use `INGEST_BIND_HOST=0.0.0.0` (the preview then works; but the API refuses to build pairing URLs for `0.0.0.0`, so copy the SRT URL from `/go-live`, replace `0.0.0.0` with the LAN address and append `&passphrase=<yours>&pbkeylen=16&latency=400000` yourself). Both UNVERIFIED.
-- Stay off a VPN that blocks LAN traffic; keep the phone awake and plugged in.
+- The `/demo` preview works with a `0.0.0.0` bind: the API shows the preview from `127.0.0.1` (`app/api/main.py`), and the pairing URLs are built with the resolved LAN address (not `0.0.0.0`). Code read only, not run: **UNVERIFIED**. With a specific LAN-address bind the anonymous preview reader is allowed from that address too (`relay/security.py:mediamtx_users`).
+- Stay off a VPN that blocks LAN traffic; keep the phone awake and plugged in. Treat the passphrase like a password; never paste it or a pairing URL anywhere.
 
 ### 3.4 Open `/demo` and enrol your face FIRST
 
@@ -179,22 +223,34 @@ Put `YOUTUBE_STREAM_KEY` and/or `TWITCH_STREAM_KEY` in `.env` (or type them on `
 
 YouTube side: in YouTube Studio create a broadcast set to **Unlisted or Private**, with the stream-key ingest; leave it waiting for data. The stream key ties to that broadcast.
 
-### 4.2 Chat OAuth (once; only if you want the chat shield)
+### 4.2 Chat login (once; only if you want the chat shield)
 
-Chat is off unless you start with `--chat`. The API spawns `python -m chat.main --profile dev` at each session start **without** `--login`, so it works only if a login is already stored. Flags of `chat/main.py`: `--login` (run the interactive OAuth flows when no stored token exists), `--remember` (keep refresh tokens in the OS keyring), `--profile`, `--env-file`, `--log-level`. The consent URL (YouTube) or device code (Twitch) is the only thing it prints, on stderr; open it in the Windows browser.
+The login is a **standalone command**: it needs no running session, no engine and no bus. It logs in to every platform in `CHAT__PLATFORMS` (default both) that has credentials, stores the tokens and exits (exit 0 done, 2 nothing to log in to, 5 a login failed). Run it once, ahead of stream day:
 
-Do the login once, ahead of stream day, against a running stack (chat needs the engine's message bus, so a session must be running, e.g. the rehearsal session `real.sh` starts):
+```
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash -c "CHAT__ENABLED=true bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python -m chat.main --login"
+```
 
-1. Start `real.sh --gpu --chat` as in section 4.3 (steps 1 to 2).
-2. In a second terminal:
-   ```
-   MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash -c "CHAT__ENABLED=true bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python -m chat.main --login --remember"
-   ```
-3. Open the printed URL / enter the printed code, approve. Stop it with Ctrl-C.
-4. **UNVERIFIED:** whether the OS keyring works in headless WSL (the code logs `keyring_unavailable` and carries on without storing). If tokens are not kept, run that same command by hand AFTER the session is live and leave it running instead of using `--chat`; do not run both at once. Re-login after 7 days while the consent screen is in "Testing".
-5. Twitch only: if the streamer account differs from the logged-in one, set `CHAT__TWITCH__CHANNEL_LOGIN` in `.env` (derived from the nested-env rule `__` in `contracts/config.py`; UNVERIFIED).
+`.env` names it reads (edit the file yourself, never paste values):
 
-If a platform has no credentials the chat process skips it with a fixed code (`yt_login_required`, `twitch_no_credentials`, ...); with none at all it exits 2 and the stream is unaffected.
+| Variable | Used for |
+|---|---|
+| `YOUTUBE_OAUTH_CLIENT_ID`, `YOUTUBE_OAUTH_CLIENT_SECRET` | YouTube login. The Google Cloud OAuth client type must be **Desktop app** (section 1.1) |
+| `TWITCH_CLIENT_ID` | Twitch login. The Twitch app must be a **Public** client (device code) |
+| `GROQ_API_KEY` | Not needed for the login; the chat classifier uses it later (without it: rules only) |
+| `CHAT__ENABLED` | `true` to turn chat on (the command above sets it for that run; `real.sh --chat` sets it for a session) |
+| `CHAT__PLATFORMS` | Optional: which platforms (default both). A nested-env list; JSON form such as `["youtube"]` (**UNVERIFIED** format: pydantic-settings parses lists from JSON) |
+| `CHAT__TWITCH__CHANNEL_LOGIN` | Twitch only: the channel to read when it is not the logged-in account |
+
+**YouTube.** The command prints a consent URL (with a short explanation) on stderr. Open it in the Windows browser and approve. Google then redirects to `http://127.0.0.1:8765/callback`; WSL2 forwards that loopback port to Windows and the command finishes by itself. The port is `CHAT_YT_LOGIN_PORT` (default 8765; if it is busy a random port is used and the printed URL carries the real one). **Fallback:** if the browser says it cannot connect, copy the full address from the browser's address bar, paste it into the terminal where the command runs, and press Enter (works only when the terminal is interactive). While the OAuth consent screen is in **Testing**, the refresh token expires after **7 days**: run the command again then.
+
+**Twitch.** The command prints "open https://www.twitch.tv/activate (the printed URI) and enter the code ...". Open it in the Windows browser, enter the code, approve; the command finishes by itself.
+
+**Where the tokens go.** The OS keyring when a real one exists (Windows credential store, macOS Keychain, Secret Service). In headless WSL there is none, so they are stored in a JSON file `chat-tokens.json` under `$STREAMSARTHI_TOKEN_DIR`, else `$XDG_CONFIG_HOME/streamsarthi`, else `~/.config/streamsarthi` (inside WSL, as root: `/root/.config/streamsarthi`), mode 0600 in a 0700 directory, outside the repo. The command prints a one-time NOTICE with the path. Delete the file to log out. Anyone who can read your WSL home can use those tokens.
+
+**At stream time.** The API starts `python -m chat.main --profile dev` itself when chat is on (`real.sh --chat`); it reads the stored tokens and never prompts. The YouTube live chat id is **discovered at runtime**: the broadcast must be live (the poller retries every 10 s until it is). If a platform has no stored login or credentials the chat process skips it with a fixed code (`yt_login_required`, `twitch_no_credentials`, ...) and tells the moderator console "chat unavailable"; with none at all it exits 2 and the stream is unaffected.
+
+**UNVERIFIED:** every part of this against the real Google and Twitch services (the code has only run against fakes), including WSL2 port forwarding for the 8765 callback and the keyring-versus-file choice on this machine.
 
 ### 4.3 Start and go live
 
@@ -202,8 +258,8 @@ If a platform has no credentials the chat process skips it with a fixed code (`y
    ```
    MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash -c "SS_MEM_MAX=7000M bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/real.sh --gpu --chat"
    ```
-   (add `INGEST_BIND_HOST=...` and `INGEST_SRT_PASSPHRASE=...` as in section 3.3 if a phone will publish). `--chat` only sets `CHAT__ENABLED=true`; it needs the credentials from 4.2.
-2. `real.sh` always starts a **rehearsal session** (no destination). Open the printed link, go to **Go live** (`/go-live`) and **Stop** that session (there is no flag to skip it).
+   (add `--phone` as in section 3.3 if a phone will publish). `--chat` only sets `CHAT__ENABLED=true`; it needs the stored login from 4.2.
+2. `real.sh` starts a **rehearsal session** (no destination) unless you pass `--live` (then it goes live to every platform that has a stream key). To go live from the web app instead, open the printed link, go to **Go live** (`/go-live`) and **Stop** that session first. New in the uncommitted tree: the start request accepts `replace_rehearsal` (`app/api/routes/session.py`; the web client has it too), which stops a running rehearsal and then starts the live session; **UNVERIFIED** in a browser.
 3. On `/go-live`: switch on YouTube and/or Twitch (keys from `.env` are recognised, or type them), keep delay **4 s**, profile `dev`, check the setup panel, then **Start**. Only a stream key is checked for presence: errors say `missing_keys` with names only.
 4. A new session means a **new publish login**: copy the ingest URL shown on the `/go-live` ingest card (or `GET /api/pairing`) into OBS or the phone again, then start publishing.
 5. When the state shows `live`, start the broadcast in YouTube Studio (or Twitch) if it is not already receiving.
@@ -236,7 +292,7 @@ On `/live` use the moderator invite card to create a link of the form `http://12
 - **Never show the RAW pane (`--raw`) on a stream or screen share.** It is the unmasked video.
 - The delay is fixed at session start (`delay_fixed_while_attached` 409 if you change it while an engine is attached). Edit it on `/go-live` before Start.
 - **The login URL token changes at every API start.** After a restart use the new link; if the page says "Open the link from the terminal", clear site data for `127.0.0.1:3000`.
-- **Reports live in the API's RAM** (6 h, at most 8) and are lost when you Ctrl-C the launcher: open or export the report first (section 7).
+- **Reports:** kept in the API's RAM (6 h, at most 8) and, new in the uncommitted tree, saved to the sessions dir (`SESSIONS_DIR`, default `~/.streamsarthi/sessions/<session id>/report.json` inside WSL, mode 0600) when a session stops. **UNVERIFIED** until the product agent reports: still open or export the report before you Ctrl-C the launcher (section 7).
 - Stream keys typed on `/go-live` live only in the API process memory; `.env` is the other place. Never commit `.env`.
 - Quota and cost: about INR 24 per streaming hour typical (INR 10 to 63), INR 89 typical with Sarvam captions; all rates are assumptions, no live call has ever been made (`docs/COST.md`). YouTube chat supports about 3 to 4 streaming hours a day on one project key. Groq rate limits are documented inconsistently; do not depend on the Groq stage (it fails toward holding messages for the moderator).
 - Do **not** run `wsl --shutdown`, a gate, a test run or another stack while streaming.
@@ -251,13 +307,13 @@ On `/live` use the moderator invite card to create a link of the form `http://12
 |---|---|
 | Protected output sits on the privacy slate, or flaps live/slate | The fail-safe. First 1 to 3 min after start while the GPU warms up is normal. Persisting: not started with `--gpu` (the CPU lane misses its deadline on text-heavy scenes), another tab or app loading the machine (load average above about 9), memory cap. Close apps, one `/demo` tab, restart with `--gpu`. Check `nvidia-smi` shows memory in use |
 | State chip says SLATE while masked live video is on screen | Known mislabel on `/live` (fixed on `/demo`): trust the video |
-| Panes show "Stream not available" | Preview cap (4 clients per stream; 503 `preview_clients_full`): close extra tabs. Not live yet. With a LAN-address ingest bind the PROTECTED pane can fail by design (section 3.3). It retries with 1 to 15 s backoff |
+| Panes show "Stream not available" | Preview cap (4 clients per stream; 503 `preview_clients_full`): close extra tabs. Not live yet. It retries with 1 to 15 s backoff. With a `0.0.0.0` bind the preview should work (section 3.3); with a specific LAN-address bind it is UNVERIFIED |
 | "Open the link from the terminal" | The token changes at every API start. Use the new link printed by the launcher; clear site data for `127.0.0.1:3000` |
-| Phone cannot connect | WSL still on NAT (check section 2.1 "WSL networking": needs `mirrored`; `wsl --shutdown` after editing `.wslconfig`), Hyper-V firewall rules missing (admin PowerShell, section 1.2), `INGEST_BIND_HOST` not set to the LAN address (default binds loopback only), missing or mismatched `INGEST_SRT_PASSPHRASE`, phone not on the same Wi-Fi, guest-network isolation. Fallback: OBS on this PC |
+| Phone cannot connect | WSL still on NAT (check section 2.1 "WSL networking": needs `mirrored`; `wsl --shutdown` after editing `.wslconfig`), Hyper-V firewall rules missing (admin PowerShell, section 1.2), `INGEST_BIND_HOST` not set (default binds loopback only: use `--phone`), `INGEST_SRT_PASSPHRASE` missing or not 10 to 79 characters of `A-Za-z0-9_-` (the ingest refuses to start; `real.sh --phone` exits 2), the app has a different passphrase, the phone was given a 172.x address (set `PAIRING_HOST` to the PC's LAN IPv4), phone not on the same Wi-Fi, guest-network isolation. Fallback: OBS on this PC |
 | OBS connects then drops, or is rejected | Wrong or stale login (the login changes every session: re-copy the URL); port taken; check `/tmp/ss_api.log` |
 | After restarting OBS/sender the output is stuck or `MuxerError` / long `auto_egress` hold in logs | Fixed in the relay (timeline-reset). Expect recovery in 3 to 8 s. If it repeats every ~14 s, restart the session. Verified on a rig, not live |
 | YouTube shows "not live" / no data | Live not enabled on the channel (up to 24 h), wrong or expired stream key, broadcast not started in Studio, session state not `live`, no internet. Try Twitch or the rehearsal tap |
-| No YouTube chat | Not started with `--chat`; no stored OAuth login (`yt_login_required` in `GET /api/session/health` status codes); consent screen not in test-user list; 7-day token expiry; broadcast not active (the poller retries every 10 s) |
+| No YouTube chat | Not started with `--chat`; no stored OAuth login (`yt_login_required` in `GET /api/session/health` status codes: run the standalone login, section 4.2); consent screen not in test-user list; 7-day token expiry (log in again); broadcast not active (the poller retries every 10 s) |
 | Groq or Sarvam errors / odd speech handling | Bad key, or rate limits (Groq limits are inconsistent in docs and unconfirmed for your account; Sarvam rounding of short requests unconfirmed). The system falls back automatically (Sarvam, then local STT, then mute voiced segments without a verdict): expect choppy but safe audio and more chat messages held for the moderator. `groq_key_missing` in the chat status = rules only |
 | Audio is muted | The engine watchdog mutes audio when the audio host stops heartbeating (grace about 2.5 s, vouch margin 1.0 s), or the thin-transcript fail-safe fired. It recovers when the host does; watch the "Live and masked. Still catching up: audio." line; if it persists, restart the session; check memory (OOM kill) |
 | Your own face stays blurred after enrolling | The allowlist wiring fix (`vision/allowlist_feed.py`) is new and **not yet verified live**. Re-enrol (good light, face only, you alone in frame), wait a few seconds. Faces are masked for about 1 s after appearing on purpose. If still blurred, accept being masked: it fails safe |
@@ -275,7 +331,7 @@ On `/live` use the moderator invite card to create a link of the form `http://12
 1. Click **Stop** on `/go-live` (the engine and chat processes are stopped and the report is built in the background, about a few seconds).
 2. Open the report from the top menu or `http://127.0.0.1:3000/report/<session id>` (the id is on `/go-live`, or in `GET /api/session`). It shows totals, a category timeline with hold bands, event table, guard warnings, chat counts, delay and fps. **Never images or raw PII** (every report is privacy-validated).
 3. Export before closing the launcher: `GET /api/report/<id>/export?format=json` or `format=html`, or `/printable` (streamer token required).
-4. Erase one with `DELETE /api/session/<id>/data`. Reports are RAM only; Ctrl-C of `real.sh` discards them.
+4. Erase one with `DELETE /api/session/<id>/data`. Reports are saved to the sessions dir when a session stops (**UNVERIFIED** until the product agent reports; the code writes `report.json` next to the session's event log). Until that is confirmed, assume a report that you did not export is lost when you Ctrl-C `real.sh`.
 5. Note the real numbers for `docs/COST.md` (the Sarvam and Groq invoices, the YouTube quota dashboard) and fill in the rehearsal log in `docs/DEMO.md` section 9.
 
 ---
@@ -303,8 +359,8 @@ On `/live` use the moderator invite card to create a link of the form `http://12
 | Readiness | `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python scripts/doctor.py --real` |
 | Level 1 | `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash -c "SS_MEM_MAX=7000M bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/real.sh --gpu"` |
 | Level 2 | same, with `--gpu --chat`, then stop the rehearsal session and start from `/go-live` |
-| Phone | add `INGEST_BIND_HOST=<LAN ip> INGEST_SRT_PASSPHRASE=<yours>` before `bash ...ss.sh` inside the quotes |
-| Chat login (once) | `... bash -c "CHAT__ENABLED=true bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python -m chat.main --login --remember"` |
+| Phone | add `--phone` to the `real.sh` command, with `INGEST_SRT_PASSPHRASE=<yours>` in `.env` (and `PAIRING_HOST=<LAN ip>` under WSL NAT) |
+| Chat login (once) | `... bash -c "CHAT__ENABLED=true bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh python -m chat.main --login"` (standalone; no session needed) |
 | Hold | button, key H, `!hold`, `POST /api/hold` |
 | Stop | Stop on `/go-live`, then Ctrl-C the launcher |
 | Ports | 8000 API, 3000 web, 8890/udp SRT, 1935 RTMP, 9997 MediaMTX control |

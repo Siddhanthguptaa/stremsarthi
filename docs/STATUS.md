@@ -99,6 +99,45 @@ Status values: `pending`, `in progress`, `blocked`, `done`. A task is **done** o
 | Chat precision / recall | see PLAN section 5, G4 | | |
 | Cost per streaming hour | | | |
 
+## Checkpoint 8: real-input mode, control plane, go-live (2026-11-21)
+
+Labels: CONFIRMED = measured or observed today; HYPOTHESIS = expected, not measured; NOT VERIFIED = not run.
+
+**DONE (code and unit tests by builder agents, reviewed in part; D-56 in `docs/DECISIONS.md`; runbook `docs/GO_LIVE.md`)**
+
+- **Real-input launcher:** `scripts/real.sh` (`--gpu --chat --live --phone --engine-log`) plus `scripts/real_run.py`; `doctor --real`.
+- **Live control plane over `Topic.CONFIG`:** API `ConfigSync`, vision `ConfigFeed`, audio `live_config`. Dropped events fall back to the startup defaults, which means more masking, not less.
+- **`AllowlistFeed`:** versioned, cap 64, fails closed; the engine reports the applied version.
+- **Engine and sessions:** session id env `STREAMSARTHI_SESSION_ID` in engine, chat and guard; engine broker flush on stop.
+- **Chat:** new `SYSTEM_STATUS` category; token file fallback (mode 0600); standalone `chat.main --login` (YouTube loopback port 8765, Twitch device code).
+- **Phone ingest:** `INGEST_BIND_HOST=0.0.0.0` with a mandatory `INGEST_SRT_PASSPHRASE` (10-79 chars, `A-Za-z0-9_-`), `PAIRING_HOST`; `relay/netenv.py` reads `.env`; loopback readers allowed.
+- **API and web:** report persisted to `<SESSIONS_DIR>/<id>/report.json` (partial copy on shutdown) and past reports served after a restart; `replace_rehearsal` go-live switch; stable login via `INGEST_PUBLISH_USER` / `INGEST_PUBLISH_PASSWORD`; `/live` LIVE banner; chat status text in EN and HI; `SYSTEM_STATUS` excluded from report protection totals.
+- **Audio:** best-available local whisper weight with logging (demo `small` falls back to `base`); the 1.5 s segment cap must stay; a local STT timeout mutes (test); Devanagari UPI handles and alphanumeric names fixed; `MIN_PAD_S` 0.3 s mute padding; config feed supervisor.
+- **Reviewer blocker FIXED:** `ByteTracker.reset` / `forget_label` left `_last_pts` stale (`vision/tracking/bytetrack.py`).
+
+**MEASURED (CONFIRMED; GPU, dev profile, synthetic demo reel, quiet machine, 14:19-14:30; one 3-minute run per setting)**
+
+| Item | Result |
+|---|---|
+| Accurate lane service | p50 ~200-390 ms, p95 ~370-720 ms against a 450 ms deadline |
+| Fast lane | p50 25-46 ms, p95 40-70 ms |
+| Cards detector | p50 ~140-260 ms (largest share of the accurate lane) |
+| Slate (PROTECT) share from accurate-lane misses, excluding start-up ingest gap and holds | ~16% before, ~11% after `engine.lane_max_age.accurate` 12 -> 20 (`config/profiles/dev.yaml`, `demo.yaml`) |
+
+- The reel cuts scene every few seconds; each cut leaves a 0.3-0.8 s gap until the first accurate result, so slate during cuts is by design. A continuous camera should be lower (HYPOTHESIS; G1 at 12:28 on continuous content showed 2.5%).
+- OCR width 800 was tried together with that change but NOT adopted (recall impact unmeasured).
+- The A/B against `9faad4b` was NOT done (the worktree lacks the relay binaries), so a regression from today's changes is neither confirmed nor excluded.
+- `/api/status` reported `engine: null` during the demo (observed by the vision agent; not investigated).
+
+**NOT VERIFIED:** anything live (YouTube, Twitch, OAuth, Groq, Sarvam); a real phone or OBS; real voices through STT (base RTF under load unmeasured; idle base RTF ~0.32 from `audio/spikes`); face enrolment end to end through the product path; config toggles reaching a running engine; Playwright gate G6; the RTX 5050 laptop.
+
+**OPEN ITEMS**
+
+- G1 GPU-leg quiet re-run and a baseline file.
+- The `engine: null` status check.
+- User inputs: keys in `.env`; YouTube live enablement (up to 24 h); a Twitch app; Windows `.wslconfig` mirrored networking plus Hyper-V firewall rules; a camera and a person.
+- `sudo apt-get install -y libnss3 libnspr4` for Playwright.
+
 ## FIRST REAL END-TO-END SMOKE (2026-11-21, product-engineer-reported, dev profile, no keys; `scripts/e2e_smoke.sh` + `e2e_smoke.py`, LF, exit 0/1/2): 30 of 30 checks on the second full run (first run 29/30: one report privacy-scan 'phone' hit that could not be reproduced; the script now prints the digit-blanked context if it recurs)
 
 The API (`SESSION_SPAWN=true`) spawned the REAL `python -m engine.main` (waiting_ingest after 27-31 s; chat disabled path clean); `GET /api/pairing` gave the publish URLs; `eval.sender.sender` published SPECIMEN scenes over SRT for 45 s through the engine's own MediaMTX; `/api/session` showed `live` with ingest URLs, `/api/risk` and `/api/alerts` 200, a WebSocket subscriber received `engine.status`, `safety.event`, `control.hold`, `chat.verdict`; hold on/off and a category toggle through `PATCH /api/config` worked; egress tap: live frames flowing, 162 card-visible frames with 0 leaked, hold produced slate frames, capture-to-tap delay p50 4.68 s / p95 4.85 s (run 1); stop reached `ended` in 1.6-2.0 s, the engine exited 0 on SIGTERM, no child process remained; `/api/report/{id}` had 50-76 events and `/printable`, `/export` (json, html) returned 200; in run 2 the privacy scan found no image, 12-digit, phone, email, UPI, script or login strings. `DESTINATIONS` and `STREAM_DELAY_SECONDS` are BOTH honoured (the engine log showed `destinations=['mediamtx_tap']`: my earlier suspicion was wrong). The real audio host heartbeats; no `audio-module-silent` in 45 s. BUGS FOUND AND FIXED in app/api: (1) `KEY=` in `.env` loaded as an empty `SecretStr` and counted as SET (the 'Key set' chip lied and the missing-key guard on start was bypassed): empty or whitespace now counts as unset (`config_store.py`); (2) ingest URLs and pairing hard-coded ports 1935/8890: now `Config.ingest_port_rtmp/srt`; (3) there was no keyless start: new `rehearsal: bool` on `POST /api/session/start` forces YouTube and Twitch off (a normal start without a destination is still 422); 5 new tests (`test_api_e2e_glue.py`). OPEN: engine and relay under load: in run 1 only 312 of 1,320 outputs were live (233 PROTECT mostly `stale-accurate`, 775 HOLD of which 202 app hold, 142 fence, 206 `auto_egress`, 225 `auto_transport`); the `mediamtx_tap` destination flapped at startup and caused a 6.8 s `auto_egress` hold (shared-machine load inflates this; relay/engine owners should look at the tap flapping); the extras (`guard_risk`, `captions`, `guard_music`) were NOT confirmed loaded (no log line says so; `/api/risk` stayed 0.0 because the smoke never starts the risk-meter source); the orchestrator discards child output (the smoke wraps `SESSION_ENGINE_CMD` in `bash -c 'exec ... > file'`); NOT run: real YouTube/Twitch/Sarvam, chat with keys, GPU/demo profile, the web UI in a browser, real audio PII (the stream had a beep only), OCR in the tap.

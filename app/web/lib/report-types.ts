@@ -186,7 +186,12 @@ function deriveTotals(timeline: readonly ReportEvent[]): SafetyReport["totals"] 
   const sums: Record<string, { n: number; total: number }> = {}
   const by_action: Record<string, number> = {}
   const by_modality: Record<string, number> = {}
+  let notices = 0
   for (const e of timeline) {
+    if (e.category === "system_status") {
+      notices += 1 // a system notice (for example "chat unavailable") is not a protection event
+      continue
+    }
     const s = (sums[e.category] ??= { n: 0, total: 0 })
     s.n += 1
     s.total += e.confidence
@@ -195,7 +200,7 @@ function deriveTotals(timeline: readonly ReportEvent[]): SafetyReport["totals"] 
   }
   const by_category: Record<string, ReportCategoryTotal> = {}
   for (const [k, s] of Object.entries(sums)) by_category[k] = { count: s.n, mean_confidence: s.n ? s.total / s.n : 0 }
-  return { events: timeline.length, by_category, by_action, by_modality }
+  return { events: timeline.length - notices, by_category, by_action, by_modality }
 }
 
 function parseTotals(raw: unknown, timeline: readonly ReportEvent[]): SafetyReport["totals"] {
@@ -206,7 +211,7 @@ function parseTotals(raw: unknown, timeline: readonly ReportEvent[]): SafetyRepo
     if (code && isObj(v)) by_category[code] = { count: count(v.count), mean_confidence: unit(v.mean_confidence) }
   }
   return {
-    events: count(raw.events) || timeline.length,
+    events: typeof raw.events === "number" ? count(raw.events) : timeline.filter((e) => e.category !== "system_status").length,
     by_category,
     by_action: countMap(raw.by_action),
     by_modality: countMap(raw.by_modality),

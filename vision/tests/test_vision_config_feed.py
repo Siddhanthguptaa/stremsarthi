@@ -177,3 +177,45 @@ def test_style_is_left_to_the_engine(rig: Rig) -> None:
     style = rig.cfg.categories[Category.PAN].style
     assert rig.host._config_feed.apply(ConfigChange({"categories.pan.style": "solid"}, "t")) == 0
     assert rig.cfg.categories[Category.PAN].style == style
+
+
+def test_dropped_config_events_reset_to_the_startup_defaults_and_log_an_error(rig: Rig, caplog) -> None:
+    feed = rig.host._config_feed
+    rig.patch({"categories.pan.enabled": False, "categories.pan.padding_px": 7})
+    rig.wait(lambda: not _pan_on(rig))
+    startup_pad = feed._startup[Category.PAN].padding_px
+    with caplog.at_level(logging.ERROR, logger="vision.config"):
+        feed.on_drop()
+    assert _pan_on(rig), "a category that was on at start is on again (more masking, never less)"
+    assert rig.cfg.categories[Category.PAN].padding_px == startup_pad
+    assert "dropped" in caplog.text
+    assert rig.run_once().requests
+
+
+def test_a_category_that_was_off_at_startup_stays_off_after_a_drop() -> None:
+    r = Rig(pan_enabled=False)
+    try:
+        r.host._config_feed.on_drop()
+        assert not _pan_on(r)
+    finally:
+        r.close()
+
+
+def test_a_real_bus_overflow_triggers_the_reset(caplog) -> None:
+    cfg = Config(profile="dev", _env_file=None)
+    bus = InProcessBus(maxsize=2)
+    host = vhost.VisionHost(cfg, bus, registry={"pan_fake": _PanDet}, assembler_factory=planner_factory)
+    host.start()
+    try:
+        with caplog.at_level(logging.ERROR):
+            for _ in range(10):
+                bus.publish(Topic.CONFIG, ConfigChange({"categories.pan.enabled": False}, "test"))
+            end = time.monotonic() + 3
+            while host._config_feed.resets == 0 and time.monotonic() < end:
+                time.sleep(0.01)
+        assert host._config_feed.resets >= 1
+        time.sleep(0.3)  # the feed thread may still be applying queued 'off' events: a drop always wins last
+        host._config_feed.on_drop()
+        assert cfg.categories[Category.PAN].enabled
+    finally:
+        host.close()

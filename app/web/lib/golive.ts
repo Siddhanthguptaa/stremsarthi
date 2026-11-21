@@ -14,8 +14,8 @@ export const PROFILES: readonly Profile[] = ["dev", "demo"]
 const SECRET_FOR: Record<DestinationKind, string> = { youtube: "youtube_stream_key", twitch: "twitch_stream_key" }
 
 /** Whether a stream key is present in `.env`. The API only ever says `"***"` or null: the value is never seen. */
-export function keyConfigured(config: PublicConfig | null, kind: DestinationKind): boolean {
-  return config?.secrets?.[SECRET_FOR[kind]] === "***"
+export function keyConfigured(config: PublicConfig | null, kind: DestinationKind, typed?: Partial<Record<DestinationKind, boolean>>): boolean {
+  return config?.secrets?.[SECRET_FOR[kind]] === "***" || typed?.[kind] === true
 }
 
 export interface SetupForm {
@@ -44,16 +44,17 @@ export function clampDelay(value: number): number {
 export type Readiness = { ok: true } | { ok: false; reason: "no_destination" | "missing_keys"; missing: DestinationKind[] }
 
 /** The same rules the API applies on start, so the button can say why it is disabled. */
-export function readiness(form: SetupForm, config: PublicConfig | null): Readiness {
+export function readiness(form: SetupForm, config: PublicConfig | null, typed?: Partial<Record<DestinationKind, boolean>>): Readiness {
   const wanted = DESTINATIONS.filter((k) => form.destinations[k])
   if (wanted.length === 0) return { ok: false, reason: "no_destination", missing: [] }
-  const missing = wanted.filter((k) => !keyConfigured(config, k))
+  const missing = wanted.filter((k) => !keyConfigured(config, k, typed))
   if (missing.length > 0) return { ok: false, reason: "missing_keys", missing }
   return { ok: true }
 }
 
-export function buildStartRequest(form: SetupForm): StartRequest {
+export function buildStartRequest(form: SetupForm, replaceRehearsal = false): StartRequest {
   return {
+    ...(replaceRehearsal ? { replace_rehearsal: true } : {}),
     destinations: DESTINATIONS.map((kind) => ({ kind, enabled: form.destinations[kind] })),
     delay_seconds: form.delay,
     profile: form.profile,
@@ -87,6 +88,8 @@ export function sessionErrorKey(error: unknown): I18nKey {
       return "golive.err.no_destination"
     case "missing_keys":
       return "golive.err.missing_keys"
+    case "session_stopping":
+      return "golive.err.session_active"
     case "bus_unavailable":
       return "golive.err.bus"
     case "requires_restart":

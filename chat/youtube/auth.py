@@ -18,7 +18,7 @@ import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from aiohttp import web
 
@@ -55,8 +55,9 @@ def make_pkce() -> tuple[str, str]:
 class LoopbackReceiver:
     """One-shot HTTP listener on ``127.0.0.1`` that captures the OAuth redirect."""
 
-    def __init__(self, state: str) -> None:
+    def __init__(self, state: str, port: int = 0) -> None:
         self._state = state
+        self._want_port = port
         self._runner: web.AppRunner | None = None
         self._future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
         self.port = 0
@@ -66,8 +67,15 @@ class LoopbackReceiver:
         app.router.add_get(CALLBACK_PATH, self._handle)
         self._runner = web.AppRunner(app, access_log=None)
         await self._runner.setup()
-        site = web.TCPSite(self._runner, "127.0.0.1", 0)
-        await site.start()
+        try:
+            site = web.TCPSite(self._runner, "127.0.0.1", self._want_port)
+            await site.start()
+        except OSError:
+            if not self._want_port:
+                raise
+            # fixed port busy: fall back to a random one (the printed URL always carries the real port)
+            site = web.TCPSite(self._runner, "127.0.0.1", 0)
+            await site.start()
         self.port = self._runner.addresses[0][1]
         return self.port
 
@@ -88,6 +96,25 @@ class LoopbackReceiver:
             return web.Response(status=400)
         self._future.set_result(code)
         return web.Response(text=_PAGE, content_type="text/html")
+
+    def submit_redirect(self, url: str) -> bool:
+        """Accept the redirect URL pasted by the owner (when the browser could not reach the loopback port).
+
+        Returns True when it carried the expected ``state`` and a code (or an error) and was accepted."""
+        if self._future.done():
+            return False
+        query = parse_qs(urlsplit(url.strip()).query)
+        state = (query.get("state") or [""])[0]
+        if not hmac.compare_digest(state.encode(), self._state.encode()):
+            return False
+        if "error" in query:
+            self._future.set_exception(YouTubeError("oauth_denied"))
+            return True
+        code = (query.get("code") or [""])[0]
+        if not code:
+            return False
+        self._future.set_result(code)
+        return True
 
     async def wait_code(self, timeout_s: float, cancel: asyncio.Event | None = None) -> str:
         waiters: set[asyncio.Future[Any]] = {self._future}
@@ -153,13 +180,17 @@ class YouTubeAuth:
         *,
         timeout_s: float = 300.0,
         cancel: asyncio.Event | None = None,
+        port: int = 0,
+        on_receiver: Callable[[LoopbackReceiver], None] | None = None,
     ) -> YouTubeTokens:
         """Run the loopback flow. ``present(url)`` shows the consent URL to the owner (no ``/dev/tty``)."""
         verifier, challenge = make_pkce()
         state = secrets.token_urlsafe(24)
-        receiver = LoopbackReceiver(state)
+        receiver = LoopbackReceiver(state, port)
         port = await receiver.start()
         try:
+            if on_receiver is not None:
+                on_receiver(receiver)
             redirect_uri = f"http://127.0.0.1:{port}{CALLBACK_PATH}"
             present(self.build_auth_url(redirect_uri, challenge, state))
             code = await receiver.wait_code(timeout_s, cancel)

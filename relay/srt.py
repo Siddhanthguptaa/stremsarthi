@@ -31,6 +31,7 @@ LATENCY_MAX_MS = 2000
 SRT_LATENCY_PRESETS: dict[str, int] = {"lan": 120, "wifi": 200, "4g": 400, "4g_weak": 500}
 
 PASSPHRASE_MIN, PASSPHRASE_MAX = 10, 79  # libsrt limits
+MIN_EXPOSED_PASSWORD = 12  # generated logins are 43 characters; this only guards a fixed INGEST_PUBLISH_PASSWORD
 _PASSPHRASE_RE = re.compile(r"[A-Za-z0-9_\-]{10,79}")
 _PASSPHRASE_ALPHABET = string.ascii_letters + string.digits
 
@@ -100,8 +101,13 @@ def validate_exposure(address: RelayAddress, phone: Credentials | None, passphra
     if phone is None:
         raise ValueError("a phone-reachable ingest bind requires publish credentials")
     if passphrase is None:
-        raise ValueError("a phone-reachable ingest bind requires an SRT passphrase")
+        raise ValueError(
+            "a phone-reachable ingest bind requires an SRT passphrase: set INGEST_SRT_PASSPHRASE "
+            "(10..79 characters from A-Za-z0-9_-)"
+        )
     validate_passphrase(passphrase)
+    if len(phone.password) < MIN_EXPOSED_PASSWORD:
+        raise ValueError(f"a phone-reachable ingest bind requires a publish password of {MIN_EXPOSED_PASSWORD}+ characters")
 
 
 def tuning_warnings(srt_latency_ms: int, hold_after_s: float) -> list[str]:

@@ -56,8 +56,9 @@ def test_payload_fits_a_qr_code():
 def test_hosts_outside_loopback_lan_tailscale_are_refused(host):
     with pytest.raises(ValueError):
         pairing_host(host)
-    with pytest.raises(ValueError):
-        build_pairing(host, PHONE)
+    if host not in ("0.0.0.0", ""):  # the wildcard is resolved by build_pairing (tested separately)
+        with pytest.raises(ValueError):
+            build_pairing(host, PHONE)
 
 
 @pytest.mark.parametrize(

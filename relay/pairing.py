@@ -20,14 +20,63 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import socket
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from urllib.parse import quote
 
-from relay.security import PATH_CAMERA, Credentials, is_allowed_bind
+from relay.netenv import effective_env
+from relay.security import PATH_CAMERA, WILDCARD, Credentials, is_allowed_bind
 from relay.srt import resolve_latency_ms, validate_passphrase
 
 MAX_PAYLOAD_CHARS = 2000  # a QR code at error-correction M holds about 2300 alphanumeric characters
 REDACTED = "<redacted>"
+ENV_PAIRING_HOST = "PAIRING_HOST"
+
+
+def detect_lan_host() -> str | None:
+    """This machine's outbound IPv4 address (a UDP ``connect`` sends no packet), or ``None``.
+
+    Under WSL2 mirrored networking this is the Windows LAN address; under NAT networking it is the
+    WSL virtual address (172.x), which a phone cannot reach: set ``PAIRING_HOST`` then.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("192.0.2.1", 9))  # TEST-NET-1: never routed, only selects the interface
+            return str(sock.getsockname()[0])
+    except OSError:
+        return None
+
+
+def resolve_pairing_host(
+    bind_host: str,
+    environ: Mapping[str, str] | None = None,
+    *,
+    detect: Callable[[], str | None] = detect_lan_host,
+) -> tuple[str, str]:
+    """The address a phone should dial, and where it came from (``bind``, ``PAIRING_HOST`` or ``autodetect``).
+
+    A specific bind address is dialled as is. For the wildcard bind (``0.0.0.0`` or empty) the
+    ``PAIRING_HOST`` variable wins, else the outbound interface address is detected; a result that is
+    not loopback/LAN/Tailscale is refused with a message that names ``PAIRING_HOST``.
+    """
+    if bind_host not in (WILDCARD, ""):
+        return pairing_host(bind_host), "bind"
+    override = (effective_env(environ).get(ENV_PAIRING_HOST) or "").strip()
+    if override:
+        try:
+            return pairing_host(override), ENV_PAIRING_HOST
+        except ValueError:
+            raise ValueError(f"{ENV_PAIRING_HOST} must be a literal LAN private or Tailscale IPv4 address") from None
+    found = detect()
+    if found:
+        try:
+            host = pairing_host(found)
+        except ValueError:
+            host = ""
+        if host and not host.startswith("127."):
+            return host, "autodetect"
+    raise ValueError(f"cannot detect a LAN address for the phone: set {ENV_PAIRING_HOST}=<this PC's LAN IPv4>")
 
 
 def pairing_host(host: str) -> str:
@@ -123,6 +172,8 @@ def build_pairing(
     ``latency_ms`` defaults to the 4G preset; pass ``"lan"`` or a number. The login and passphrase
     are embedded in the returned URLs only; nothing is logged or written.
     """
+    if host in (WILDCARD, ""):  # the bind address is not a destination: pick one the phone can dial
+        host, _source = resolve_pairing_host(host)  # callers that need the source call resolve_pairing_host
     host = pairing_host(host)
     latency = resolve_latency_ms(latency_ms)
     for port in (rtmp_port, srt_port):

@@ -4,8 +4,9 @@ import * as React from "react"
 import Link from "next/link"
 import { AlertTriangle, CheckCircle2, CircleX, Loader2 } from "lucide-react"
 
-import { type ApiClient, type PublicConfig } from "@/lib/api"
-import type { Pairing, SessionView, StartResponse, StreamerApi } from "@/lib/api-streamer"
+import { ApiRequestError, type ApiClient, type PublicConfig } from "@/lib/api"
+import type { DestinationKind, DestinationView, Pairing, SessionView, StartResponse, StreamerApi } from "@/lib/api-streamer"
+import { glText, PLATFORM_NAME } from "@/lib/golive-text"
 import {
   CHECK_LABELS,
   DELAY_MAX,
@@ -32,13 +33,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 
 export type SetupConfigApi = Pick<ApiClient, "getConfig">
-export type SetupSessionApi = Pick<StreamerApi, "getSession" | "startSession" | "stopSession" | "getPairing" | "getPairingQr">
+export type SetupSessionApi = Pick<StreamerApi, "getSession" | "startSession" | "stopSession" | "getPairing" | "getPairingQr"> &
+  Partial<Pick<StreamerApi, "listDestinations" | "setDestinationKey" | "clearDestinationKey">>
 
 const POLL_MS = 3000
 
@@ -66,7 +69,7 @@ interface GoLivePanelProps {
 
 /** Go-live setup: destinations with key status, delay, profile, ingest addresses, setup check, start and stop. */
 export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLivePanelProps) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [config, setConfig] = React.useState<PublicConfig | null>(null)
   const [session, setSession] = React.useState<SessionView | null>(null)
   const [form, setForm] = React.useState<SetupForm | null>(null)
@@ -77,11 +80,31 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
   const [stopOpen, setStopOpen] = React.useState(false)
   const [pairing, setPairing] = React.useState<Pairing | null>(null)
   const [qrSrc, setQrSrc] = React.useState<string | null>(null)
+  const [dests, setDests] = React.useState<DestinationView[]>([])
+  const [keyDraft, setKeyDraft] = React.useState<Record<DestinationKind, string>>({ youtube: "", twitch: "" })
+  const [keyMsg, setKeyMsg] = React.useState<{ kind: DestinationKind; text: string } | null>(null)
+  const [newAddress, setNewAddress] = React.useState<{ stable: boolean } | null>(null)
   const delayId = React.useId()
   const profileId = React.useId()
 
   const state = session?.state ?? null
   const active = isActiveState(state)
+  // A local rehearsal may be switched to a live session in one step; a live session never is.
+  const rehearsalActive = active && session?.output === "rehearsal"
+  const locked = active && !rehearsalActive
+  const typed = React.useMemo(
+    () => ({ youtube: dests.find((d) => d.kind === "youtube")?.configured === true, twitch: dests.find((d) => d.kind === "twitch")?.configured === true }),
+    [dests],
+  )
+  const loadDests = React.useCallback(() => {
+    sessionApi
+      .listDestinations?.()
+      .then((r) => setDests(r.destinations))
+      .catch(() => {
+        /* the .env status from the config still shows */
+      })
+  }, [sessionApi])
+  React.useEffect(() => loadDests(), [loadDests])
 
   const load = React.useCallback(() => {
     Promise.all([configApi.getConfig(), sessionApi.getSession()])
@@ -123,7 +146,7 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
     return () => {
       alive = false
     }
-  }, [active, sessionApi])
+  }, [active, sessionApi, session?.session_id])
 
   const shownPairing = active ? pairing : null
   React.useEffect(() => {
@@ -144,16 +167,41 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
     }
   }, [shownPairing, sessionApi])
 
-  const verdict = form ? readiness(form, config) : null
+  const verdict = form ? readiness(form, config, typed) : null
   const names = (kinds: readonly string[]) => kinds.map((k) => t(`golive.dest.${k}` as I18nKey)).join(", ")
+
+  const saveKey = async (kind: DestinationKind) => {
+    const key = keyDraft[kind].trim()
+    if (!key || !sessionApi.setDestinationKey) return
+    try {
+      await sessionApi.setDestinationKey(kind, key)
+      setKeyDraft((d) => ({ ...d, [kind]: "" })) // the field is emptied at once: the key is never kept on screen
+      setKeyMsg({ kind, text: glText(lang, "golive.key.saved") })
+      loadDests()
+    } catch (error) {
+      const locked409 = error instanceof ApiRequestError && error.code === "session_active"
+      setKeyMsg({ kind, text: glText(lang, locked409 ? "golive.key.locked" : "golive.key.bad") })
+    }
+  }
+
+  const forgetKey = async (kind: DestinationKind) => {
+    try {
+      await sessionApi.clearDestinationKey?.(kind)
+    } finally {
+      setKeyMsg(null)
+      loadDests()
+    }
+  }
 
   const start = async () => {
     if (!form || !verdict?.ok) return
     setBusy("start")
     setErrorKey(null)
     try {
-      const response = await sessionApi.startSession(buildStartRequest(form))
+      const response = await sessionApi.startSession(buildStartRequest(form, rehearsalActive))
       setChecks(response.checks)
+      setNewAddress({ stable: response.login_stable === true })
+      setPairing(null) // the login is new: never show the old address
       setSession(await sessionApi.getSession())
     } catch (error) {
       setErrorKey(sessionErrorKey(error))
@@ -213,9 +261,15 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
                 <ul className="space-y-3">
                   {DESTINATIONS.map((kind) => {
                     const id = `dest-${kind}`
-                    const configured = keyConfigured(config, kind)
+                    const configured = keyConfigured(config, kind, typed)
+                    const view = dests.find((d) => d.kind === kind)
+                    const fromEnv = config?.secrets?.[`${kind}_stream_key`] === "***"
+                    const source = view?.key_source ?? (fromEnv ? "env" : null)
+                    const name = PLATFORM_NAME[kind]
+                    const runningLive = session?.output === "live" && (session.destinations ?? []).includes(kind) && active
                     return (
-                      <li key={kind} className="flex min-h-11 items-center justify-between gap-3">
+                      <li key={kind} className="space-y-2">
+                       <div className="flex min-h-11 items-center justify-between gap-3">
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
                           <Label htmlFor={id} className="text-base">
                             {t(`golive.dest.${kind}` as I18nKey)}
@@ -228,15 +282,56 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
                         <Switch
                           id={id}
                           checked={form.destinations[kind]}
-                          disabled={active || busy !== null}
+                          disabled={locked || busy !== null}
                           onCheckedChange={(on) => setForm({ ...form, destinations: { ...form.destinations, [kind]: on } })}
                         />
+                       </div>
+                       <p className="text-sm text-muted-foreground" data-testid={`dest-status-${kind}`}>
+                        {source ? glText(lang, source === "env" ? "golive.keyFrom.env" : "golive.keyFrom.session") : glText(lang, "golive.keyNone")}
+                        {" · "}
+                        <span className={runningLive ? "font-semibold text-red-600" : ""}>
+                          {runningLive
+                            ? glText(lang, "golive.out.liveNow")
+                            : form.destinations[kind]
+                              ? glText(lang, "golive.out.rtmps", { name })
+                              : glText(lang, "golive.out.previewOnly")}
+                        </span>
+                       </p>
+                       {sessionApi.setDestinationKey && source !== "env" ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Label htmlFor={`key-${kind}`} className="sr-only">
+                            {glText(lang, "golive.key.label", { name })}
+                          </Label>
+                          <Input
+                            id={`key-${kind}`}
+                            type="password"
+                            autoComplete="off"
+                            spellCheck={false}
+                            className="min-w-0 flex-1"
+                            placeholder={glText(lang, "golive.key.label", { name })}
+                            value={keyDraft[kind]}
+                            disabled={locked || busy !== null}
+                            onChange={(e) => setKeyDraft((d) => ({ ...d, [kind]: e.target.value }))}
+                          />
+                          <Button type="button" variant="outline" size="lg" disabled={locked || busy !== null || keyDraft[kind].trim() === ""} onClick={() => void saveKey(kind)}>
+                            {glText(lang, "golive.key.set")}
+                          </Button>
+                          {source === "session" ? (
+                            <Button type="button" variant="ghost" size="lg" disabled={locked || busy !== null} onClick={() => void forgetKey(kind)}>
+                              {glText(lang, "golive.key.clear")}
+                            </Button>
+                          ) : null}
+                        </div>
+                       ) : null}
+                       {keyMsg?.kind === kind ? (
+                        <p role="status" className="text-sm">{keyMsg.text}</p>
+                       ) : null}
                       </li>
                     )
                   })}
                 </ul>
                 {DESTINATIONS.some((k) => !keyConfigured(config, k)) ? (
-                  <p className="text-sm text-muted-foreground">{t("golive.key.missingHint")}</p>
+                  <p className="text-sm text-muted-foreground">{sessionApi.setDestinationKey ? glText(lang, "golive.key.hint") : t("golive.key.missingHint")}</p>
                 ) : null}
               </CardContent>
             </Card>
@@ -302,7 +397,18 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {verdict && !active ? (
+              {session?.output ? (
+                <p className="text-sm font-semibold" data-testid="output-mode" data-mode={session.output}>
+                  {session.output === "live" ? glText(lang, "golive.out.liveNow") : glText(lang, "golive.out.rehearsalNow")}
+                </p>
+              ) : null}
+              {rehearsalActive ? <p className="text-sm text-muted-foreground">{glText(lang, "golive.rehearsalRunning")}</p> : null}
+              {newAddress && active ? (
+                <p role="status" className="rounded-md border border-amber-500 bg-amber-500/10 px-3 py-2 text-sm" data-testid="new-address">
+                  {glText(lang, newAddress.stable ? "golive.stableLogin" : "golive.newAddress")}
+                </p>
+              ) : null}
+              {verdict && !locked ? (
                 <p id="golive-readiness" className="text-sm" data-testid="readiness">
                   {verdict.ok
                     ? t("golive.ready.ok")
@@ -320,6 +426,20 @@ export function GoLivePanel({ configApi, sessionApi, pollMs = POLL_MS }: GoLiveP
                   </p>
                 ) : null}
               </div>
+
+              {rehearsalActive ? (
+                <Button
+                  type="button"
+                  size="lg"
+                  className="min-h-14 w-full bg-red-600 text-lg text-white hover:bg-red-700"
+                  disabled={!verdict?.ok || busy !== null || state === "stopping"}
+                  aria-describedby="golive-readiness"
+                  onClick={() => void start()}
+                >
+                  {busy === "start" ? <Loader2 aria-hidden className="animate-spin motion-reduce:animate-none" /> : null}
+                  {busy === "start" ? glText(lang, "golive.switching") : glText(lang, "golive.switch")}
+                </Button>
+              ) : null}
 
               {active ? (
                 <Button

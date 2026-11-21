@@ -23,7 +23,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
 import sys
+import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -41,6 +43,7 @@ from chat.common import (
 from chat.common.bus import session_id_from_env
 from chat.main import build, groq_from_config, make_youtube_actions
 from chat.pipeline import ChatPipeline
+from chat.tokenfile import default_backend
 from chat.twitch import (
     ChatEvents,
     DeviceAuth,
@@ -82,6 +85,7 @@ class ExitCode(IntEnum):
     NO_CONNECTORS = 2
     BUS_ERROR = 3
     CONNECTOR_FAILED = 4
+    LOGIN_FAILED = 5
 
 
 @dataclass
@@ -100,15 +104,95 @@ class LiveOptions:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
+YT_LOOPBACK_PORT_ENV = "CHAT_YT_LOGIN_PORT"
+YT_LOOPBACK_PORT_DEFAULT = 8765
+
+
+def youtube_login_port() -> int:
+    """Fixed loopback port of the YouTube consent redirect (WSL2 forwards it to the Windows browser)."""
+    raw = os.environ.get(YT_LOOPBACK_PORT_ENV, "").strip()
+    try:
+        port = int(raw) if raw else YT_LOOPBACK_PORT_DEFAULT
+    except ValueError:
+        return YT_LOOPBACK_PORT_DEFAULT
+    return port if 1024 <= port <= 65535 else YT_LOOPBACK_PORT_DEFAULT
+
+
 def _present_url(url: str) -> None:
-    print("Open this URL in your browser to authorise Stream Sarthi (YouTube):", file=sys.stderr)  # noqa: T201
+    # The consent URL carries a one-time state and PKCE challenge, no token. It is meant to be opened.
+    print(  # noqa: T201
+        "\nYOUTUBE LOGIN: open this URL in your Windows browser and approve. After approval the browser is "
+        "sent back to http://127.0.0.1:<port>/callback and this window finishes by itself.\n"
+        "If the browser shows 'cannot connect', copy the full address from its address bar and paste it "
+        "here, then press Enter.\n",
+        file=sys.stderr,
+    )
     print(url, file=sys.stderr)  # noqa: T201
 
 
 def _present_device(prompt: DevicePrompt) -> None:
     print(  # noqa: T201
-        f"Open {prompt.uri.reveal()} and enter the code {prompt.code.reveal()} (Twitch).", file=sys.stderr
+        f"\nTWITCH LOGIN: open {prompt.uri.reveal()} in your Windows browser, enter the code "
+        f"{prompt.code.reveal()} and approve. This window finishes by itself.\n",
+        file=sys.stderr,
     )
+
+
+def _watch_stdin_for_redirect(loop: asyncio.AbstractEventLoop, receiver: Any) -> None:
+    """Daemon thread: a pasted redirect URL completes the login when the browser cannot reach the port."""
+    if not sys.stdin or not sys.stdin.isatty():
+        return
+
+    def reader() -> None:
+        while True:
+            try:
+                line = sys.stdin.readline()
+            except Exception:
+                return
+            if not line:
+                return
+            loop.call_soon_threadsafe(receiver.submit_redirect, line)
+
+    threading.Thread(target=reader, name="chat-login-stdin", daemon=True).start()
+
+
+async def login_youtube(
+    auth: YouTubeAuth, store: YouTubeTokenStore, *, remember: bool = True, strict: bool = True
+) -> YouTubeTokens:
+    loop = asyncio.get_running_loop()
+    tokens = await auth.login(
+        _present_url,
+        port=youtube_login_port(),
+        on_receiver=lambda receiver: _watch_stdin_for_redirect(loop, receiver),
+    )
+    if remember:
+        try:
+            store.save(auth.client_id, tokens, remember=True)
+        except ChatError:
+            if strict:
+                raise
+            log_event(_LOG, "token_save_failed", level=logging.WARNING, platform="youtube")
+    return tokens
+
+
+async def login_twitch(
+    auth: DeviceAuth, store: TokenStore, *, remember: bool = True, strict: bool = True
+) -> Tokens:
+    tokens = await auth.login(_present_device, asyncio.Event())
+    if remember:
+        try:
+            session = UserSession(auth, tokens)
+            await session.access_token()  # validates the token and learns the user id
+            if session.user_id:
+                store.save(auth.client_id, session.user_id, session.tokens, remember=True)
+                store.backend.set_password(
+                    "stream-sarthi-twitch:" + auth.client_id, "_last_user", session.user_id
+                )
+        except Exception as exc:
+            if strict:
+                raise
+            log_event(_LOG, "token_save_failed", level=logging.WARNING, error=type(exc).__name__)
+    return tokens
 
 
 @dataclass
@@ -131,6 +215,7 @@ class ChatService:
         self._stop = asyncio.Event()
         self._ready = asyncio.Event()
         self._aio: aiohttp.ClientSession | None = None
+        self.announce_gap_s = 0.4
 
     # ---- public -------------------------------------------------------------------------------
     def request_stop(self) -> None:
@@ -152,8 +237,27 @@ class ChatService:
             tw = await self._setup_twitch(aio) if "twitch" in chat.platforms else None
             if yt is None and tw is None:
                 log_event(_LOG, "chat_no_connectors", level=logging.ERROR)
+                await self.announce_unavailable()
                 return int(ExitCode.NO_CONNECTORS)
-            return await self._serve(yt, tw)
+            if self.skipped:  # one platform is up, the other is not: say so
+                await self.announce_unavailable(repeats=1)
+            code = await self._serve(yt, tw)
+            if code == int(ExitCode.CONNECTOR_FAILED):
+                await self.announce_unavailable(extra="chat_connectors_failed")
+            return code
+
+    async def announce_unavailable(self, *, repeats: int = 3, extra: str = "chat_unavailable") -> None:
+        """Tell the moderator console chat is not running (SYSTEM_STATUS safety events, codes only).
+
+        Published a few times because a freshly started process can lose its first messages on the bus
+        (PUB/SUB slow joiner). Never raises: the stack must not depend on chat."""
+        for i in range(repeats):
+            with contextlib.suppress(Exception):
+                self.publisher.safety(extra, source="chat")
+                for platform, reason in self.skipped.items():
+                    self.publisher.safety(reason, source=f"chat.{platform}")
+            if i + 1 < repeats:
+                await asyncio.sleep(self.announce_gap_s)
 
     # ---- serve and shutdown ---------------------------------------------------------------------
     async def _serve(self, yt: _Setup | None, tw: _Setup | None) -> int:
@@ -284,26 +388,17 @@ class ChatService:
         return _Setup(actions, make)
 
     async def _default_youtube_tokens(self, auth: YouTubeAuth) -> YouTubeTokens | None:
-        store: YouTubeTokenStore | None = None
+        store = YouTubeTokenStore(default_backend())  # keyring when real, else the 0600 token file
         try:
-            store = YouTubeTokenStore()
-        except ChatError:
-            log_event(_LOG, "keyring_unavailable", level=logging.INFO, platform="youtube")
-        if store is not None:
-            try:
-                stored = store.load(auth.client_id)
-            except ChatError as exc:
-                log_event(_LOG, exc.code, level=logging.WARNING, platform="youtube")
-                stored = None
-            if stored is not None:
-                return stored
+            stored = store.load(auth.client_id)
+        except ChatError as exc:
+            log_event(_LOG, exc.code, level=logging.WARNING, platform="youtube")
+            stored = None
+        if stored is not None:
+            return stored
         if not self.options.login:
             return None
-        tokens = await auth.login(_present_url)
-        if store is not None and self.options.remember:
-            with contextlib.suppress(ChatError):
-                store.save(auth.client_id, tokens, remember=True)
-        return tokens
+        return await login_youtube(auth, store, remember=self.options.remember, strict=False)
 
     # ---- Twitch ---------------------------------------------------------------------------------
     async def _setup_twitch(self, aio: aiohttp.ClientSession) -> _Setup | None:
@@ -383,38 +478,71 @@ class ChatService:
         return found
 
     async def _default_twitch_tokens(self, auth: DeviceAuth) -> Tokens | None:
-        store: TokenStore | None = None
-        try:
-            store = TokenStore()
-        except ChatError:
-            log_event(_LOG, "keyring_unavailable", level=logging.INFO, platform="twitch")
+        store = TokenStore(default_backend())  # keyring when real, else the 0600 token file
         service = "stream-sarthi-twitch:" + auth.client_id
-        if store is not None:
-            try:
-                last = store.backend.get_password(service, "_last_user")
-                stored = store.load(auth.client_id, last) if last else None
-            except Exception as exc:  # code only: the keyring may carry anything
-                log_event(_LOG, "keyring_read_failed", level=logging.WARNING, error=type(exc).__name__)
-                stored = None
-            if stored is not None:
-                return stored
+        try:
+            last = store.backend.get_password(service, "_last_user")
+            stored = store.load(auth.client_id, last) if last else None
+        except Exception as exc:  # code only: the store may carry anything
+            log_event(_LOG, "keyring_read_failed", level=logging.WARNING, error=type(exc).__name__)
+            stored = None
+        if stored is not None:
+            return stored
         if not self.options.login:
             return None
-        tokens = await auth.login(_present_device, asyncio.Event())
-        if store is not None and self.options.remember:
-            session = UserSession(auth, tokens)
-            with contextlib.suppress(Exception):
-                await session.access_token()
-                if session.user_id:
-                    store.save(auth.client_id, session.user_id, session.tokens, remember=True)
-                    store.backend.set_password(service, "_last_user", session.user_id)
-        return tokens
+        return await login_twitch(auth, store, remember=self.options.remember, strict=False)
 
     # ---- helpers --------------------------------------------------------------------------------
     def _skip(self, platform: str, code: str) -> None:
         self.skipped[platform] = code
         log_event(_LOG, "connector_skipped", level=logging.WARNING, platform=platform, code=code)
         return None
+
+
+async def run_login(config: Config, *, remember: bool = True) -> int:
+    """Standalone ``python -m chat.main --login``: log in to every configured platform, store, exit.
+
+    Needs neither the engine nor the bus. Exit 0 all done, 2 nothing to log in to (no client id), 5 a login failed."""
+    chat = config.chat
+    done = failed = 0
+    async with aiohttp.ClientSession() as aio:
+        if "youtube" in chat.platforms:
+            cid = config.youtube_oauth_client_id.get_secret_value().strip() if config.youtube_oauth_client_id else ""
+            if not cid:
+                log_event(_LOG, "login_skipped", level=logging.WARNING, platform="youtube", code="yt_no_credentials")
+            else:
+                sec = (
+                    config.youtube_oauth_client_secret.get_secret_value().strip()
+                    if config.youtube_oauth_client_secret
+                    else ""
+                )
+                auth = YouTubeAuth(cid, Secret(sec) if sec else None, make_youtube_http(aio))
+                try:
+                    await login_youtube(auth, YouTubeTokenStore(default_backend()), remember=remember)
+                    log_event(_LOG, "login_ok", platform="youtube")
+                    done += 1
+                except ChatError as exc:
+                    log_event(_LOG, "login_failed", level=logging.ERROR, platform="youtube", code=exc.code)
+                    failed += 1
+        if "twitch" in chat.platforms and not chat.twitch.anonymous_read:
+            cid = config.twitch_client_id.get_secret_value().strip() if config.twitch_client_id else ""
+            if not cid:
+                log_event(_LOG, "login_skipped", level=logging.WARNING, platform="twitch", code="twitch_no_credentials")
+            else:
+                tauth = DeviceAuth(cid, make_twitch_http(aio))
+                try:
+                    await login_twitch(tauth, TokenStore(default_backend()), remember=remember)
+                    log_event(_LOG, "login_ok", platform="twitch")
+                    done += 1
+                except ChatError as exc:
+                    log_event(_LOG, "login_failed", level=logging.ERROR, platform="twitch", code=exc.code)
+                    failed += 1
+                except Exception as exc:  # InvalidToken and friends: class only
+                    log_event(_LOG, "login_failed", level=logging.ERROR, platform="twitch", code=type(exc).__name__)
+                    failed += 1
+    if failed:
+        return int(ExitCode.LOGIN_FAILED)
+    return int(ExitCode.OK) if done else int(ExitCode.NO_CONNECTORS)
 
 
 @dataclass

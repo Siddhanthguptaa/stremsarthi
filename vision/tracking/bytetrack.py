@@ -146,11 +146,12 @@ class ByteTracker:
 
     def reset(self) -> None:
         self._tracks.clear()
+        self._last_pts = -float("inf")
 
     def forget_label(self, label: Hashable) -> None:
+        """Drop only the tracks of one label (a category switched off live); the clock is left alone."""
         for tid in [t for t, tr in self._tracks.items() if tr.label == label]:
             del self._tracks[tid]
-        self._last_pts = -float("inf")
 
     def update(
         self,

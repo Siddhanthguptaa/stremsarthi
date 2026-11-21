@@ -75,6 +75,21 @@ class LiveAudioSettings:
         except Exception:  # a malformed initial config leaves the safe defaults (everything on)
             return
 
+    def fail_closed(self) -> bool:
+        """Config feed lost an event or died: every spoken category back ON and no less sensitive than the default
+        (more muting, never less). Languages and mute mode are kept (neither can leak). Returns whether it changed."""
+        changed = False
+        for cat in SPOKEN_CATEGORIES:
+            if not self.enabled[cat]:
+                self.enabled[cat] = True
+                changed = True
+            if self.sensitivity[cat] < DEFAULT_SENSITIVITY:
+                self.sensitivity[cat] = DEFAULT_SENSITIVITY
+                changed = True
+        if changed:
+            self.version += 1
+        return changed
+
     def apply(self, diff: Mapping[str, Any]) -> bool:
         """Apply the keys we understand; returns whether anything changed."""
         changed = False

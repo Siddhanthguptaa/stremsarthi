@@ -90,7 +90,7 @@ def ffmpeg_argv(prefix: Sequence[str], stream: Stream, view: SessionView) -> tup
     if stream == "protected":
         url = f"rtmp://{view.host}:{view.rtmp_port}/shielded"  # anonymous loopback read: no secret in it
         return [*head, "-nostdin", "-fflags", "nobuffer", *low_latency, "-i", url, *out], None
-    url = f"rtmp://127.0.0.1:{view.rtmp_port}/camera"  # anonymous loopback read (relay: DEMO_RAW_PREVIEW=1)
+    url = f"rtmp://{view.host}:{view.rtmp_port}/camera"  # anonymous local read (relay: DEMO_RAW_PREVIEW=1)
     return [*head, "-nostdin", "-fflags", "nobuffer", *low_latency, "-i", url, *out], None
 
 

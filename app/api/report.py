@@ -146,7 +146,11 @@ def build_report(rec: SessionLog) -> dict[str, Any]:
     by_action: dict[str, int] = defaultdict(int)
     by_modality: dict[str, int] = defaultdict(int)
     failsafe_audio_ms = 0
+    notices = 0
     for e in all_events:
+        if e.category.value == "system_status":
+            notices += 1  # a notice (for example "chat unavailable"), not a protection: never counted as one
+            continue
         by_cat[e.category.value].append(e.confidence)
         by_action[e.action] += 1
         by_modality[e.modality.value] += 1
@@ -174,7 +178,8 @@ def build_report(rec: SessionLog) -> dict[str, Any]:
         "profile": rec.profile,
         "delay_seconds": rec.delay_seconds,
         "totals": {
-            "events": len(all_events),
+            "events": len(all_events) - notices,
+            "system_notices": notices,
             "by_category": {
                 c: {"count": len(v), "mean_confidence": round(sum(v) / len(v), 3)}
                 for c, v in sorted(by_cat.items())

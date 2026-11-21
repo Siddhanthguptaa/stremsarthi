@@ -196,9 +196,15 @@ class AudioOrchestrator:
             return
         try:
             self._cfg_sub = self.bus.subscribe([Topic.CONFIG])
-            self._cfg_task = loop.create_task(pipe.watch_config(self._cfg_sub))
+            self._cfg_task = loop.create_task(
+                pipe.supervise_config(self._cfg_sub, lambda: self._resubscribe_config())
+            )
         except Exception as exc:  # no live toggles, defaults (everything on) stay: never fewer mutes
-            log.warning("audio config feed unavailable (%s)", type(exc).__name__)
+            log.error("audio config feed unavailable (%s): defaults stay", type(exc).__name__)
+
+    def _resubscribe_config(self) -> Any:
+        self._cfg_sub = self.bus.subscribe([Topic.CONFIG])
+        return self._cfg_sub
 
     @staticmethod
     def _cancel_pending(loop: asyncio.AbstractEventLoop) -> None:
