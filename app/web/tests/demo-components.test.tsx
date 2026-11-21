@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CaptionStrip } from "@/components/demo/caption-strip"
 import { PreviewPane } from "@/components/demo/preview-pane"
 import { ProofCounter } from "@/components/demo/proof-counter"
+import { RiskStrip } from "@/components/demo/risk-strip"
 import { LanguageProvider } from "@/components/shell/language-provider"
 import { StageStateChip } from "@/components/demo/stage-state"
 import { useDemoStatus, usePreviewToken } from "@/components/demo/use-demo-preview"
@@ -434,5 +435,43 @@ describe("ProofCounter", () => {
     renderIn(<ProofCounter state={initialProof} />)
     expect(screen.getByTestId("proof-total").textContent).toBe("0")
     expect(screen.getByText(/Nothing protected yet/)).toBeTruthy()
+  })
+})
+
+describe("compact stage cards", () => {
+  it("the chip stays LIVE and says which lane is catching up", () => {
+    renderIn(<StageStateChip kind="live" catchingUp={["audio"]} compact />)
+    expect(screen.getByRole("status").textContent).toContain("LIVE")
+    expect(screen.getByTestId("stage-state").getAttribute("data-state")).toBe("live")
+    expect(screen.getByText("Live and masked. Still catching up: audio.")).toBeTruthy()
+  })
+
+  it("the compact proof card keeps the total and one chip per category", () => {
+    let state = initialProof
+    for (const [id, category] of [["1", "aadhaar"], ["2", "aadhaar"], ["3", "face"]] as const) {
+      state = proofReducer(state, { type: "event", event: { event_id: id, category, modality: "video", wall_ts: "2026-11-21T09:00:00+00:00" } })
+    }
+    renderIn(<ProofCounter state={state} compact />)
+    expect(screen.getByTestId("proof-total").textContent).toBe("3")
+    const chips = screen.getAllByRole("listitem")
+    expect(chips).toHaveLength(2)
+    expect(chips[0].textContent).toContain("Aadhaar card")
+    expect(chips[0].textContent).toContain("2")
+  })
+
+  it("the risk strip is a labelled meter with a text level and the live warnings", () => {
+    renderIn(<RiskStrip view={{ level: "orange", score: 0.62, signals: [{ key: "music:music", source: "music", category: "music", score: 0.62, expiresAt: 1 }] }} />)
+    const meter = screen.getByRole("meter")
+    expect(meter.getAttribute("aria-valuenow")).toBe("62")
+    expect(meter.getAttribute("aria-valuemin")).toBe("0")
+    expect(meter.getAttribute("aria-valuemax")).toBe("100")
+    expect(meter.getAttribute("aria-valuetext")).toContain("62%")
+    expect(screen.getByTestId("risk-meter").getAttribute("data-level")).toBe("orange")
+    expect(screen.getAllByRole("listitem")).toHaveLength(1)
+  })
+
+  it("the large caption strip is the same labelled region", () => {
+    renderIn(<CaptionStrip lines={[]} large />)
+    expect(screen.getByRole("region", { name: "Live caption strip" })).toBeTruthy()
   })
 })

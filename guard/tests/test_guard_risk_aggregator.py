@@ -379,3 +379,24 @@ async def test_run_loop_survives_bad_event_and_failing_tick() -> None:
     await asyncio.wait_for(task, 2.0)
     assert svc.error_counts.get("ValueError") == 1 and svc.error_counts.get("RuntimeError") == 2
     assert any(m.level != "green" for m in bus.of(Topic.RISK_METER))
+
+
+def test_service_stamps_real_wall_time_and_takes_the_session_id_from_the_environment(monkeypatch):
+    from datetime import datetime
+
+    from guard.risk import service as svc_mod
+
+    monkeypatch.setenv("STREAMSARTHI_SESSION_ID", "sess-abc123")
+    monkeypatch.setattr(svc_mod.time, "time", lambda: 1_800_000_000.0)  # 2027-01-15, far from the old epoch
+    svc = RiskService(GuardConfig(), None)
+    ts = svc.agg._wall(12.5)  # stream time must not leak into the wall stamp
+    assert datetime.fromisoformat(ts).timestamp() == pytest.approx(1_800_000_000.0)
+    assert svc.agg._session == "sess-abc123"
+    monkeypatch.delenv("STREAMSARTHI_SESSION_ID")
+    assert RiskService(GuardConfig(), None).agg._session == "session"  # fallback: the previous default
+    for bad in ("x" * 65, "has space", "semi;colon", "../etc", "नम"):
+        monkeypatch.setenv("STREAMSARTHI_SESSION_ID", bad)
+        assert RiskService(GuardConfig(), None).agg._session == "session"  # invalid values are ignored
+    monkeypatch.setenv("STREAMSARTHI_SESSION_ID", "A_b-9" + "z" * 59)  # exactly 64 characters is fine
+    assert RiskService(GuardConfig(), None).agg._session == "A_b-9" + "z" * 59
+    assert RiskService(GuardConfig(), None, session_id="explicit").agg._session == "explicit"

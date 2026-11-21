@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
+import re
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -30,6 +32,21 @@ _EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 def stream_wall_ts(t: float | None) -> str:
     """Deterministic wall_ts string derived from stream time (real wall time is not needed)."""
     return (_EPOCH + timedelta(seconds=t or 0.0)).isoformat()
+
+
+_SESSION_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def real_wall_ts(_t: float | None = None, *, clock: Callable[[], float] | None = None) -> str:
+    """Real UTC wall time (ISO 8601) at the moment the event is published: what the safety report and the
+    alerts session filter sort and match on. The stream time argument is not needed."""
+    return datetime.fromtimestamp((clock or time.time)(), UTC).isoformat()
+
+
+def session_id_from_env(default: str = "session") -> str:
+    """The API sets ``STREAMSARTHI_SESSION_ID`` for the engine process; fall back to the old default."""
+    sid = os.environ.get("STREAMSARTHI_SESSION_ID", "").strip()
+    return sid if _SESSION_RE.fullmatch(sid) else default
 
 
 class StreamClock:
@@ -56,9 +73,11 @@ class RiskService:
         bus: EventBus | None = None,
         *,
         clock: StreamClock | None = None,
-        wall_ts_fn: Callable[[float | None], str] = stream_wall_ts,
-        session_id: str = "session",
+        wall_ts_fn: Callable[[float | None], str] | None = None,
+        session_id: str | None = None,
     ) -> None:
+        wall_ts_fn = wall_ts_fn or real_wall_ts
+        session_id = session_id or session_id_from_env()
         self.cfg = cfg
         self.bus = bus
         self.clock = clock or StreamClock()

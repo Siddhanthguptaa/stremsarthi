@@ -74,6 +74,8 @@ class AudioOrchestrator:
         self._start_error: str | None = None
         self._warm_task: asyncio.Task[None] | None = None
         self._hb_task: asyncio.Task[None] | None = None
+        self._cfg_task: asyncio.Task[None] | None = None
+        self._cfg_sub: Any = None
         self._hb_seq = 0
         self._last_pts: float | None = None
         self.heartbeat_s = HEARTBEAT_S
@@ -142,9 +144,10 @@ class AudioOrchestrator:
                 self._n_failsafe += 1
                 n = self._n_failsafe
                 self.failsafe_chunks += 1
-            span, mask = chunk_failsafe(
-                chunk, f"au-fs-{n}", time.monotonic(), self.config.audio.mute_mode, why
+            mode = (
+                self._pipeline.live.mute_mode if self._pipeline is not None else self.config.audio.mute_mode
             )
+            span, mask = chunk_failsafe(chunk, f"au-fs-{n}", time.monotonic(), mode, why)
             self.bus.publish(Topic.MUTE_SPAN, span)
             self.bus.publish(Topic.MASK_REQUEST, mask)
         except Exception as exc:
@@ -172,6 +175,7 @@ class AudioOrchestrator:
         try:
             if self._pipeline is None:
                 self._pipeline = self._build_pipeline()
+            self._start_config_feed(loop)
             self._warm_task = loop.create_task(self._warmup())
             self._hb_task = loop.create_task(self._heartbeat())  # only once the pipeline exists
             self._ready.set()
@@ -184,6 +188,17 @@ class AudioOrchestrator:
             finally:
                 self._ready.set()
                 loop.close()
+
+    def _start_config_feed(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Subscribe to ``Topic.CONFIG`` before the engine can publish its first (burst of) change(s)."""
+        pipe = self._pipeline
+        if pipe is None:
+            return
+        try:
+            self._cfg_sub = self.bus.subscribe([Topic.CONFIG])
+            self._cfg_task = loop.create_task(pipe.watch_config(self._cfg_sub))
+        except Exception as exc:  # no live toggles, defaults (everything on) stay: never fewer mutes
+            log.warning("audio config feed unavailable (%s)", type(exc).__name__)
 
     @staticmethod
     def _cancel_pending(loop: asyncio.AbstractEventLoop) -> None:
@@ -255,6 +270,13 @@ class AudioOrchestrator:
         if hb is not None:
             hb.cancel()
             await asyncio.gather(hb, return_exceptions=True)
+        cfg_task = self._cfg_task
+        if cfg_task is not None:
+            cfg_task.cancel()
+            await asyncio.gather(cfg_task, return_exceptions=True)
+        closer = getattr(self._cfg_sub, "close", None)
+        if closer is not None:
+            closer()
         warm = self._warm_task
         if warm is not None and not warm.done():
             warm.cancel()

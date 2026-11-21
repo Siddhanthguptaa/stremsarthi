@@ -257,4 +257,20 @@ async def test_publisher_topics_and_safety_events(clock: ManualClock) -> None:
     assert topics == [Topic.CHAT_ALLOWED, Topic.CHAT_VERDICT, Topic.SAFETY_EVENT]
     event = bus.history[2][1]
     assert event.detail_code == "twitch_disconnected" and event.modality is Modality.CHAT
-    assert event.category is Category.FAILSAFE and event.source == "chat.twitch"
+    assert event.category is Category.SYSTEM_STATUS and event.source == "chat.twitch"
+
+
+def test_session_id_comes_from_the_environment_when_valid(monkeypatch: pytest.MonkeyPatch) -> None:
+    from chat.common.bus import session_id_from_env
+
+    monkeypatch.delenv("STREAMSARTHI_SESSION_ID", raising=False)
+    assert session_id_from_env() == "chat"
+    monkeypatch.setenv("STREAMSARTHI_SESSION_ID", "sess-2026_11-21")
+    assert session_id_from_env() == "sess-2026_11-21"
+    for bad in ("a" * 65, "has space", "semi;colon", "../x", ""):
+        monkeypatch.setenv("STREAMSARTHI_SESSION_ID", bad)
+        assert session_id_from_env() == "chat", bad
+    monkeypatch.setenv("STREAMSARTHI_SESSION_ID", "s123")
+    bus = InProcessBus()
+    ChatPublisher(bus, session_id=session_id_from_env()).safety("twitch_disconnected")
+    assert bus.history[0][1].session_id == "s123"

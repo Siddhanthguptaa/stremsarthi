@@ -19,7 +19,18 @@ router = APIRouter(prefix="/api")
 
 @router.get("/config")
 async def get_config(request: Request, _: Principal = Depends(require_role("streamer"))) -> dict[str, Any]:  # noqa: B008
-    return request.app.state.config_store.public()
+    return _view(request.app.state)
+
+
+def _view(state: Any, applied: str | None = None) -> dict[str, Any]:
+    """The public config plus ``config_version`` (counts committed changes) and ``engine_ack``: always null,
+    because ``EngineStatus`` carries no config version, so the API cannot know what the engine applied."""
+    out = state.config_store.public()
+    out["config_version"] = state.config_store.version
+    out["engine_ack"] = None
+    if applied is not None:
+        out["applied"] = applied
+    return out
 
 
 @router.patch("/config")
@@ -40,5 +51,7 @@ async def patch_config(
         except (RuntimeError, ValueError, TypeError):
             log.warning("config publish failed")
             raise ApiError(503, "bus_unavailable", "could not reach the engine bus") from None
-        store.commit(new_config)
-    return store.public()
+        store.commit(new_config, diff)
+    # "published": sent on the bus while an engine is reporting. "pending": no engine is up yet; the change is
+    # kept and re-sent (config_sync.py) once one starts. Neither says the engine applied it.
+    return _view(state, "published" if state.hub.engine_status() is not None else "pending")

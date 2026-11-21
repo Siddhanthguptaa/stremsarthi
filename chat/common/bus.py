@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import re
 import uuid
 from datetime import UTC, datetime
 
@@ -29,6 +31,16 @@ REPORTED_STATUS_CODES = frozenset(
         "twitch_actions_blocked",
     }
 )
+
+
+_SESSION_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+DEFAULT_SESSION_ID = "chat"
+
+
+def session_id_from_env(default: str = DEFAULT_SESSION_ID) -> str:
+    """``STREAMSARTHI_SESSION_ID`` (set by the API for the chat process) if it is at most 64 of ``[A-Za-z0-9_-]``."""
+    value = os.environ.get("STREAMSARTHI_SESSION_ID", "")
+    return value if _SESSION_RE.fullmatch(value) else default
 
 
 class ChatPublisher:
@@ -65,8 +77,8 @@ class ChatPublisher:
             wall_ts=datetime.fromtimestamp(self._clock.wall(), UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             pts=None,
             modality=Modality.CHAT,
-            # No dedicated "system status" category exists; see the T1.5 report (contract request).
-            category=Category.FAILSAFE,
+            # Operational notice (quota low, platform disconnected): not a protection event, so not FAILSAFE.
+            category=Category.SYSTEM_STATUS,
             action="warned",
             confidence=confidence,
             bbox=None,

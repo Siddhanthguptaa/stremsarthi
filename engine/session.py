@@ -206,7 +206,11 @@ class Session:
         self._acursor: float | None = None  # next output sample (float: fps need not divide 48 kHz)
         self._cursor_reset = False  # set by ingest threads, applied by the tick thread
         self.safety = SafetyPublisher(bus, self.session_id, fps=self.fps) if bus is not None else None
-        self.status = StatusPublisher(bus, self.engine) if bus is not None else None
+        self.status = (
+            StatusPublisher(bus, self.engine, applied_allowlist_version=self._applied_allowlist_version)
+            if bus is not None
+            else None
+        )
         self.timing_log = TimingLog(config.engine.timing_log_path)
         if bus is not None and self.timing_log.enabled:
             self.timing_log.attach(bus)
@@ -304,8 +308,14 @@ class Session:
             on(Topic.SESSION, self._on_session_command),
         ]
 
+    def _applied_allowlist_version(self) -> int | None:
+        """The version the vision host actually applied, when it reports one (``VisionHost.applied_allowlist_version``)."""
+        return getattr(self.lane_host, "applied_allowlist_version", None)
+
     def _on_allowlist(self, update: AllowlistUpdate) -> None:
-        if self.status is not None:
+        # The received version is only a fallback for hosts that do not report what they applied: reporting it
+        # as soon as it arrives would hide an update that vision dropped, and the API would never resync.
+        if self.status is not None and self._applied_allowlist_version() is None:
             self.status.allowlist_version = update.version
 
     # ------------------------------------------------------------------ audio watchdog

@@ -104,11 +104,13 @@ class CardsDetector:
         self._res: Resources | None = None
         self._cfg: DetectorConfig | None = None
         self._shape_fallback = SHAPE_FALLBACK_DEFAULT
+        self._edge_cards = True
 
     # ------------------------------------------------------------------ plugin interface
     def configure(self, cfg: DetectorConfig, res: Resources) -> None:
         self._cfg, self._res = cfg, res
         self._shape_fallback = bool(cfg.params.get("shape_fallback", SHAPE_FALLBACK_DEFAULT))
+        self._edge_cards = bool(cfg.params.get("edge_cards", True))  # off: skips the edge-card searches
 
     def set_shape_fallback(self, on: bool) -> None:
         """Switch the card-shape fallback (only ever active with ``mask_when_unsure`` on for Aadhaar)."""
@@ -173,7 +175,7 @@ class CardsDetector:
         if unsure and not masked_hint and not late:
             covered = [pts for _, pts in detections]
             fh, fw = image.shape[:2]
-            at_side = any(b[:, 0].min() <= 12 or b[:, 0].max() >= fw - 12 for b in boxes)
+            at_side = self._edge_cards and any(b[:, 0].min() <= 12 or b[:, 0].max() >= fw - 12 for b in boxes)
             # the whole-frame outline search is the costly part (~16 ms): only with enough text for card_like,
             # or with text running to a frame side (a card cut by it)
             cands = region_candidates(image) if len(boxes) >= 4 or at_side else []
@@ -184,7 +186,7 @@ class CardsDetector:
                 detections.append((self._detection(frame, hit, CardQuad(pts, "card_like", 0.0)), pts))
             # a card entering or leaving through a frame side: masked whole, beyond the frame edge
             edge_cat = self._edge_category(texts)
-            for pts in find_edge_card(image, boxes, candidates=cands):
+            for pts in find_edge_card(image, boxes, candidates=cands) if self._edge_cards else []:
                 if any(quad_overlap(pts, c) > 0.3 for c in covered):
                     continue
                 hit = _Hit(edge_cat, pts, CONF_CARD_LIKE, "card_like", 0.0)

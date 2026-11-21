@@ -10,7 +10,7 @@ import time
 
 import pytest
 
-from contracts import Config
+from contracts import Config, Topic
 from engine import main as engine_main
 from engine.main import Extra, ModuleLoadError, assemble, run
 
@@ -428,3 +428,39 @@ def test_an_extra_whose_start_failed_is_not_tapped(builders):
     asm.start()
     assert asm.session._taps == ()
     asm.shutdown()
+
+
+# ------------------------------------------------------------------ session id from the API
+
+
+def test_session_id_is_read_from_the_environment_and_stamped_on_events(monkeypatch, builders):
+    from contracts import HoldSource
+
+    monkeypatch.setenv("STREAMSARTHI_SESSION_ID", "sess-2026_11-21-AbC")
+    asm = assemble_fake({})
+    try:
+        assert asm.session.session_id == "sess-2026_11-21-AbC"
+        events = []
+        asm.bus.on(Topic.SAFETY_EVENT, events.append)
+        asm.session.hold(HoldSource.API, True, now=1.0)
+        asm.session.hold(HoldSource.API, False, now=2.0)  # the held event is published on release
+        assert events and {e.session_id for e in events} == {"sess-2026_11-21-AbC"}
+    finally:
+        asm.shutdown()
+
+
+@pytest.mark.parametrize("bad", ["", "x" * 65, "has space", "semi;colon", "a/b", "नमस्ते", "id\n"])
+def test_invalid_session_ids_fall_back_to_a_random_one(monkeypatch, bad):
+    monkeypatch.setenv("STREAMSARTHI_SESSION_ID", bad)
+    asm = assemble_fake({})
+    try:
+        assert asm.session.session_id != bad and len(asm.session.session_id) == 32
+    finally:
+        asm.shutdown()
+
+
+def test_session_id_helper_accepts_exactly_64_characters():
+    from engine.main import session_id_from_env
+
+    assert session_id_from_env({"STREAMSARTHI_SESSION_ID": "a" * 64}) == "a" * 64
+    assert session_id_from_env({}) is None

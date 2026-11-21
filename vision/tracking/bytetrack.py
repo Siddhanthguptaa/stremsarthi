@@ -146,6 +146,10 @@ class ByteTracker:
 
     def reset(self) -> None:
         self._tracks.clear()
+
+    def forget_label(self, label: Hashable) -> None:
+        for tid in [t for t, tr in self._tracks.items() if tr.label == label]:
+            del self._tracks[tid]
         self._last_pts = -float("inf")
 
     def update(

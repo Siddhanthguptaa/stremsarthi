@@ -8,11 +8,12 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 ROOT="$PWD"
-BUILD=1 CHAT=1 RAW=0 AUDIO=1 GPU=0
+BUILD=1 CHAT=1 RAW=0 AUDIO=1 GPU=0 ENGINE_LOG=0
 ORIG_ARGS=("$@")
 for a in "$@"; do
   case "$a" in
     --gpu) GPU=1 ;;
+    --engine-log) ENGINE_LOG=1 ;;
     --no-build) BUILD=0 ;;
     --no-chat) CHAT=0 ;;
     --raw) RAW=1 ;;
@@ -63,9 +64,14 @@ export PYTHONUNBUFFERED=1
 SECRET_KEY="$(head -c 24 /dev/urandom | base64 | tr -d '=/+\n')"
 export SECRET_KEY
 [ "$RAW" = 1 ] && export DEMO_RAW_PREVIEW=1
+# --engine-log: keep the engine's own log (code-only messages, no frames/text/secrets) in /tmp/ss_engine.log: it holds the
+# per-lane coverage diagnostics ('coverage summary ... lane_diag') printed when the engine stops.
+if [ "$ENGINE_LOG" = 1 ]; then
+  export SESSION_ENGINE_CMD="bash -c 'exec python -u -m engine.main --profile {profile} > /tmp/ss_engine.log 2>&1'"
+fi
 if [ "$CHAT" = 1 ]; then
   export CHAT__ENABLED=true
-  export SESSION_CHAT_CMD="python -m eval.demo.chat_feeder --profile {profile}"
+  export SESSION_CHAT_CMD="python -m eval.demo.chat_feeder --profile {profile} --loop"
 fi
 python -u -m app.api.main >/tmp/ss_api.log 2>&1 &
 PIDS+=("$!")

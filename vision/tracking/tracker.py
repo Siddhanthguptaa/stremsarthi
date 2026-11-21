@@ -75,6 +75,10 @@ class ByteTrackHold:
         self.tracker.reset()
         self.hysteresis.reset()
 
+    def forget_category(self, category: Category) -> None:
+        self.tracker.forget_label(category)
+        self.hysteresis.forget_category(category)
+
     @property
     def live_tracks(self) -> int:
         return len(self.tracker.tracks)

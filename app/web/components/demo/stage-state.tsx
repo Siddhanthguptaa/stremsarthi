@@ -25,8 +25,16 @@ const HINT: Record<"live" | "hold" | "slate", DemoKey> = {
   slate: "state.slate.hint",
 }
 
-/** The big LIVE / HOLD / SLATE chip. Text and icon carry the state, colour only backs it up. */
-export function StageStateChip({ kind }: { kind: ChipKind }) {
+interface StageStateChipProps {
+  kind: ChipKind
+  /** Lanes still catching up while the stream is live (never turns the chip into SLATE). */
+  catchingUp?: readonly string[]
+  /** A smaller chip for the page header. */
+  compact?: boolean
+}
+
+/** The LIVE / HOLD / SLATE chip. Text and icon carry the state, colour only backs it up. */
+export function StageStateChip({ kind, catchingUp = [], compact = false }: StageStateChipProps) {
   const { t } = useLanguage()
   const { d, alt, other } = useDemoText()
   const state = stageState(kind)
@@ -42,7 +50,7 @@ export function StageStateChip({ kind }: { kind: ChipKind }) {
       Icon = CircleCheck
       label = d("state.live")
       labelAlt = alt("state.live")
-      hint = d(HINT.live)
+      hint = catchingUp.length > 0 ? d("state.live.catching").replace("{lanes}", catchingUp.join(", ")) : d(HINT.live)
       break
     case "hold":
       tone = "bg-warning text-warning-foreground"
@@ -69,24 +77,28 @@ export function StageStateChip({ kind }: { kind: ChipKind }) {
   }
 
   return (
-    <div className="space-y-1" data-testid="stage-state" data-state={state === "other" ? kind : state}>
+    <div className={cn("space-y-1", compact && "sm:text-right")} data-testid="stage-state" data-state={state === "other" ? kind : state}>
       <p
         role="status"
         aria-label={d("state.label")}
-        className={cn("inline-flex min-h-14 items-center gap-3 rounded-full px-6 text-3xl font-extrabold tracking-wide", tone)}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-full font-extrabold tracking-wide",
+          compact ? "min-h-10 px-4 text-xl" : "min-h-14 gap-3 px-6 text-3xl",
+          tone,
+        )}
       >
         <span className="sr-only">{d("state.label")}: </span>
-        <Icon aria-hidden className={cn("size-7 shrink-0", Icon === Loader2 && "animate-spin motion-reduce:animate-none")} />
+        <Icon aria-hidden className={cn("shrink-0", compact ? "size-5" : "size-7", Icon === Loader2 && "animate-spin motion-reduce:animate-none")} />
         <span>
           {label}
           {labelAlt ? (
-            <span lang={other} className="ml-3 text-base font-semibold opacity-90">
+            <span lang={other} className={cn("font-semibold opacity-90", compact ? "ml-2 text-sm" : "ml-3 text-base")}>
               {labelAlt}
             </span>
           ) : null}
         </span>
       </p>
-      {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className={cn("text-muted-foreground", compact ? "max-w-xs text-xs sm:ml-auto" : "text-sm")}>{hint}</p> : null}
     </div>
   )
 }

@@ -126,6 +126,13 @@ async def start_session(
     if missing:  # names only, never values
         raise ApiError(422, "missing_keys", "missing in .env: " + ", ".join(sorted(missing)))
 
+    attached = engine is not None  # an engine already running (scripts/run_engine): its delay is fixed
+    if attached and body.delay_seconds is not None and body.delay_seconds != cfg.delay_seconds:
+        raise ApiError(
+            409,
+            "delay_fixed_while_attached",
+            "an engine is already running with its own delay; stop it or start the session without a delay",
+        )
     delay = body.delay_seconds if body.delay_seconds is not None else cfg.delay_seconds
     profile = body.profile or cfg.profile
     new_config = store.with_destinations(enabled)
@@ -140,13 +147,16 @@ async def start_session(
     }
     if state.settings.demo_raw_preview and state.settings.lan_host is None:
         child_overrides["DEMO_RAW_PREVIEW"] = "1"  # environment only, never argv; never with --lan
+    child_overrides.update(
+        store.restart_env()
+    )  # detect.* and gpu.* the streamer set: environment, never argv
     try:
         record = await state.golive.begin(
             delay_seconds=delay,
             profile=profile,
             destinations=enabled,
             chat_enabled=new_config.chat.enabled,
-            engine_already_running=state.hub.engine_status() is not None,
+            engine_already_running=attached,
             extra_env=child_overrides,
         )
     except OSError:

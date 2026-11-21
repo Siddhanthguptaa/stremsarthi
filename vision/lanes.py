@@ -257,7 +257,9 @@ class LaneWorker:
         self.lane = lane
         self.detectors = tuple(detectors)
         self.schedule = schedule
-        self._categories: Mapping[Category, CategoryConfig] = dict(categories or {})
+        self._categories: Mapping[Category, CategoryConfig] = (
+            categories if categories is not None else {}
+        )  # live
         self._allowlist = allowlist
         self._assemble: Assembler = assembler or _no_assembly
         self._deadline_s = deadline_s
@@ -416,6 +418,8 @@ class LaneWorker:
         )
         detections: list[Detection] = []
         for det in self.detectors:
+            if not self._runnable(det):
+                continue  # every category of this detector is switched off: it emits nothing
             t0 = self._clock()
             try:
                 detections.extend(det.detect(frame, ctx))
@@ -433,6 +437,17 @@ class LaneWorker:
         return LaneResult(
             self.lane, frame.seq, frame.pts, self._clock(), ok=True, requests=requests, aux_detections=aux
         )
+
+    def _runnable(self, det: Detector) -> bool:
+        """False when the detector declares categories and every one of them is currently disabled."""
+        cats = getattr(det, "categories", None)
+        if not cats or not self._categories:
+            return True
+        for c in cats:
+            conf = self._categories.get(c)
+            if conf is None or conf.enabled:  # unknown category: keep running (fail safe)
+                return True
+        return False
 
     def _fail(self, frame: Frame, source: str, exc: Exception) -> LaneResult:
         self.failed += 1

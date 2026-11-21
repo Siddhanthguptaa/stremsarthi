@@ -39,7 +39,7 @@ SECRET_FIELDS = (
     "sarvam_api_key",
 )
 LIVE_PREFIXES = ("categories.", "captions.", "hold.", "chat.")
-LIVE_KEYS = frozenset({"audio.languages"})
+LIVE_KEYS = frozenset({"audio.languages", "audio.mute_mode"})
 RESTART_PREFIXES = ("gpu.", "detect.")
 RESTART_KEYS = frozenset({"delay_seconds"})
 # Names and phone numbers the streamer wants protected (``chat.streamer_private.*``) and the channel
@@ -101,6 +101,11 @@ def classify(path: str) -> str:
 class ConfigStore:
     def __init__(self, config: Config) -> None:
         self.config = config
+        # What the streamer changed through the API (dotted path -> value). Never a secret or a private term
+        # (``plan_patch`` refuses those). A process that starts later gets these re-sent: live keys as
+        # ``ConfigChange`` events (``config_sync.py``), restart-only keys as environment variables.
+        self.overrides: dict[str, Any] = {}
+        self.version = 0  # bumped on every committed change; shown to the UI
 
     # --- read ------------------------------------------------------------------------------
     def configured_secrets(self) -> dict[str, bool]:
@@ -194,8 +199,30 @@ class ConfigStore:
         except ValueError as exc:
             raise ApiError(422, "invalid_config", str(exc)[:200]) from None
 
-    def commit(self, config: Config) -> None:
+    def commit(self, config: Config, diff: dict[str, Any] | None = None) -> None:
         self.config = config
+        if diff:
+            self.overrides.update(diff)
+            self.version += 1
+
+    def live_overrides(self) -> dict[str, Any]:
+        return {p: v for p, v in self.overrides.items() if classify(p) == "live"}
+
+    def restart_env(self) -> dict[str, str]:
+        """Restart-only overrides (``detect.*``, ``gpu.*``) as nested environment variables for a spawned
+        engine, e.g. ``DETECT__STRIDE=2``. ``delay_seconds`` travels separately (``STREAM_DELAY_SECONDS``)."""
+        out: dict[str, str] = {}
+        for path, value in self.overrides.items():
+            if classify(path) != "restart" or path in RESTART_KEYS:
+                continue
+            if isinstance(value, bool):
+                text = "true" if value else "false"
+            elif isinstance(value, (int, float, str)):
+                text = str(value)
+            else:
+                continue
+            out[path.upper().replace(".", "__")] = text
+        return out
 
     def with_destinations(self, enabled: dict[str, bool]) -> Config:
         """Copy of the config with the youtube/twitch enabled flags set (session start)."""

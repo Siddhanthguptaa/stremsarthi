@@ -174,6 +174,7 @@ class FacesDetector:
         self._state: dict[int, _TrackState] = {}
         self._run = 0
         self._epoch = 0
+        self._reset_requested = False
         self._last_pts = float("-inf")
         self._allow_version: object = None
         self._allow_matrix: np.ndarray | None = None
@@ -242,6 +243,11 @@ class FacesDetector:
         self._epoch += 1  # voids embedding jobs still in flight
         self._futures.clear()
 
+    def reset_state(self) -> None:
+        """Ask for a fresh start (the host calls it when the category is switched off, from another thread):
+        tracks, votes and pending embeddings are forgotten at the start of the next run."""
+        self._reset_requested = True
+
     def _reset_identity(self) -> None:
         """Forget tracks, votes and in-flight embedding jobs but keep the loaded allowlist."""
         self._tracker = None
@@ -260,10 +266,14 @@ class FacesDetector:
         new one is verified from scratch."""
         assert self._res is not None
         view = ctx.allowlist if ctx.allowlist is not None else self._res.allowlist
-        version = getattr(view, "version", None)
+        snap = getattr(view, "snapshot", None)
+        if snap is not None:
+            version, entries = snap()  # one lock: version and entries belong together
+        else:
+            version, entries = getattr(view, "version", None), None
         if version is None or version != self._allow_version or self._allow_matrix is None:
             vectors = []
-            for _face_id, vec in view.embeddings():
+            for _face_id, vec in entries if entries is not None else view.embeddings():
                 arr = np.asarray(vec, dtype=np.float32).reshape(-1)
                 if arr.size == EMBEDDING_DIM and np.all(np.isfinite(arr)):
                     vectors.append(l2_normalise(arr))
@@ -282,6 +292,9 @@ class FacesDetector:
     def detect(self, frame: Frame, ctx: DetectContext) -> list[Detection]:
         if self._backend is None or self._res is None or self._cfg is None:
             raise RuntimeError("faces detector used before configure()")
+        if self._reset_requested:
+            self._reset_requested = False
+            self._reset_tracking()
         face_cfg = self._cfg.categories.get(Category.FACE)
         masking = bool(face_cfg is not None and face_cfg.enabled)
         unsure = bool(face_cfg is not None and face_cfg.mask_when_unsure)

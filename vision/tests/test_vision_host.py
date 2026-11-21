@@ -64,23 +64,27 @@ def test_submit_before_start_raises_and_after_close_is_noop() -> None:
     host.close()  # idempotent
 
 
-def test_active_lanes_come_from_enabled_detectors_and_lifecycle_runs() -> None:
+def test_every_detector_is_built_but_a_disabled_one_is_not_warmed_or_run() -> None:
     fast = make_fake_detector("fa", Lane.FAST, frozenset({Category.PAN}))
     off = make_fake_detector("off", Lane.ACCURATE, frozenset({Category.EMAIL}))
     cfg = _cfg()
     cfg.categories[Category.EMAIL] = cfg.categories[Category.EMAIL].model_copy(update={"enabled": False})
     bus = InProcessBus()
     host = vhost.VisionHost(cfg, bus, registry={"fa": fast, "off": off})
-    assert host.active_lanes == frozenset({Lane.FAST})
+    assert host.active_lanes == frozenset({Lane.FAST, Lane.ACCURATE})  # built for a later switch-on
     det = host.detectors["fa"]
+    off_det = host.detectors["off"]
     host.start()
     assert det.configured and det.warmed
+    assert off_det.configured and not off_det.warmed  # warmed when first switched on
     try:
         results = _drive(host, 7)
     finally:
         host.close()
     assert det.closed
-    assert [r.frame_seq for r in results] == [0, 3, 6]
+    assert [r.frame_seq for r in results if r.lane is Lane.FAST] == [0, 3, 6]
+    # the lane of the disabled detector still heartbeats (ran, found nothing) but never ran the detector
+    assert off_det.calls == [] and all(r.ok and not r.requests for r in results if r.lane is Lane.ACCURATE)
 
 
 def test_vram_budget_enforced_at_build() -> None:

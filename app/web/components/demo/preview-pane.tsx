@@ -28,6 +28,8 @@ interface PreviewPaneProps {
    * "Connecting...") the pane asks the status endpoint why: viewer cap reached, or stream gone.
    */
   getStatus?: () => Promise<DemoStatus>
+  /** Presenter mode: bigger labels for the stage. */
+  large?: boolean
 }
 
 const LABEL: Record<PreviewKind, DemoKey> = { raw: "stage.raw", protected: "stage.protected" }
@@ -38,7 +40,7 @@ const ALT: Record<PreviewKind, DemoKey> = { raw: "pane.raw.alt", protected: "pan
  * One side of the side-by-side stage: a big label, a badge and the MJPEG stream (or a placeholder that says why
  * there is no picture). The image is a stream, not a stored file: nothing here keeps or saves a frame.
  */
-export function PreviewPane({ kind, mode, src, tokenFailed = false, getStatus }: PreviewPaneProps) {
+export function PreviewPane({ kind, mode, src, tokenFailed = false, getStatus, large = false }: PreviewPaneProps) {
   const { d, alt, other } = useDemoText()
   const headingId = React.useId()
   const isRaw = kind === "raw"
@@ -61,22 +63,24 @@ export function PreviewPane({ kind, mode, src, tokenFailed = false, getStatus }:
   }
 
   return (
-    <section aria-labelledby={headingId} data-pane={kind} data-mode={mode} className="space-y-2">
-      <h2 id={headingId} className="text-xl font-extrabold leading-tight tracking-wide sm:text-2xl">
-        {d(LABEL[kind])}
-        <span lang={other} className="block text-base font-semibold tracking-normal text-muted-foreground">
-          {alt(LABEL[kind])}
-        </span>
-      </h2>
-      <p
-        className={cn(
-          "inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-sm font-bold",
-          isRaw ? "bg-warning text-warning-foreground" : "bg-success text-success-foreground",
-        )}
-      >
-        <Icon aria-hidden className="size-4" />
-        {d(BADGE[kind])}
-      </p>
+    <section aria-labelledby={headingId} data-pane={kind} data-mode={mode} className="min-w-0 space-y-2">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+        <h2 id={headingId} className={cn("font-extrabold leading-tight tracking-wide", large ? "text-2xl lg:text-3xl" : "text-lg sm:text-xl")}>
+          {d(LABEL[kind])}
+          <span lang={other} className={cn("block font-semibold tracking-normal text-muted-foreground", large ? "text-lg" : "text-sm")}>
+            {alt(LABEL[kind])}
+          </span>
+        </h2>
+        <p
+          className={cn(
+            "inline-flex min-h-7 items-center gap-1.5 rounded-full px-3 text-xs font-bold sm:text-sm",
+            isRaw ? "bg-warning text-warning-foreground" : "bg-success text-success-foreground",
+          )}
+        >
+          <Icon aria-hidden className="size-4" />
+          {d(BADGE[kind])}
+        </p>
+      </div>
       <div
         className={cn(
           "relative aspect-video w-full overflow-hidden rounded-xl border-4 bg-black text-white",

@@ -28,10 +28,11 @@ import importlib
 import inspect
 import logging
 import os
+import re
 import signal
 import sys
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -267,6 +268,21 @@ class Assembly:
                 log.warning("shutdown step failed: %s", type(exc).__name__)
 
 
+SESSION_ID_ENV = "STREAMSARTHI_SESSION_ID"
+_SESSION_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def session_id_from_env(environ: Mapping[str, str] | None = None) -> str | None:
+    """The session id the API gave this engine process, or ``None`` (then the session makes a random one).
+    Only ``[A-Za-z0-9_-]`` and at most 64 characters are accepted; anything else is ignored."""
+    value = (os.environ if environ is None else environ).get(SESSION_ID_ENV, "")
+    if _SESSION_ID_RE.fullmatch(value):
+        return value
+    if value:
+        log.warning("%s is not a valid session id: using a random one", SESSION_ID_ENV)
+    return None
+
+
 def _build(config: Config, bus: LocalBus, name: str) -> Any:
     path = config.runtime.modules.get(name)
     if not path:
@@ -319,7 +335,13 @@ def assemble(
         if not isinstance(endpoints, RelayEndpoints):
             raise ModuleLoadError("relay: build() did not return RelayEndpoints")
         session = Session(
-            config, endpoints.source, endpoints.sink, lane_host=lane_host, audio_host=audio_host, bus=bus
+            config,
+            endpoints.source,
+            endpoints.sink,
+            lane_host=lane_host,
+            audio_host=audio_host,
+            bus=bus,
+            session_id=session_id_from_env(),  # the API's id, so alerts and events line up; else random
         )
     except BaseException:
         _close_extras(extras)

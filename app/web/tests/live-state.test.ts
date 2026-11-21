@@ -134,10 +134,16 @@ describe("status chip", () => {
     expect(chipFor(initialLiveState, true, at, false)).toBe("hold")
   })
 
-  it("LIVE when every frame is checked, PROTECT when the engine is on the slate or a lane is stale", () => {
+  it("LIVE when every frame is checked, PROTECT only while the engine is on the slate (protect_seconds > 0)", () => {
     expect(chipFor(withEngine({ state: "live", protect_seconds: 0, lanes_stale: [] }), false, at, true)).toBe("live")
     expect(chipFor(withEngine({ state: "live", protect_seconds: 1.5, lanes_stale: [] }), false, at, true)).toBe("protect")
-    expect(chipFor(withEngine({ state: "live", protect_seconds: 0, lanes_stale: ["accurate"] }), false, at, true)).toBe("protect")
+    expect(chipFor(withEngine({ state: "live", protect_seconds: 1.5, lanes_stale: ["accurate"] }), false, at, true)).toBe("protect")
+  })
+
+  it("a stale lane alone never turns LIVE into PROTECT: audio lane stale while the video is live is LIVE", () => {
+    expect(chipFor(withEngine({ state: "live", protect_seconds: 0, lanes_stale: ["audio"] }), false, at, true)).toBe("live")
+    expect(chipFor(withEngine({ state: "live", protect_seconds: 0, lanes_stale: ["accurate"] }), false, at, true)).toBe("live")
+    expect(chipFor(withEngine({ state: "live", protect_seconds: 0, lanes_stale: ["fast", "accurate", "audio"] }), false, at, true)).toBe("live")
   })
 
   it("maps the other engine states", () => {

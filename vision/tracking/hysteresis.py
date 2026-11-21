@@ -121,6 +121,11 @@ class TrackHysteresis:
         self._entries.clear()
         self._last_pts = -math.inf
 
+    def forget_category(self, category: Category) -> None:
+        """Drop every track (held ones included) of ``category``: a switched-off category stops masking at once."""
+        for tid in [t for t, e in self._entries.items() if e.detection.category is category]:
+            del self._entries[tid]
+
     def __len__(self) -> int:
         return len(self._entries)
 

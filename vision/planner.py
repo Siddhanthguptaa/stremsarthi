@@ -157,6 +157,10 @@ class IouHoldTracker:
     def reset(self) -> None:
         self._tracks.clear()
 
+    def forget_category(self, category: Category) -> None:
+        for tid in [t for t, tr in self._tracks.items() if tr.detection.category is category]:
+            del self._tracks[tid]
+
     def update(self, detections: Sequence[Detection], pts: float) -> list[TrackedDetection]:
         if pts < self._last_pts - 1.0:  # the source clock restarted: old tracks are meaningless
             self._tracks.clear()
@@ -371,6 +375,7 @@ class MaskPlanner:
         # planner tracks whose held mask was released because the detector confirmed them allowlisted
         self._owner: dict[int, tuple[str, int | None]] = {}
         self._released: set[int] = set()
+        self._forget: set[Category] = set()  # categories switched off: their tracks go on the next run
         if tracker is None or tracker == "bytetrack":
             self.tracker: Tracker = ByteTrackHold(config.categories, frame_rate=self.rate_hz)
             self._can_fall_back = True
@@ -394,7 +399,19 @@ class MaskPlanner:
     ) -> tuple[tuple[MaskRequest, ...], tuple[Detection, ...]]:
         return self.plan(frame.pts, detections)
 
+    def forget_category(self, category: Category) -> None:
+        """Thread-safe request (any thread): the lane thread drops the category's tracks and holds at its next run."""
+        self._forget.add(category)
+
+    def _apply_forget(self) -> None:
+        while self._forget:
+            cat = self._forget.pop()
+            fn = getattr(self.tracker, "forget_category", None)
+            if fn is not None:
+                fn(cat)
+
     def _track(self, usable: list[Detection], pts: float) -> list[TrackedDetection]:
+        self._apply_forget()
         try:
             return self.tracker.update(usable, pts)
         except Exception as exc:

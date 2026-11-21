@@ -326,9 +326,12 @@ class StatusPublisher:
         interval_s: float = 1.0,
         window_s: float = 5.0,
         process_clock: Callable[[], float] = time.process_time,
+        applied_allowlist_version: Callable[[], int | None] | None = None,
     ) -> None:
         self.bus = bus
         self.engine = engine
+        # what the vision host has ACTUALLY applied (None: it does not say; fall back to the received version)
+        self._applied_version = applied_allowlist_version
         self.interval_s = interval_s
         self.window_s = window_s
         self._process_clock = process_clock
@@ -340,6 +343,17 @@ class StatusPublisher:
         self.allowlist_version = 0
         self.audio_stale = False  # audio watchdog: the audio module is silent, audio goes out muted
         self.published = 0
+
+    def _allowlist_version(self) -> int:
+        provider = self._applied_version
+        if provider is not None:
+            try:
+                applied = provider()
+            except Exception:  # noqa: BLE001 - a broken host must not stop the status
+                applied = None
+            if isinstance(applied, int) and not isinstance(applied, bool) and applied >= 0:
+                return applied
+        return self.allowlist_version
 
     def observe(self, now: float, arrival: float | None, protect_age: float) -> None:
         """One frame left the engine at ``now``; ``arrival`` is its capture-side arrival time."""
@@ -370,7 +384,7 @@ class StatusPublisher:
             fps=float(len(recent)) if self._emits else None,
             cpu_cores=None if cores is None else round(cores, 2),
             vram_mb=None,  # the engine is CPU-only
-            allowlist_version=self.allowlist_version,
+            allowlist_version=self._allowlist_version(),
             lanes_stale=(*self.engine.lanes_stale(), *(("audio",) if self.audio_stale else ())),
             protect_seconds=round(self._protect_age, 2),
             contract_version=CONTRACT_VERSION,

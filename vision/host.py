@@ -21,6 +21,7 @@ import threading
 from collections.abc import Callable, Mapping
 
 from contracts import (
+    Category,
     Config,
     Detection,
     Detector,
@@ -34,12 +35,13 @@ from contracts import (
     Topic,
 )
 
+from .allowlist_feed import AllowlistFeed
+from .config_feed import ConfigFeed
 from .lanes import Assembler, LaneSchedule, LaneWorker, _no_assembly
 from .planner import planner_factory
 from .registry import (
     check_vram_budget,
     discover,
-    enabled_detectors,
     uses_gpu,
     vram_required_mb,
 )
@@ -72,7 +74,9 @@ class VisionHost:
         self._assembler_factory = assembler_factory
         self.resources = resources or VisionResources(config)
         reg = discover() if registry is None else dict(registry)
-        self.classes = enabled_detectors(reg, config)
+        # every detector is built, enabled or not: a category switched on later (PATCH /api/config) needs its
+        # detector and its lane; a detector whose categories are all off is simply not run (``LaneWorker``)
+        self.classes = dict(reg)
         self.declared_vram_mb = check_vram_budget(self.classes.values(), config, budget_mb=vram_budget_mb)
         self.detectors: dict[str, Detector] = {i: cls() for i, cls in self.classes.items()}
         by_lane: dict[Lane, list[Detector]] = {}
@@ -91,6 +95,18 @@ class VisionHost:
                 assembler=self._wrap(lane),
                 deadline_s=ACCURATE_DEADLINE_S if lane is Lane.ACCURATE else None,
             )
+        self._allow_feed = AllowlistFeed(bus, self.resources.allowlist) if bus is not None else None
+        self._warmed: set[str] = set()
+        self._config_feed = (
+            ConfigFeed(
+                bus,
+                config.categories,
+                before_enable=self._before_enable,
+                after_disable=self._after_disable,
+            )
+            if bus is not None
+            else None
+        )
         self._lock = threading.Lock()
         self._started = False
         self._closed = False
@@ -114,6 +130,39 @@ class VisionHost:
 
         return assemble
 
+    @property
+    def applied_allowlist_version(self) -> int:
+        """Highest ``AllowlistUpdate.version`` applied to the face allowlist (0 = none, or reset after a failure or
+        a bus overflow); the engine reports it so the API resyncs when it differs."""
+        return self._allow_feed.applied_version if self._allow_feed is not None else 0
+
+    # ------------------------------------------------------------------ live category switches
+    def _any_enabled(self, cls: type) -> bool:
+        cats = self.config.categories
+        return any((c in cats and cats[c].enabled) for c in cls.categories)
+
+    def _before_enable(self, category: Category) -> None:
+        """A category is about to be switched on: warm its detector first if it never ran (feed thread)."""
+        for ident, det in self.detectors.items():
+            if category in type(det).categories and ident not in self._warmed:
+                try:
+                    det.warmup()
+                    self._warmed.add(ident)
+                except Exception as exc:  # noqa: BLE001 - the lane will fail its run (PROTECT) rather than leak
+                    log.error("detector %s warm-up failed on enable: %s", ident, type(exc).__name__)
+
+    def _after_disable(self, category: Category) -> None:
+        """A category was switched off: its tracks and holds go at the next lane run, detector state is reset."""
+        for planner in self.assemblers.values():
+            fn = getattr(planner, "forget_category", None)
+            if fn is not None:
+                fn(category)
+        for det in self.detectors.values():
+            if category in type(det).categories:
+                reset = getattr(det, "reset_state", None)
+                if reset is not None:
+                    reset()
+
     # ------------------------------------------------------------------ LaneHost
     def _detector_config(self, det: Detector) -> DetectorConfig:
         gpu = uses_gpu(self.config)
@@ -132,8 +181,14 @@ class VisionHost:
                 raise RuntimeError("VisionHost is closed")
             for det in self.detectors.values():
                 det.configure(self._detector_config(det), self.resources)
-            for det in self.detectors.values():
-                det.warmup()
+            for ident, det in self.detectors.items():
+                if self._any_enabled(type(det)):  # a detector that is off is warmed when first switched on
+                    det.warmup()
+                    self._warmed.add(ident)
+            if self._config_feed is not None:
+                self._config_feed.start()
+            if self._allow_feed is not None:
+                self._allow_feed.start()  # before the lanes: an update published during warm-up is kept
             for worker in self._workers.values():
                 worker.start()
             self._started = True
@@ -169,6 +224,10 @@ class VisionHost:
                 return
             self._closed = True
         errors: list[str] = []
+        if self._config_feed is not None:
+            self._config_feed.close()
+        if self._allow_feed is not None:
+            self._allow_feed.close()
         for worker in self._workers.values():
             try:
                 worker.close()

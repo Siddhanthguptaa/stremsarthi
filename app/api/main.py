@@ -20,6 +20,7 @@ from .auth import TokenService
 from .bus import BusClient, make_bus
 from .chat_state import ChatState
 from .config_store import ConfigStore
+from .config_sync import ConfigSync
 from .demo_preview import PreviewHub, SessionView, split_cmd
 from .enrol_service import MAX_ENROL_FRAMES, AllowlistService
 from .errors import install_error_handlers
@@ -126,6 +127,20 @@ def create_app(
         max_clients=settings.demo_max_clients,
     )
 
+    config_store = ConfigStore(config)
+
+    def chat_running() -> bool:
+        chat = orchestrator.chat
+        return chat is not None and chat.state == "running"
+
+    config_sync = ConfigSync(
+        config_store,
+        bus,
+        engine_state=lambda: (lambda s: None if s is None else s.state)(hub.engine_status()),
+        session_id=lambda: sessions.record.session_id if sessions.record is not None else None,
+        chat_running=chat_running,
+    )
+
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await bus.start()
@@ -136,6 +151,7 @@ def create_app(
             asyncio.create_task(chat_state.run_sweeper(), name="chat-sweeper"),
             asyncio.create_task(risk.run(risk.subscribe(bus)), name="risk-state"),
             asyncio.create_task(recorder.run(recorder.subscribe(bus)), name="session-recorder"),
+            asyncio.create_task(config_sync.run(), name="config-sync"),
         ]
         await orchestrator.start_watching()
         try:
@@ -161,7 +177,8 @@ def create_app(
     app.state.tokens = tokens
     app.state.bus = bus
     app.state.hub = hub
-    app.state.config_store = ConfigStore(config)
+    app.state.config_store = config_store
+    app.state.config_sync = config_sync
     app.state.sessions = sessions
     app.state.orchestrator = orchestrator
     app.state.golive = golive

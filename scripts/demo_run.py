@@ -48,6 +48,16 @@ try:  # captions on by default for the demo (the strip shows 'Waiting for speech
     cl.patch("/api/config", json={"captions": {"enabled": True}})
 except Exception:  # noqa: BLE001 - cosmetic
     pass
+try:  # enrol the reel's 'ENROLLED' person (keyless, RAM only) BEFORE the sender starts, so that face stays visible
+    sys.path.insert(0, str(ROOT))
+    from scripts.demo_enrol import engine_allowlist_version, enrol_demo
+
+    if enrol_demo(cl):
+        print("engine allowlist_version:", engine_allowlist_version(cl, want=1), flush=True)
+    else:
+        print("demo enrol failed: the enrolled-face scene will blur both faces", flush=True)
+except Exception as exc:  # noqa: BLE001 - the demo still runs without it
+    print("demo enrol skipped:", type(exc).__name__, flush=True)
 srt = cl.get("/api/pairing").json()["srt"]["url"]
 sender: subprocess.Popen[bytes] | None = None
 stopping = False

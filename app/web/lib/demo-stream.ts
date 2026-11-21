@@ -61,6 +61,23 @@ export function viewerCapReached(kind: PreviewKind, status: DemoStatus): boolean
 export const streamAvailable = (kind: PreviewKind, status: DemoStatus): boolean =>
   kind === "raw" ? status.raw_enabled && status.raw_available : status.protected_available
 
+/** The P key toggles presenter mode: not while typing, not with a modifier, not on repeat, not over a dialog. */
+export function shouldTogglePresenter(
+  event: { key: string; repeat?: boolean; defaultPrevented?: boolean; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean; target?: unknown },
+  dialogOpen: boolean,
+): boolean {
+  if (event.key !== "p" && event.key !== "P") return false
+  if (event.repeat || event.defaultPrevented || dialogOpen) return false
+  if (event.ctrlKey || event.metaKey || event.altKey) return false
+  const target = event.target as { tagName?: string; isContentEditable?: boolean; closest?: (s: string) => unknown } | null | undefined
+  if (target) {
+    if (target.tagName && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName.toUpperCase())) return false
+    if (target.isContentEditable) return false
+    if (typeof target.closest === "function" && target.closest('[contenteditable="true"],[role="textbox"],[role="combobox"]')) return false
+  }
+  return true
+}
+
 /** The stream-state chip: HOLD wins, then the privacy slate, then LIVE; anything else shows the engine state. */
 export type StageState = "live" | "hold" | "slate" | "other"
 

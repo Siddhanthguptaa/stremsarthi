@@ -446,3 +446,50 @@ def test_a_publish_only_process_is_heard_with_no_other_subscriber(endpoints):
         pub.close(0)
         ctx.term()
         broker.stop()
+
+
+# ------------------------------------------------------------------ shutdown flush
+
+
+class FakeXpub:
+    """A socket that refuses ``refuse`` sends (HWM reached) and then accepts."""
+
+    def __init__(self, refuse: int = 0) -> None:
+        import zmq
+
+        self.again, self.refuse, self.sent = zmq.Again, refuse, []
+
+    def send_multipart(self, frames, flags=0):
+        if self.refuse > 0:
+            self.refuse -= 1
+            raise self.again()
+        self.sent.append(frames)
+
+
+def test_final_flush_sends_everything_queued_and_retries_a_full_socket():
+    broker = ZmqBroker(LocalBus())
+    for k in range(5):
+        broker._out.append((b"safety.event", f"p{k}".encode()))
+    sock = FakeXpub(refuse=3)
+    assert broker._final_flush(sock, timeout_s=2.0) == 0
+    assert [f[2] for f in sock.sent] == [f"p{k}".encode() for k in range(5)]  # all, in order
+    assert [f[1] for f in sock.sent] == sorted(f[1] for f in sock.sent) and broker.forwarded_out == 5
+    assert not broker._out
+
+
+def test_final_flush_is_bounded_and_counts_what_it_could_not_send():
+    broker = ZmqBroker(LocalBus())
+    for _ in range(3):
+        broker._out.append((b"safety.event", b"x"))
+    began = time.monotonic()
+    assert broker._final_flush(FakeXpub(refuse=10**9), timeout_s=0.1) == 3
+    assert time.monotonic() - began < 1.0 and broker.out_dropped == 3 and not broker._out
+
+
+def test_event_published_right_before_stop_still_reaches_the_subscriber(rig):
+    bus, broker, wire = rig
+    for k in range(20):
+        bus.publish(Topic.SAFETY_EVENT, safety(k))
+    broker.stop()  # the session's last events are queued: they must leave before the sockets close
+    frames = wire.recv_all()
+    assert len(frames) == 20 and {f[0] for f in frames} == {b"safety.event"}

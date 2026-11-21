@@ -47,6 +47,11 @@ class InMemoryAllowlist:
         with self._lock:
             return self._entries
 
+    def snapshot(self) -> tuple[int, Sequence[tuple[str, Any]]]:
+        """``(version, entries)`` read under one lock: the pair can never be torn by a concurrent update."""
+        with self._lock:
+            return self.version, self._entries
+
     def __len__(self) -> int:
         return len(self._entries)
 

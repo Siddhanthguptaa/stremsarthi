@@ -24,6 +24,7 @@ from typing import Any
 import numpy as np
 
 from audio.orchestrator.failsafe import ArrivalMap, Coverage, chunk_failsafe, hard_deadline, soft_deadline
+from audio.orchestrator.live_config import LiveAudioSettings
 from audio.orchestrator.mute import Carry, PlannedSpan, SpanPlanner
 from audio.orchestrator.race import SttAllFailed, SttRace
 from audio.orchestrator.window import TranscriptWindowBuilder
@@ -122,7 +123,8 @@ class AudioPipeline:
         self.ring = PcmRing()
         self.arrivals = ArrivalMap()
         self.coverage = Coverage()
-        self.lang = a.languages[0] if len(a.languages) == 1 else None
+        self.live = LiveAudioSettings(a.languages, a.mute_mode)
+        self.live.load_categories(getattr(config, "categories", None) or {})
         self._bounds: dict[int, tuple[float, float]] = {}
         self._carry: Carry | None = None
         self._prev_end: float | None = None
@@ -167,15 +169,23 @@ class AudioPipeline:
                 if seg.voiced:
                     self._failsafe(seg, "error")
 
+    async def watch_config(self, sub: Any) -> None:
+        """Feed ``Topic.CONFIG`` changes from a bus subscription into the live settings (until cancelled)."""
+        async for _topic, ev in sub:
+            try:
+                self.live.apply(ev.diff)
+            except Exception as exc:  # never let a bad event stop the feed
+                log.warning("audio config event ignored (%s)", type(exc).__name__)
+
     def failsafe_chunk(self, chunk: AudioChunk, why: str) -> None:
         """Mute the whole chunk (loop thread). Never raises, never logs text or audio."""
         try:
             self.stats["chunk_failsafe"] += 1
             now = self.clock()
-            probe, _ = chunk_failsafe(chunk, "probe", now, self.cfg.audio.mute_mode, why)
+            probe, _ = chunk_failsafe(chunk, "probe", now, self.live.mute_mode, why)
             for lo, hi in self.coverage.uncovered(probe.pts_start, probe.pts_end, min_len=0.0):
                 self._n_span += 1
-                span, mask = chunk_failsafe(chunk, f"au-{self._n_span}", now, self.cfg.audio.mute_mode, why)
+                span, mask = chunk_failsafe(chunk, f"au-{self._n_span}", now, self.live.mute_mode, why)
                 span = replace(span, pts_start=lo, pts_end=hi)
                 mask = replace(mask, pts_start=lo, pts_end=hi, frame_pts=lo)
                 self.coverage.add(lo, hi)
@@ -256,7 +266,7 @@ class AudioPipeline:
 
     async def _verdict(self, seg: Segment, prev: asyncio.Future[None] | None) -> None:
         t0 = self.clock()
-        tr = await self.race.transcribe(seg, self.lang, self._context)
+        tr = await self.race.transcribe(seg, self.live.lang_hint, self._context)
         self._timing("stt", seg, t0, self.clock())
         if too_thin(seg, tr):
             self.bus.publish(Topic.TRANSCRIPT, tr)  # still local-only; the guard sees it
@@ -268,6 +278,9 @@ class AudioPipeline:
         self._prev_end = seg.pts_end
         spans = list(self.planner.leading_numbers(self._carry, win))
         spans += await self.detector.detect(win)
+        spans = [
+            s for s in spans if self.live.allows(s.category, s.confidence)
+        ]  # categories the streamer turned off
         planned = self.planner.plan(spans, win, self._bounds, seg.pts_end)
         tail = [p for p in planned if p.tail_extended]
         self._carry = (
@@ -311,7 +324,7 @@ class AudioPipeline:
                     p.confidence,
                     p.reason,
                     now,
-                    self.cfg.audio.mute_mode,  # type: ignore[arg-type]
+                    self.live.mute_mode,  # type: ignore[arg-type]
                 )
                 self.coverage.add(lo, hi)
                 self.stats["spans"] += 1

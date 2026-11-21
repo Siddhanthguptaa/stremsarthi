@@ -355,6 +355,32 @@ def test_allowlist_version_is_tracked_for_the_status():
     assert session.status.allowlist_version == 4
 
 
+def test_status_reports_the_allowlist_version_vision_actually_applied():
+    """Reporting the received version would hide an update vision dropped (the API would never resync)."""
+    from contracts import AllowlistUpdate
+
+    class AppliedHost(FakeLaneHost):
+        applied_allowlist_version = 0  # nothing applied yet
+
+    bus = LocalBus()
+    host = AppliedHost()
+    session, _, now = make_session(host=host, bus=bus)
+    sub = bus.subscribe([Topic.ENGINE_STATUS])
+
+    def published_version() -> int:
+        now[0] += 1.5
+        session.step(now[0])
+        return [e for _, e in sub.drain()][-1].allowlist_version
+
+    bus.publish(Topic.ALLOWLIST, AllowlistUpdate("snapshot", None, None, None, 3))
+    assert session.status.allowlist_version == 0  # the received version is no longer recorded
+    assert published_version() == 0  # vision ignored or dropped it: the status must say so
+    host.applied_allowlist_version = 3
+    assert published_version() == 3
+    host.applied_allowlist_version = 0  # the feed was cleared
+    assert published_version() == 0
+
+
 def test_hold_command_through_the_bus_and_held_event_on_release():
     bus = LocalBus()
     session, _, now = make_session(bus=bus)

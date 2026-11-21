@@ -8,6 +8,7 @@ Tags: **RUNS** (entry point exists and was run by a builder, locally, no keys), 
 
 | Piece | Tag | Evidence and gap |
 |---|---|---|
+| One-command demo: `scripts/demo.sh --raw --gpu` and the `/demo` page (RAW vs PROTECTED panes, state chip, captions, privacy-proof counter, risk meter, hold bar) | RUNS (keyless, SPECIMEN only) | Verified by the builders in a real browser on a quiet machine WITH the GPU: Aadhaar masked by a solid box, UPI QR blacked out, Hindi signboard blurred, faces blurred, risk meter moves Low / Watch / High. Without the GPU the protected pane stayed on the privacy slate for the text-heavy scenes even on a quiet machine: always use `--gpu`. Not rehearsed on the RTX 5050 |
 | Go-live from the web app: `/go-live` page, `POST /api/session/start` (spawns the real engine, and `chat.main` only if chat is enabled), stop, session chip | RUNS (keyless) | `scripts/e2e_smoke.sh` passed 30 of 30 on its second full run, dev profile, no keys (the first run was 29 of 30: one privacy-scan hit that could not be reproduced). The web `/go-live` screen itself: jsdom tests only, no browser run |
 | Rehearsal mode (keyless: no YouTube/Twitch, output only to the local `shielded` tap) | RUNS | `POST /api/session/start` with `{"rehearsal": true}`. There is no web toggle for it: call the API with the streamer token |
 | Relay, delay buffer, mask compositor, fail-safe, slate | RUNS | G1 main and fail-safe legs pass on a quiet machine (section 8); real YouTube/Twitch egress never tried (loopback sink and tap only) |
@@ -23,20 +24,46 @@ Tags: **RUNS** (entry point exists and was run by a builder, locally, no keys), 
 | Red-team suites | RUNS | `python -m eval.run redteam-video`, `redteam-audio`, `redteam-chat`; reports in `eval/reports/2026-11-21-redteam-*.md` |
 | Gates | G0 PASS, G1 FAIL on 2 alignment checks only, G2 FAIL at clean+light, G3 and G5 pass on synthetic/oracle data, G4 pass on the gate set but below target on the blind set, G6 and Final do not exist | `scripts/gate_phase0.sh` to `gate_phase5.sh`; there is no `gate_phase6.sh` or `gate_final.sh` |
 
-## 1. The 5-minute story
+**Known gaps in the demo (state them if asked):**
+- The "enrolled face stays visible" moment needs a demo enrolment step: `scripts/demo_enrol.py` is being added and does not exist yet. Until then both faces in the reel are masked.
+- The state chip mislabels SLATE while live masked video is shown (fix in progress).
+- Spoken-PII muting on the reel's flite TTS voice is untested with a real recogniser; the reel does not exercise Sarvam or Groq.
+- Nothing is live: no keys, no YouTube or Twitch; the demo runs as a keyless rehearsal session on the local tap.
+- The browser test gate (Playwright) cannot run until `sudo apt-get install -y libnss3 libnspr4` is done on the machine (a user admin step); no accessibility or mobile-viewport run.
+- One demo tab only (preview cap 4 clients per stream, `DEMO_MAX_CLIENTS`).
+- Chat in the demo is a scripted mock YouTube feed through the real chat shield, not live chat; it runs once per session.
 
-| Time | Scene | Say | Show |
-|---|---|---|---|
-| 0:00 | Problem | One frame, one spoken number or one chat message is enough to dox a streamer. Existing tools are English-first and do not know Aadhaar, PAN, UPI. (2 to 3 real, sourced incidents: the user must supply them; none are in the repo.) | Slide |
-| 0:30 | Architecture | A 4 s broadcast delay on audio and video, kept in sync. Detection finishes before anything goes out; anything not yet checked goes out masked. | Slide, then `/go-live` and `/live` (delay, engine chip, session state) |
-| 1:00 | Video | SPECIMEN Aadhaar, PAN, UPI QR, plate, OTP screen, game ID, signboard on the source feed. The delayed output is blurred. An enrolled teammate stays visible, a stranger is masked. | Source preview next to the output tap or an unlisted YouTube viewer |
-| 2:15 | Audio | A teammate says a made-up phone number in Hinglish; output goes silent over it, the mouth is blurred. (Only with live STT working: otherwise use the fail-safe mode, section 6.) | Output plus the alert feed on `/live` |
-| 3:00 | Chat | A teammate posts Hinglish abuse and a fake UPI link; hidden from the overlay, visible in `/mod`. (Only if the live chat process works with a key; otherwise show the tests and the blind-set numbers.) | `/mod` beside `/live` |
-| 3:45 | Hold | Press HOLD on `/live` (or type `!hold` as broadcaster in chat). The slate covers the output; the last 3 s of buffered frames are masked too. | HOLD button, output |
-| 4:15 | Guard and captions | Risk meter on `/live` reacts to a library song and to profanity; captions on/off with the language picker. | Risk meter, caption overlay |
-| 4:30 | Proof | The section 8 table with its caveats, `docs/COST.md` (typical INR 24 per hour, captions off, assumed rates), then the safety report page: category, time, confidence, never images or text. | `/report/<session id>` |
+## 1. The 5-minute run order (tied to the 90 s demo reel)
 
-## 2. Pre-flight checklist
+The one-command launcher (section 3) loops a 90 s SPECIMEN reel (video and speech audio in ONE sender process) into a keyless rehearsal session. The reel timeline below is from `eval/sender/demo_scenes.py` (scene lengths) and `eval/data_gen/demo_audio.py` (what is said); the exact spoken times are in `/tmp/streamsarthi-demo/demo_reel_timeline.json`, written by `scripts/demo_assets.sh`. Times are seconds into the reel as seen on the RAW (source) pane; the PROTECTED pane, audio and captions show it about 4 to 5 s later (the broadcast delay). Open `/demo` (side-by-side RAW and PROTECTED, state chip, captions, privacy-proof counter, risk meter, hold bar). The reel loops every 90 s, so the story can start at any loop boundary.
+
+| Reel time | Scene (source caption) | What to say and point at |
+|---|---|---|
+| 0-7 s | `demo_aadhaar_static`: "SPECIMEN Aadhaar (still)" | Problem in one line: one frame is enough to dox a streamer. RAW shows the card, PROTECTED shows a solid box. Mention the 4 s delay. Speaker: "welcome to the stream... testing the privacy shield" appears as a caption |
+| 7-15 s | `demo_aadhaar_moving`: "SPECIMEN Aadhaar (moving)" | The mask follows the moving card (tracking) |
+| 15-22 s | `demo_pan`: "SPECIMEN PAN card" | Same for PAN |
+| 22-30 s | `demo_upi_qr`: "SPECIMEN UPI QR" | The QR is decoded, `upi://` checked, blacked out. A non-payment QR is not masked (not in the reel) |
+| 30-38 s | `demo_plate`: "SPECIMEN number plate" | Indian plate masked |
+| 38-46 s | `demo_signboard`: "Hindi signboard (SPECIMEN)" | Indian-script signboard blurred without reading it (mask-all-text) |
+| 46-55 s | `demo_otp_phone`: "SPECIMEN phone with an OTP" | OTP notification masked. **Phone number spoken at 50.1 to 56.2 s**: output goes silent over the digits, the proof counter ticks, the alert feed shows an audio event (see the caveat on real recognition, section 5.3) |
+| 55-64 s | `demo_bgmi_lobby`: "SPECIMEN BGMI lobby" | Player id, room id, password masked |
+| 64-78 s | `demo_faces`: "Enrolled face + stranger" | Faces blur; the enrolled face is meant to stay visible once the demo enrolment step exists (section 0). The two people swap sides halfway. **UPI ID spoken at 70.5 to 75.5 s** ("demo dot streamer zz at ybl"): muted. A mild curse ("oh damn that was a crap shot", nominally around 73 to 74 s, check the timeline JSON) drives the risk meter to Watch or High |
+| 78-90 s | `demo_calm`: "Calm scene: nothing to hide" | Nothing is masked: the shield does not blur everything. **Music bed at 80.5 to 83.5 s** (a synthetic song in the demo fingerprint library): risk meter and fingerprint warning. **Chat `!hold` at 84 s** (moderator): the slate covers the PROTECTED pane (retro hold masks the preceding 3 s too); the broadcaster's `!unhold` at 88 s releases it. Closing line, then open the safety report |
+
+Chat runs alongside from the scripted feeder (`eval/demo/chat_feeder.py`, a mock YouTube chat feeding the REAL chat shield process). Times are seconds after the feeder starts (3 s start delay by default; chat reaches viewers about 5 s after the video): 1 friendly; 5 friendly; 10 friendly; **15 Hinglish abuse (Latin letters)**; **21 fake UPI payment link**; 27 moderator welcome (staff, never hidden); 33 friendly; **39 Devanagari abuse**; **44 doxxing attempt ("iska ghar kahan hai")**; 50 friendly; **58 link-shortener "free recharge" scam**; 66, 74, 81 friendly; **84 `!hold` (moderator)**; **88 `!unhold` (broadcaster)**; 89.5 friendly. Flagged items appear in `/mod` (moderator link) and only as a hidden counter for the streamer. The feeder is started once per session (no `--loop` in `scripts/demo.sh`), so chat follows the reel only for the first pass; the `!hold` at 84 s then lines up with the calm scene of the first loop. Print the plan: `SS python -m eval.demo.chat_feeder --print-plan`.
+
+Wrap-up (about 4:30): the section 8 table with its caveats, `docs/COST.md` (typical INR 24 per hour, assumed rates, nothing measured live), then the safety report (`/report/<session id>`): category, time, confidence, never images or text. Opening and closing slides (the real, sourced incidents) are the user's to supply.
+
+## 2. Pre-flight
+
+**Two-minute pre-flight (right before going on)**
+1. Close every other app (browsers except one tab, IDEs, chat clients, other WSL jobs). The delay maximum was within 0.2 s of its limit on a quiet machine.
+2. `SS python scripts/doctor.py --profile demo --gpu`: exit 0 or 1 (warnings only) is fine, 2 is blocking.
+3. `nvidia-smi` (run in WSL, or `SS nvidia-smi`): the RTX is visible and no other job holds it. The demo holds `/tmp/streamsarthi-gpu.lock` for its whole run and waits up to 10 minutes for it.
+4. Ports free: 8000 (API), 3000 (web), 8890 (SRT), 1935 (RTMP), 9997 (MediaMTX API). The launcher refuses to start if any is taken (stop a previous demo, gate or smoke run first).
+5. Power plugged in, performance mode, only ONE browser tab on `/demo`.
+
+**Day-before checklist**
 
 `SS` below means the wrapper, run from Git Bash on Windows:
 `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh`
@@ -54,22 +81,33 @@ Tags: **RUNS** (entry point exists and was run by a builder, locally, no keys), 
 10. **Backup recording** of a full run on the desktop: NOT YET RECORDED.
 11. Hackathon rules on pre-built code and AI-tool disclosure: open user item.
 
-## 3. Start sequence
+## 3. Start sequence: one command
 
 ```
-# 1. API (prints http://127.0.0.1:3000/#token=<streamer token>; SECRET_KEY from the environment or .env)
-SS python -m app.api.main
-# 2. web app (Next.js dev server on 3000, API at http://127.0.0.1:8000)
-SS bash scripts/web.sh run dev
+SS bash scripts/demo.sh --raw --gpu
 ```
+`SS` is `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh` (so the full command is `MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -u root -- bash /mnt/c/Users/siddh/stremsarthi/scripts/ss.sh bash scripts/demo.sh --raw --gpu`). Options: `--gpu` (always use it: vision on the NVIDIA GPU, CUDA start-up about 50 s, holds `/tmp/streamsarthi-gpu.lock`), `--raw` (enables the RAW preview pane, loopback only), `--no-build` (skip the web build), `--no-chat`, `--no-audio` (skip the TTS audio build).
 
-Open the printed URL (the token is in the fragment). On `/go-live` pick the profile (`dev` or `demo`), the delay (3.0 to 5.0 s, default 4.0), YouTube and/or Twitch (a destination needs its key: "Key set / Key missing" chip), and press Start. By default the API spawns the engine (`python -m engine.main --profile <p>`, which builds relay, vision, audio and the extras guard_risk, captions, guard_music) and, if `chat.enabled`, the chat process. `SESSION_SPAWN=false` stops it spawning; then run the engine by hand: `SS bash scripts/run_engine.sh demo` (or `dev`; `demo` runs under the GPU lock). Engine start takes about 30 s to reach `waiting_ingest`.
+What it does, in order: builds the demo assets (speech audio, NASA face portraits with a hash check, chat plan; `scripts/demo_assets.sh`, log `/tmp/ss_demo_assets.log`); builds the web app (`/tmp/ss_webbuild.log`); starts the API with a random `SECRET_KEY` (spawns the real engine when the session starts; log `/tmp/ss_api.log`) with `DEMO_RAW_PREVIEW=1` for `--raw`, and, unless `--no-chat`, `CHAT__ENABLED=true` and `SESSION_CHAT_CMD="python -m eval.demo.chat_feeder --profile {profile}"`; starts the web server on 127.0.0.1:3000 (`/tmp/ss_web.log`); then `scripts/demo_run.py` starts a keyless REHEARSAL session (`POST /api/session/start`, `rehearsal: true`, 4.0 s delay), waits for the engine to be ready, waits for the models (45 s with `--gpu`), turns captions on, and loops the 90 s reel into the engine's SRT ingest. It prints the local login link (`http://127.0.0.1:3000/#token=...`, it carries your token). Open it, then go to the Demo page in the top menu (`/demo`). **Ctrl-C stops everything.** Expect about 1.5 to 2 minutes from launch to a live pane.
 
-**Keyless rehearsal** (no stream keys; output only to the local tap): `POST /api/session/start` with body `{"rehearsal": true}` and header `Authorization: Bearer <streamer token>`.
+Other pages: `/go-live`, `/live`, `/enrol`, `/controls`, `/mod` (moderator token via `POST /api/auth/mod-invite`), `/report/<session id>`. The hand-started sequence (API: `SS python -m app.api.main`, web: `SS bash scripts/web.sh run dev`, engine by hand: `SS bash scripts/run_engine.sh demo`, keyless session: `POST /api/session/start` with `{"rehearsal": true}`) still works for debugging.
 
-**Source**: the `/go-live` ingest card shows RTMP and SRT URLs (login per session unless `INGEST_PUBLISH_USER` and `INGEST_PUBLISH_PASSWORD` are set in `.env`; letters, digits, `_`, `-`) and a QR for Moblin; the same data is at `GET /api/pairing`. OBS: 720p30, x264, keyframe 2 s, no B-frames, to the SRT or RTMP URL shown. Synthetic source instead of a camera: `SS python -m eval.sender.sender --url "<the SRT url from the ingest card>" --script card_static:60,card_moving:30,card_absent:20` (scenes: `card_static`, `card_moving`, `card_hold`, `card_absent`, `many_targets`, `idle`). The pairing host must be loopback, LAN-private or Tailscale; a wildcard host is refused (422).
+Constraints: ONE demo tab (the RAW and PROTECTED previews share ffmpeg; cap 4 clients per stream, `DEMO_MAX_CLIENTS`, a second tab or a reload loop can starve the panes). The RAW pane shows unmasked SPECIMEN video: it works only with `--raw`, only from loopback, and must never be shown on a stream. After a sender restart the protected output recovers in about 3 to 8 s (relay timeline-reset fix).
 
-Pages: `/go-live`, `/live` (hold, status, alerts, risk meter, captions on/off and language), `/enrol`, `/controls` (category toggles; no hold button there), `/mod` (moderator token via `POST /api/auth/mod-invite`), `/report/<session id>`.
+**If something goes wrong**
+
+| Symptom | Likely cause and action |
+|---|---|
+| Protected pane blank | More than one demo tab open, the GPU not in use, or the machine loaded. Close extra tabs (only one `/demo` tab), confirm the launcher was started with `--gpu`, close other apps, wait up to 8 s after any sender restart. |
+| "Open the link from the terminal" | The login token changes at every API start. Use the link printed by the latest launch; clear site data for `127.0.0.1:3000` after a restart. |
+| Protected pane stuck on the privacy slate | CPU path or an overloaded machine: the text-heavy scenes (signboard, OTP phone, BGMI lobby) exceed the CPU lane budget and the engine slates instead of risking a leak. Restart with `--gpu`, close other apps. On the CPU path this happened even on a quiet machine. |
+| No chat items in `/mod` or the hidden counter | Chat not enabled: launched with `--no-chat`, or `CHAT__ENABLED` / `SESSION_CHAT_CMD` missing from the API environment. Check `/tmp/ss_api.log` for the chat process; remember the feeder runs once per session (first loop of the reel). |
+| `port ... is already in use` | A previous demo, gate or e2e smoke is still running: stop it (`pkill -f engine.main`, or Ctrl-C the old launcher), then relaunch. |
+| Launcher waits on the GPU lock | Another GPU job holds `/tmp/streamsarthi-gpu.lock`; it waits up to 600 s, then exits. Stop the other job. |
+| "demo_assets failed" or "web build failed" | Read `/tmp/ss_demo_assets.log` or `/tmp/ss_webbuild.log`. The portraits need network once (hash-checked). |
+| "API did not start" | Read `/tmp/ss_api.log` (missing dependency, port taken). |
+| State chip says SLATE while masked live video is on screen | Known mislabel (a fix is in progress); trust the video. |
+| No audio events, silent captions | Audio host still loading (wait for the warm-up), or `--no-audio` was used. Real recognition is not used in the demo: the reel's voice is flite TTS (section 5.3). |
 
 ## 4. SPECIMEN inputs (synthetic, visibly marked, never real data)
 
@@ -96,6 +134,7 @@ Seeded and deterministic. Every card carries a SPECIMEN watermark; Aadhaar numbe
 - Offline, synthetic, CPU, clean and light levels only (D-48): faces, Aadhaar, PAN, UPI QR, signboard, phone, UPI ID, email, game IDs and plates masked 1.000; PIN 0.912; OTP 0.917 on stills. Failing at clean+light in the report: allowlisted faces visible (0.208 on stills, 0.750 clips settled; a later round reports 22/24 = 0.917 stills and 0.968 clips in the builder's harness, not re-run through the gate) and the ACCURATE lane p95 (530 ms on the shared machine, 453 ms on a quiet machine, budget 450 ms). G2 is FAIL until re-run.
 - Heavy level (blur, heavy JPEG, dark; stress only, D-48): plates about 4.5 % to 7 %, OTP 0 to 31 %, game IDs about 5 to 13 %, Aadhaar clips 0.55, phone clips 0.33, even after the T7.5 mask-when-unsure fallbacks (OTP banner 0/16 to 5/16, BGMI 3/31 to 4/31).
 - Video red team (quick subset: 46 cases, 727 frames, one seed): control 0/27 leaks; angle, distance, glare, screen-of-screen, photo-of-photo 0 leaks; leaks in `enter_leave` (a card entering or leaving the frame), `motion` (pans), `occlusion`, `flash`, `scene_cut`. The one confirmed leak (a card 40 % occluded from the left) was fixed (9/9 to 0/9 cases). Still open: card entering fast (7 of 35 frames leak after the fix), a card at the frame edge showing 35 % (100 % leak), QR entering or flashing, scene cuts, fast pans, a PAN occluded from the top. The full grid, more seeds and GPU were not run.
+- Demo reel faces: the enrolled-face moment needs `scripts/demo_enrol.py` (not yet present); until it exists both faces are masked.
 - Faces: stranger masked 97.2 % with 0 runs showing a stranger; allowlisted visible about 94 to 99 % once settled; the first ~1 s after a face appears is masked on purpose. The planner's allow-release was reviewed (APPROVE).
 - Signboards: mask-all-text, so signage goes dark unread; it also masks text-heavy screens. Keep `signboard.enabled=false` for gaming and screen scenes.
 - Fallback: show the per-category report `eval/reports/2026-11-21-phase2-offline-d48.md` and the stills; `SS bash scripts/gate_phase2.sh --plan`.

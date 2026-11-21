@@ -9,12 +9,15 @@ import {
   TOKEN_REFRESH_MS,
   paneMode,
   retryDelayMs,
+  shouldTogglePresenter,
   stageState,
   streamAvailable,
   tokenRefreshDelayMs,
   viewerCapReached,
 } from "@/lib/demo-stream"
-import type { ApiAlert } from "@/lib/live-state"
+import { type ApiAlert, ENGINE_STALE_MS, type LiveState, catchingUpLanes, chipFor, initialLiveState, liveReducer } from "@/lib/live-state"
+import type { EngineStatus } from "@/lib/wire"
+import { engineFrame } from "./helpers"
 
 const status = (over: Partial<DemoStatus> = {}): DemoStatus => ({
   raw_enabled: true,
@@ -224,5 +227,54 @@ describe("privacy proof counter", () => {
   it("keeps nothing but ids, categories and counts", () => {
     const s = proofReducer(initialProof, ev("1", "aadhaar"))
     expect(Object.keys(s).sort()).toEqual(["byCategory", "byModality", "seen", "total"])
+  })
+})
+
+describe("shared chip rule (/live and /demo): what viewers actually get", () => {
+  const at = 1_000_000
+  const engine = (over: Partial<EngineStatus>): LiveState =>
+    liveReducer(initialLiveState, { type: "engine", status: { ...(engineFrame(1).data.d as unknown as EngineStatus), state: "live", ...over }, at })
+
+  it("LIVE while frames are live, even if a lane (video or audio) reports no covering result", () => {
+    expect(chipFor(engine({ protect_seconds: 0, lanes_stale: [] }), false, at, true)).toBe("live")
+    expect(chipFor(engine({ protect_seconds: 0, lanes_stale: ["audio"] }), false, at, true)).toBe("live")
+    expect(chipFor(engine({ protect_seconds: 0, lanes_stale: ["accurate"] }), false, at, true)).toBe("live")
+  })
+
+  it("SLATE only while the latest frame was not live (protect_seconds > 0), with or without stale lanes", () => {
+    expect(chipFor(engine({ protect_seconds: 0.4, lanes_stale: [] }), false, at, true)).toBe("protect")
+    expect(chipFor(engine({ protect_seconds: 2.5, lanes_stale: ["fast", "accurate"] }), false, at, true)).toBe("protect")
+  })
+
+  it("HOLD wins; other engine states and a silent engine are unchanged", () => {
+    expect(chipFor(engine({ protect_seconds: 3, lanes_stale: ["fast"] }), true, at, true)).toBe("hold")
+    expect(chipFor(engine({ state: "waiting_ingest" }), false, at, true)).toBe("waiting")
+    expect(chipFor(engine({}), false, at + ENGINE_STALE_MS + 1, true)).toBe("offline")
+    expect(chipFor(initialLiveState, false, at, false)).toBe("unknown")
+  })
+
+  it("lists the lanes still catching up only while the chip is LIVE", () => {
+    const s = engine({ protect_seconds: 0, lanes_stale: ["audio"] })
+    expect(catchingUpLanes(s, "live")).toEqual(["audio"])
+    expect(catchingUpLanes(s, "protect")).toEqual([])
+    expect(catchingUpLanes(initialLiveState, "live")).toEqual([])
+  })
+})
+
+describe("presenter key", () => {
+  const key = (over: Record<string, unknown> = {}) => ({ key: "p", ...over })
+  it("toggles on P or p only", () => {
+    expect(shouldTogglePresenter(key(), false)).toBe(true)
+    expect(shouldTogglePresenter(key({ key: "P" }), false)).toBe(true)
+    expect(shouldTogglePresenter(key({ key: "h" }), false)).toBe(false)
+  })
+  it("ignores modifiers, key repeat, dialogs and typing", () => {
+    expect(shouldTogglePresenter(key({ ctrlKey: true }), false)).toBe(false)
+    expect(shouldTogglePresenter(key({ metaKey: true }), false)).toBe(false)
+    expect(shouldTogglePresenter(key({ repeat: true }), false)).toBe(false)
+    expect(shouldTogglePresenter(key(), true)).toBe(false)
+    expect(shouldTogglePresenter(key({ target: { tagName: "INPUT" } }), false)).toBe(false)
+    expect(shouldTogglePresenter(key({ target: { tagName: "SELECT" } }), false)).toBe(false)
+    expect(shouldTogglePresenter(key({ target: { isContentEditable: true } }), false)).toBe(false)
   })
 })

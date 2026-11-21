@@ -1,18 +1,21 @@
 "use client"
 
 import * as React from "react"
+import { Minimize2, Presentation } from "lucide-react"
 
 import { ApiRequestError } from "@/lib/api"
 import { captionReducer, initialCaptions } from "@/lib/captions"
 import { initialProof, proofReducer } from "@/lib/demo-proof"
-import { paneMode } from "@/lib/demo-stream"
+import { paneMode, shouldTogglePresenter } from "@/lib/demo-stream"
 import { AUTO_SOURCES } from "@/lib/hold-machine"
-import { chipFor, engineIsFresh, initialLiveState, liveReducer } from "@/lib/live-state"
+import { catchingUpLanes, chipFor, engineIsFresh, initialLiveState, liveReducer } from "@/lib/live-state"
 import { initialRisk, riskReducer, riskView } from "@/lib/risk"
+import { cn } from "@/lib/utils"
 import type { WireTopic } from "@/lib/wire"
 import { CaptionStrip } from "@/components/demo/caption-strip"
 import { PreviewPane } from "@/components/demo/preview-pane"
 import { ProofCounter } from "@/components/demo/proof-counter"
+import { RiskStrip } from "@/components/demo/risk-strip"
 import { StageStateChip } from "@/components/demo/stage-state"
 import { useDemoApi, useDemoStatus, usePreviewToken } from "@/components/demo/use-demo-preview"
 import { useDemoText } from "@/components/demo/use-demo-text"
@@ -22,7 +25,6 @@ import { ConnectionBanner } from "@/components/shell/connection-banner"
 import { AlertFeed } from "@/components/streamer/alert-feed"
 import { CaptionsControl } from "@/components/streamer/captions-control"
 import { HoldButton } from "@/components/streamer/hold-button"
-import { RiskMeter } from "@/components/streamer/risk-meter"
 import { useRealtime } from "@/components/streamer/use-realtime"
 import { useStreamerApi } from "@/components/streamer/use-streamer-api"
 import { useLanguage } from "@/components/shell/language-provider"
@@ -161,48 +163,101 @@ function Console() {
 
   const engineFresh = engineIsFresh(live, now)
   const chip = chipFor(live, hold.view.held, now, live.engineAt !== null)
+  const catching = catchingUpLanes(live, chip)
   const engineConfirmed = engineFresh && live.engine !== null && live.engine.hold_active === hold.view.held
   const riskNow = riskView(risk, now)
 
+  // --- presenter mode (key P): no navigation, bigger panes, caption strip under them -----------------------
+  const [presenter, setPresenter] = React.useState(false)
+  React.useEffect(() => {
+    if (!presenter) return
+    document.documentElement.dataset.presenter = "on" // the <style> below hides the shell's navigation
+    return () => {
+      delete document.documentElement.dataset.presenter
+    }
+  }, [presenter])
+  React.useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const dialogOpen = document.querySelector('[role="dialog"], [role="alertdialog"]') !== null
+      if (!shouldTogglePresenter(event, dialogOpen)) return
+      event.preventDefault()
+      setPresenter((on) => !on)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
   return (
-    <div className="space-y-6 pb-52" data-testid="demo-console">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{d("demo.title")}</h1>
-          <p className="text-muted-foreground">{d("demo.desc")}</p>
+    <div
+      // Wider stage than the shell's max-w-5xl: break out of the centred column, up to 80 rem (7xl), or the full width in presenter mode.
+      className={cn(
+        "relative left-1/2 -translate-x-1/2 space-y-4 pb-48",
+        presenter ? "w-[calc(100vw-2rem)]" : "w-[min(calc(100vw-2rem),80rem)]",
+      )}
+      data-testid="demo-console"
+      data-presenter={presenter ? "on" : "off"}
+    >
+      <style>{"html[data-presenter='on'] body > header { display: none }"}</style>
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1 className="text-xl font-bold tracking-tight">{d("demo.title")}</h1>
+          <p className="sr-only">{d("demo.desc")}</p>
           {demoStatus.status ? (
             <p className="text-xs text-muted-foreground" data-testid="preview-clients">
               {d("preview.clients")}: {demoStatus.status.clients}
             </p>
           ) : null}
+          {presenter ? (
+            <p className="text-sm font-semibold tabular-nums" data-testid="presenter-proof">
+              {proof.total} {d("proof.short")}
+            </p>
+          ) : null}
         </div>
-        <StageStateChip kind={chip} />
+        <div className="flex flex-wrap items-center gap-3">
+          <StageStateChip kind={chip} catchingUp={catching} compact />
+          <button
+            type="button"
+            aria-pressed={presenter}
+            aria-keyshortcuts="P"
+            aria-label={d("presenter.label")}
+            onClick={() => setPresenter((on) => !on)}
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {presenter ? <Minimize2 aria-hidden className="size-4" /> : <Presentation aria-hidden className="size-4" />}
+            {presenter ? d("presenter.off") : d("presenter.on")}
+            <kbd className="rounded border bg-muted px-1.5 text-xs">{d("presenter.key")}</kbd>
+          </button>
+        </div>
       </header>
 
       <ConnectionBanner state={connection} apiDown={live.apiDown} />
 
-      <section aria-label={d("demo.stage")} className="grid gap-5 md:grid-cols-2">
-        <PreviewPane kind="raw" mode={rawMode} src={urlFor("raw")} tokenFailed={preview.failed} getStatus={getDemoStatus} />
-        <PreviewPane kind="protected" mode={protectedMode} src={urlFor("protected")} tokenFailed={preview.failed} getStatus={getDemoStatus} />
+      <section aria-label={d("demo.stage")} className="grid gap-4 md:grid-cols-2">
+        <PreviewPane kind="raw" mode={rawMode} src={urlFor("raw")} tokenFailed={preview.failed} getStatus={getDemoStatus} large={presenter} />
+        <PreviewPane kind="protected" mode={protectedMode} src={urlFor("protected")} tokenFailed={preview.failed} getStatus={getDemoStatus} large={presenter} />
       </section>
 
-      <CaptionStrip lines={captions.lines} />
+      <CaptionStrip lines={captions.lines} large={presenter} />
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <RiskMeter view={riskNow} />
-        <ProofCounter state={proof} />
-      </div>
+      {presenter ? null : (
+        <>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <RiskStrip view={riskNow} />
+            <ProofCounter state={proof} compact />
+          </div>
 
-      <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
+          <AlertFeed alerts={live.alerts} total={live.alertsTotal} loadFailed={alertsFailed} />
 
-      <details className="rounded-lg border bg-card p-3">
-        <summary className="min-h-11 cursor-pointer py-2 text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          {d("settings.title")}
-        </summary>
-        <div className="pt-3">
-          <CaptionsControl api={api} lines={captions.lines} />
-        </div>
-      </details>
+          <details className="rounded-lg border bg-card p-3">
+            <summary className="min-h-11 cursor-pointer py-2 text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {d("settings.title")}
+            </summary>
+            <div className="pt-3">
+              <CaptionsControl api={api} lines={captions.lines} />
+            </div>
+          </details>
+        </>
+      )}
 
       <div
         role="region"
@@ -210,7 +265,7 @@ function Console() {
         className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
         style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto w-full max-w-5xl">
+        <div className={cn("mx-auto w-full", presenter ? "max-w-[100rem]" : "max-w-7xl")}>
           <HoldButton
             view={hold.view}
             engineConfirmed={engineConfirmed}

@@ -147,8 +147,13 @@ export function engineIsFresh(state: LiveState, now: number): boolean {
 
 /**
  * LIVE / PROTECT / HOLD (docs/specs/app-web.md 5.1). Hold wins, then the engine's own state. `protect_seconds`
- * is the time since the first non-live frame (0 while every frame is checked), so above 0 the stream is on
- * the privacy slate.
+ * is the time since the first non-live frame (0 while the latest emitted frame was live: engine/deadline.py
+ * `_decide`, engine/publishers.py `observe`), so above 0 the stream is on the privacy slate.
+ *
+ * `lanes_stale` is NOT part of the rule: it also lists "audio" (the audio watchdog mutes audio while the masked
+ * video is still live) and a video lane with no covering result while the engine is still LIVE inside its
+ * coverage grace. Counting it made the chip say PROTECT over live masked video. Stale lanes are shown as a
+ * quiet "still catching up" note instead (`catchingUpLanes`, and the engine metrics).
  */
 export function chipFor(state: LiveState, held: boolean, now: number, everSeen: boolean): ChipKind {
   if (held) return "hold"
@@ -156,7 +161,7 @@ export function chipFor(state: LiveState, held: boolean, now: number, everSeen: 
   const engine = state.engine as EngineStatus
   switch (engine.state) {
     case "live":
-      return engine.protect_seconds > 0 || engine.lanes_stale.length > 0 ? "protect" : "live"
+      return engine.protect_seconds > 0 ? "protect" : "live"
     case "starting":
     case "ready":
       return "starting"
@@ -167,4 +172,9 @@ export function chipFor(state: LiveState, held: boolean, now: number, everSeen: 
     case "error":
       return "error"
   }
+}
+
+/** Stale lanes while the stream is live (video or audio still catching up). Empty unless the chip is LIVE. */
+export function catchingUpLanes(state: LiveState, chip: ChipKind): string[] {
+  return chip === "live" && state.engine ? [...state.engine.lanes_stale] : []
 }

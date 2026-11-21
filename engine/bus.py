@@ -240,6 +240,10 @@ class LocalBus:
         }
 
 
+FINAL_FLUSH_S = 1.5  # bound on draining the outbound queue at shutdown
+FINAL_LINGER_S = 1.0  # bound on ZeroMQ delivering what was sent, before the context closes
+
+
 class BrokerError(RuntimeError):
     """The ZeroMQ broker could not start (endpoint in use, pyzmq missing)."""
 
@@ -391,9 +395,44 @@ class ZmqBroker:
         except Exception as exc:  # keep the engine alive: it holds and fail-safes without the bridge
             log.error("zmq broker stopped: %s", type(exc).__name__)
         finally:
+            # Events queued while stopping (the session's last held / track-close SafetyEvents) must still
+            # leave: drain the outbound queue (bounded wait), then let ZeroMQ finish sending (bounded linger).
+            try:
+                self._final_flush(xpub)
+                xpub.setsockopt(zmq.LINGER, int(FINAL_LINGER_S * 1000))
+                xpub.close()
+            except Exception as exc:  # shutting down: never raise
+                log.warning("zmq final flush failed: %s", type(exc).__name__)
+                xpub.close(0)
             xsub.close(0)
-            xpub.close(0)
-            ctx.term()
+            ctx.term()  # waits for the XPUB linger above, at most FINAL_LINGER_S
+
+    def _final_flush(self, xpub: Any, timeout_s: float = FINAL_FLUSH_S) -> int:
+        """Send everything still queued for the wire, retrying a full socket until ``timeout_s``.
+        Returns how many messages were left unsent (dropped and counted)."""
+        import zmq
+
+        deadline = time.monotonic() + timeout_s
+        while self._out:
+            item = self._out.popleft()
+            name, payload = item
+            self._seq += 1
+            try:
+                xpub.send_multipart(
+                    [name, f"{self._epoch}:{self._seq}".encode("ascii"), payload], zmq.NOBLOCK
+                )
+                self.forwarded_out += 1
+            except zmq.Again:
+                self._seq -= 1
+                self._out.appendleft(item)
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(0.005)
+        left = len(self._out)
+        if left:
+            self.out_dropped += left
+            self._out.clear()
+        return left
 
     def _from_subscriber(self, xsub: Any, message: bytes) -> None:
         if not message:

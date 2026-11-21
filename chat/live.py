@@ -38,6 +38,7 @@ from chat.common import (
     Secret,
     log_event,
 )
+from chat.common.bus import session_id_from_env
 from chat.main import build, groq_from_config, make_youtube_actions
 from chat.pipeline import ChatPipeline
 from chat.twitch import (
@@ -122,7 +123,8 @@ class ChatService:
         self.config = config
         self.bus = bus
         self.options = options or LiveOptions()
-        self.publisher = ChatPublisher(bus, session_id="chat")
+        self.session_id = session_id_from_env()
+        self.publisher = ChatPublisher(bus, session_id=self.session_id)
         self.pipeline: ChatPipeline | None = None
         self.platforms: list[_Platform] = []
         self.skipped: dict[str, str] = {}  # platform -> reason code
@@ -160,6 +162,7 @@ class ChatService:
             self.bus,
             youtube=yt.actions if yt else None,
             twitch=tw.actions if tw else None,
+            session_id=self.session_id,
         )
         self.pipeline = pipeline
         pipeline.start()
